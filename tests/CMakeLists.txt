@@ -23,6 +23,7 @@ macro(create_test name)
         src/cohens_d.cpp
         src/simple_diff.cpp
         src/summarize_comparisons.cpp
+        src/summarize_effects.cpp
     )
 
     target_link_libraries(

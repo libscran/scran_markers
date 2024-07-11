@@ -16,16 +16,81 @@
 namespace scran_markers {
 
 /**
- * Choice of summary statistic for the pairwise effects of a given group, see `SummarizeEffects` for details.
- * `n_summaries` is used to denote the number of possible summary statistics. 
+ * @brief Pointers to arrays to hold the summary statistics.
+ *
+ * @tparam Stat_ Floating-point type for the statistics.
+ * @tparam Rank_ Numeric type for the rank.
  */
-enum class Summary : unsigned char {
-    MIN,
-    MEAN,
-    MEDIAN,
-    MAX,
-    MIN_RANK,
-    n_summaries 
+template<typename Stat_ = double, typename Rank_ = int>
+struct SummaryBuffers {
+    /**
+     * Pointer to an array of length equal to the number of genes,
+     * to be filled with the minimum effect size for each gene.
+     */ 
+    Stat_* min = NULL;
+
+    /**
+     * Pointer to an array of length equal to the number of genes,
+     * to be filled with the mean effect size for each gene.
+     */ 
+    Stat_* mean = NULL;
+
+    /**
+     * Pointer to an array of length equal to the number of genes,
+     * to be filled with the median effect size for each gene.
+     */ 
+    Stat_* median = NULL;
+
+    /**
+     * Pointer to an array of length equal to the number of genes,
+     * to be filled with the maximum effect size for each gene.
+     */ 
+    Stat_* max = NULL;
+
+    /**
+     * Pointer to an array of length equal to the number of genes,
+     * to be filled with the minimum rank of the effect sizes for each gene.
+     */ 
+    Rank_* min_rank = NULL;
+};
+
+/**
+ * @brief Container for the summary statistics.
+ *
+ * @tparam Stat_ Floating-point type for the statistics.
+ * @tparam Rank_ Numeric type for the rank.
+ */
+template<typename Stat_ = double, typename Rank_ = int>
+struct SummaryResults {
+    /**
+     * Vector of length equal to the number of genes,
+     * to be filled with the minimum effect size for each gene.
+     */ 
+    std::vector<Stat_> min;
+
+    /**
+     * Vector of length equal to the number of genes,
+     * to be filled with the mean effect size for each gene.
+     */ 
+    std::vector<Stat_> mean;
+
+    /**
+     * Vector of length equal to the number of genes,
+     * to be filled with the median effect size for each gene.
+     */
+    std::vector<Stat_> median;
+
+    /**
+     * Vector of length equal to the number of genes,
+     * to be filled with the maximum effect size for each gene.
+     */
+    std::vector<Stat_> max;
+
+    /**
+     * Vector of length equal to the number of genes,
+     * to be filled with the minimum rank of the effect sizes for each gene.
+     */ 
+    std::vector<Rank_> min_rank;
 };
 
 /**
@@ -33,8 +98,8 @@ enum class Summary : unsigned char {
  */
 namespace internal {
 
-template<typename Stat_>
-void summarize_comparisons_internal(size_t ngroups, const Stat_* effects, size_t group, size_t gene, std::vector<std::vector<Stat_*> >& output, std::vector<Stat_>& buffer) {
+template<typename Stat_, typename Rank_>
+void summarize_comparisons_internal(size_t ngroups, const Stat_* effects, size_t group, size_t gene, const SummaryBuffers<Stat_, Rank_>& output, std::vector<Stat_>& buffer) {
     auto ebegin = buffer.data();
     auto elast = ebegin;	
 
@@ -51,37 +116,39 @@ void summarize_comparisons_internal(size_t ngroups, const Stat_* effects, size_t
     }
 
     size_t ncomps = elast - ebegin;
-    constexpr size_t before_minrank = static_cast<size_t>(Summary::MIN_RANK);
-    if (ncomps == 0) {
-        for (size_t i = 0; i < before_minrank; ++i) {
-            if (output[i].size()) {
-                output[i][group][gene] = std::numeric_limits<Stat_>::quiet_NaN();
-            }
+    if (ncomps <= 1) {
+        Stat_ val = (ncomps == 0 ? std::numeric_limits<Stat_>::quiet_NaN() : *ebegin);
+        if (output.min) {
+            output.min[gene] = val;
         }
-    } else if (ncomps == 1) {
-        for (size_t i = 0; i < before_minrank; ++i) { 
-            if (output[i].size()) {
-                output[i][group][gene] = *ebegin;
-            }
+        if (output.mean) {
+            output.mean[gene] = val;
         }
+        if (output.max) {
+            output.max[gene] = val;
+        }
+        if (output.median) {
+            output.median[gene] = val;
+        }
+
     } else {
-        if (output[static_cast<size_t>(Summary::MIN)].size()) {
-            output[static_cast<size_t>(Summary::MIN)][group][gene] = *std::min_element(ebegin, elast);
+        if (output.min) {
+            output.min[gene] = *std::min_element(ebegin, elast);
         }
-        if (output[static_cast<size_t>(Summary::MEAN)].size()) {
-            output[static_cast<size_t>(Summary::MEAN)][group][gene] = std::accumulate(ebegin, elast, 0.0) / ncomps; 
+        if (output.mean) {
+            output.mean[gene] = std::accumulate(ebegin, elast, 0.0) / ncomps; 
         }
-        if (output[static_cast<size_t>(Summary::MAX)].size()) {
-            output[static_cast<size_t>(Summary::MAX)][group][gene] = *std::max_element(ebegin, elast);
+        if (output.max) {
+            output.max[gene] = *std::max_element(ebegin, elast);
         }
-        if (output[static_cast<size_t>(Summary::MEDIAN)].size()) { // this mutates the buffer, so we put this last to avoid surprises.
-            output[static_cast<size_t>(Summary::MEDIAN)][group][gene] = tatami_stats::medians::direct(ebegin, ncomps, /* skip_nan = */ false); 
+        if (output.median) { // this mutates the buffer, so we put this last to avoid surprises.
+            output.median[gene] = tatami_stats::medians::direct(ebegin, ncomps, /* skip_nan = */ false); 
         }
     }
 }
 
-template<typename Stat_>
-void summarize_comparisons(size_t ngenes, size_t ngroups, const Stat_* effects, std::vector<std::vector<Stat_*> >& output, int threads) {
+template<typename Stat_, typename Rank_>
+void summarize_comparisons(size_t ngenes, size_t ngroups, const Stat_* effects, const std::vector<SummaryBuffers<Stat_, Rank_> >& output, int threads) {
     size_t shift = ngroups * ngroups;
 
     tatami::parallelize([&](size_t, size_t start, size_t length) -> void {
@@ -91,7 +158,7 @@ void summarize_comparisons(size_t ngenes, size_t ngroups, const Stat_* effects, 
         for (size_t gene = start, end = start + length; gene < end; ++gene, effect_ptr += shift) {
             auto current_effects = effect_ptr;
             for (size_t l = 0; l < ngroups; ++l, current_effects += ngroups) {
-                summarize_comparisons_internal(ngroups, current_effects, l, gene, output, buffer);
+                summarize_comparisons_internal(ngroups, current_effects, l, gene, output[l], buffer);
             }
         }
     }, ngenes, threads);
@@ -159,13 +226,17 @@ void compute_min_rank_for_group(Index_ ngenes, size_t ngroups, size_t group, con
 }
 
 template<typename Stat_, typename Index_, typename Rank_>
-void compute_min_rank_pairwise(Index_ ngenes, size_t ngroups, const Stat_* effects, std::vector<Rank_*>& output, int threads) {
+void compute_min_rank_pairwise(Index_ ngenes, size_t ngroups, const Stat_* effects, const std::vector<SummaryBuffers<Stat_, Rank_> >& output, int threads) {
     size_t shift = ngroups * ngroups;
 
     tatami::parallelize([&](size_t, size_t start, size_t length) {
         std::vector<std::pair<Stat_, Index_> > buffer(ngenes);
         for (size_t g = start, end = start + length; g < end; ++g) { 
-            auto target = output[g];
+            auto target = output[g].min_rank;
+            if (target == NULL) {
+                continue;
+            }
+
             std::fill_n(target, ngenes, ngenes + 1); 
             auto base = effects + g * ngroups;
 

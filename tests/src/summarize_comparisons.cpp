@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "scran_tests/scran_tests.hpp"
 #include "scran_markers/summarize_comparisons.hpp"
 
 #include <numeric>
@@ -7,16 +8,21 @@
 
 class SummarizeComparisonsTest : public ::testing::TestWithParam<std::tuple<int, int> > {
 protected:
-    static void create_outputs(int ngenes, int ngroups, std::vector<double>& output, std::vector<std::vector<double*> >& ptrs) {
-        output.resize(ngroups * static_cast<size_t>(scran_markers::Summary::n_summaries) * ngenes);
+    static void create_outputs(int ngenes, int ngroups, std::vector<double>& output, std::vector<scran_markers::SummaryBuffers<double, int> >& ptrs) {
+        output.resize(ngroups * 4 * ngenes);
 
-        auto ptr = output.data();
-        ptrs.resize(static_cast<size_t>(scran_markers::Summary::n_summaries));
-        for (size_t s = 0; s < ptrs.size(); ++s) {
-            ptrs[s].clear();
-            for (int g = 0; g < ngroups; ++g, ptr += ngenes) {
-                ptrs[s].push_back(ptr);
-            }
+        auto optr = output.data();
+        ptrs.resize(ngroups);
+        for (int g = 0; g < ngroups; ++g) {
+            auto& current = ptrs[g];
+            current.min = optr;
+            optr += ngenes;
+            current.mean = optr;
+            optr += ngenes;
+            current.median = optr;
+            optr += ngenes;
+            current.max = optr;
+            optr += ngenes;
         }
     }
 
@@ -60,7 +66,7 @@ TEST_P(SummarizeComparisonsTest, Basic) {
     int ngroups = std::get<0>(params);
 
     std::vector<double> output;
-    std::vector<std::vector<double*> > ptrs;
+    std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
     create_outputs(ngenes, ngroups, output, ptrs);
 
     auto values = spawn_simple_values(ngenes, ngroups);
@@ -70,17 +76,17 @@ TEST_P(SummarizeComparisonsTest, Basic) {
     for (int gene = 0; gene < ngenes; ++gene) {
         for (int g = 0; g < ngroups; ++g) {
             // Checking that the minimum is correct.
-            EXPECT_FLOAT_EQ(ptrs[0][g][gene], g * gene + (g == 0));
+            EXPECT_FLOAT_EQ(ptrs[g].min[gene], g * gene + (g == 0));
 
             // Checking that the mean is correct.
-            EXPECT_FLOAT_EQ(ptrs[1][g][gene], g * gene + ((ngroups - 1)*ngroups/2.0 - g)/(ngroups-1));
+            EXPECT_FLOAT_EQ(ptrs[g].mean[gene], g * gene + ((ngroups - 1)*ngroups/2.0 - g)/(ngroups-1));
 
             // Checking that the median is between the min and max.
-            EXPECT_TRUE(ptrs[2][g][gene] >= ptrs[0][g][gene]);
-            EXPECT_TRUE(ptrs[2][g][gene] <= ptrs[3][g][gene]);
+            EXPECT_TRUE(ptrs[g].median[gene] >= ptrs[g].min[gene]);
+            EXPECT_TRUE(ptrs[g].median[gene] <= ptrs[g].max[gene]);
 
             // Checking that the maximum is correct.
-            EXPECT_FLOAT_EQ(ptrs[3][g][gene], g * gene + ngroups - 1 - (g == ngroups - 1));
+            EXPECT_FLOAT_EQ(ptrs[g].max[gene], g * gene + ngroups - 1 - (g == ngroups - 1));
         }
     }
 
@@ -99,7 +105,7 @@ TEST_P(SummarizeComparisonsTest, Missing) {
     int ngroups = std::get<0>(params);
 
     std::vector<double> output;
-    std::vector<std::vector<double*> > ptrs;
+    std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
     create_outputs(ngenes, ngroups, output, ptrs);
 
     auto threads = std::get<1>(GetParam());
@@ -112,7 +118,10 @@ TEST_P(SummarizeComparisonsTest, Missing) {
             for (int g = 0; g < ngroups; ++g) {
                 if (g == lost) {
                     for (int i = 0; i < 3; ++i) {
-                        EXPECT_TRUE(std::isnan(ptrs[i][g][gene]));
+                        EXPECT_TRUE(std::isnan(ptrs[g].min[gene]));
+                        EXPECT_TRUE(std::isnan(ptrs[g].mean[gene]));
+                        EXPECT_TRUE(std::isnan(ptrs[g].median[gene]));
+                        EXPECT_TRUE(std::isnan(ptrs[g].max[gene]));
                     }
                     continue;
                 }
@@ -124,7 +133,7 @@ TEST_P(SummarizeComparisonsTest, Missing) {
                 } else if (g==0 || lost==0) {
                     baseline += 1;
                 }
-                EXPECT_FLOAT_EQ(ptrs[0][g][gene], baseline);
+                EXPECT_FLOAT_EQ(ptrs[g].min[gene], baseline);
 
                 // Checking that the mean is correct.
                 baseline = g * gene;
@@ -133,7 +142,7 @@ TEST_P(SummarizeComparisonsTest, Missing) {
                 } else {
                     baseline += ((ngroups - 1)*ngroups/2.0 - g - lost)/(ngroups-2);
                 }
-                EXPECT_FLOAT_EQ(ptrs[1][g][gene], baseline);
+                EXPECT_FLOAT_EQ(ptrs[g].mean[gene], baseline);
 
                 // Checking that the maximum is correct.
                 baseline = g * gene + ngroups - 1;
@@ -142,7 +151,7 @@ TEST_P(SummarizeComparisonsTest, Missing) {
                 } else if (g==ngroups - 1 || lost==ngroups - 1) {
                     baseline -= 1;
                 }
-                EXPECT_FLOAT_EQ(ptrs[3][g][gene], baseline);
+                EXPECT_FLOAT_EQ(ptrs[g].max[gene], baseline);
             }
         }
     }
@@ -161,17 +170,17 @@ INSTANTIATE_TEST_SUITE_P(
 
 class ComputeMinRankTest : public ::testing::TestWithParam<int> {
 protected:
-    static void configure(int ngenes, int ngroups, std::vector<double>& output, std::vector<double*>& ptrs) {
+    static void configure(int ngenes, int ngroups, std::vector<int>& output, std::vector<scran_markers::SummaryBuffers<double, int> >& ptrs) {
         output.resize(ngroups * ngenes);
-        auto ptr = output.data();
-        for (int g = 0; g < ngroups; ++g, ptr += ngenes) {
-            ptrs.push_back(ptr);
+        auto optr = output.data();
+        ptrs.resize(ngroups);
+        for (int g = 0; g < ngroups; ++g, optr += ngenes) {
+            ptrs[g].min_rank = optr;
         }
     }
 
-    void compare_vectors(const std::vector<double>& expected, const double* ptr) {
-        std::vector<double> observed(ptr, ptr + expected.size());
-        EXPECT_EQ(expected, observed);
+    void compare_vectors(const std::vector<int>& expected, const int* ptr) {
+        EXPECT_EQ(expected, scran_tests::vector_n(ptr, expected.size()));
     }
 };
 
@@ -184,14 +193,14 @@ TEST_P(ComputeMinRankTest, Basic) {
         0, 4, 4, 4, 0, 4, 4, 4, 0
     };
 
-    std::vector<double> output;
-    std::vector<double*> ptrs;
+    std::vector<int> output;
+    std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
     configure(ngenes, ngroups, output, ptrs);
 
     auto threads = GetParam();
     scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ptrs, threads);
     for (size_t i = 0; i < ngroups; ++i) {
-        compare_vectors({4, 3, 2, 1}, ptrs[i]); // reversed, for maximum effect sizes.
+        compare_vectors({4, 3, 2, 1}, ptrs[i].min_rank); // reversed, for maximum effect sizes.
     }
 }
 
@@ -206,15 +215,15 @@ TEST_P(ComputeMinRankTest, LessBasic) {
     };
     for (auto& e : effects) { e *= -1; }
 
-    std::vector<double> output;
-    std::vector<double*> ptrs;
+    std::vector<int> output;
+    std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
     configure(ngenes, ngroups, output, ptrs);
 
     auto threads = GetParam();
     scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ptrs, threads);
-    compare_vectors({1, 2, 1, 3}, output.data());
-    compare_vectors({2, 3, 1, 1}, output.data() + ngenes);
-    compare_vectors({1, 1, 2, 4}, output.data() + ngenes * 2);
+    compare_vectors({1, 2, 1, 3}, ptrs[0].min_rank);
+    compare_vectors({2, 3, 1, 1}, ptrs[1].min_rank);
+    compare_vectors({1, 1, 2, 4}, ptrs[2].min_rank);
 }
 
 TEST_P(ComputeMinRankTest, Missing) {
@@ -231,21 +240,21 @@ TEST_P(ComputeMinRankTest, Missing) {
 
     /* Implicitly, the ranks become:
         0, 1, 2, 3, 0, 2, 1, n, 0,
-        0, X, 4, 2, 0, 1, 2, n, 0,
+        0, n, 4, 2, 0, 1, 2, n, 0,
         0, 2, 3, n, 0, 3, 3, n, 0,
-        0, 3, 1, 1, 0, X, 4, n, 0
+        0, 3, 1, 1, 0, n, 4, n, 0
      * after we remove the NA and promote all subsequent entries.
      */
 
-    std::vector<double> output;
-    std::vector<double*> ptrs;
+    std::vector<int> output;
+    std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
     configure(ngenes, ngroups, output, ptrs);
 
     auto threads = GetParam();
     scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ptrs, threads);
-    compare_vectors({1, 4, 2, 1}, output.data());
-    compare_vectors({2, 1, 3, 1}, output.data() + ngenes);
-    compare_vectors({1, 2, 3, 4}, output.data() + ngenes * 2);
+    compare_vectors({1, 4, 2, 1}, ptrs[0].min_rank);
+    compare_vectors({2, 1, 3, 1}, ptrs[1].min_rank);
+    compare_vectors({1, 2, 3, 4}, ptrs[2].min_rank);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -256,61 +265,74 @@ INSTANTIATE_TEST_SUITE_P(
 
 // Also checking that our multiple min_rank variants are consistent
 // with each other, especially when threading gets involved.
-class ComputeMinRankTestThreaded : public ::testing::TestWithParam<std::tuple<int, int, bool> > {
+class ComputeMinRankTestThreaded : public ::testing::TestWithParam<std::tuple<int, bool> > {
 protected:
-    std::vector<double*> configure(int ngenes, int ngroups, double* ptr) {
-        std::vector<double*> ptrs;
-        for (int g = 0; g < ngroups; ++g, ptr += ngenes) {
-            ptrs.push_back(ptr);
+    static void configure(int ngenes, int ngroups, std::vector<int>& output, std::vector<scran_markers::SummaryBuffers<double, int> >& ptrs) {
+        output.resize(ngroups * ngenes);
+        auto optr = output.data();
+        ptrs.resize(ngroups);
+        for (int g = 0; g < ngroups; ++g, optr += ngenes) {
+            ptrs[g].min_rank = optr;
         }
-        return ptrs;
     }
 };
 
 TEST_P(ComputeMinRankTestThreaded, Consistency) {
     auto param = GetParam();
-    size_t ngenes = 20;
+    size_t ngenes = 200;
     size_t ngroups = std::get<0>(param);
-    size_t nthreads = std::get<1>(param);
-    bool add_nans = std::get<2>(param);
+    bool add_nans = std::get<1>(param);
 
-    std::mt19937_64 rng(/* seed */ ngroups * nthreads + add_nans);
-    std::vector<double> effects(ngenes * ngroups * ngroups);
-    std::normal_distribution<double> dist;
-    std::uniform_real_distribution<double> unif;
-    for (auto& e : effects) {
-        e = dist(rng);
-        if (add_nans && unif(rng) <= 0.05) {
-            e = std::numeric_limits<double>::quiet_NaN();
+    scran_tests::SimulationParameters sparams;
+    sparams.seed = ngroups * 10 + add_nans * 100;
+    auto effects = scran_tests::simulate_vector(ngenes * ngroups * ngroups, sparams);
+    if (add_nans) {
+        std::mt19937_64 rng(sparams.seed + 1);
+        std::uniform_real_distribution<double> unif;
+        for (auto& e : effects) {
+            if (unif(rng) <= 0.05) {
+                e = std::numeric_limits<double>::quiet_NaN();
+            }
         }
     }
 
-    std::vector<double> ref_output(ngroups * ngenes);
-    std::vector<double*> ref_ptrs = configure(ngenes, ngroups, ref_output.data());
-    scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ref_ptrs, 1);
+    std::vector<int> ref_output;
+    {
+        std::vector<scran_markers::SummaryBuffers<double, int> > ref_ptrs;
+        configure(ngenes, ngroups, ref_output, ref_ptrs);
+        scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ref_ptrs, 1);
+    }
 
-    std::vector<double> threaded_output(ngroups * ngenes);
-    std::vector<double*> threaded_ptrs = configure(ngenes, ngroups, threaded_output.data());
-    scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), threaded_ptrs, nthreads);
-    EXPECT_EQ(threaded_output, ref_output);
+    {
+        std::vector<int> threaded_output;
+        std::vector<scran_markers::SummaryBuffers<double, int> > threaded_ptrs;
+        configure(ngenes, ngroups, threaded_output, threaded_ptrs);
+        scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), threaded_ptrs, 3);
+        EXPECT_EQ(threaded_output, ref_output);
+    }
 
-    std::vector<double> pergroup_output(ngroups * ngenes);
+    std::vector<int> pergroup_output(ngroups * ngenes);
+    std::vector<int> threaded_pergroup_output(ngroups * ngenes);
+
     for (size_t g = 0; g < ngroups; ++g) {
         std::vector<double> copy(ngroups * ngenes);
         for (size_t i = 0; i < ngenes; ++i) {
             auto base = effects.data() + i * ngroups * ngroups + g * ngroups;
-            std::copy(base, base + ngroups, copy.data() + i * ngroups);
+            std::copy_n(base, ngroups, copy.data() + i * ngroups);
         }
-        scran_markers::internal::compute_min_rank_for_group(ngenes, ngroups, g, copy.data(), pergroup_output.data() + g * ngenes, nthreads);
+
+        scran_markers::internal::compute_min_rank_for_group(ngenes, ngroups, g, copy.data(), pergroup_output.data() + g * ngenes, 1);
+        scran_markers::internal::compute_min_rank_for_group(ngenes, ngroups, g, copy.data(), threaded_pergroup_output.data() + g * ngenes, 3);
     }
+
     EXPECT_EQ(pergroup_output, ref_output);
+    EXPECT_EQ(threaded_pergroup_output, ref_output);
 }
 
 INSTANTIATE_TEST_SUITE_P(
     ComputeMinRankThreaded,
     ComputeMinRankTestThreaded,
     ::testing::Combine(
-        ::testing::Values(1, 2, 3), // number of threads
         ::testing::Values(2, 3, 4, 5), // number of groups
         ::testing::Values(false, true) // whether to spike in NaN's.
     )
