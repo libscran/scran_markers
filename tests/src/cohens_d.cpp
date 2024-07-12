@@ -28,7 +28,8 @@ TEST(CohensD, Unblocked) {
 
     size_t ngroups = means.size();
     std::vector<double> output(ngroups * ngroups);
-    scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, 1, group_sizes.data(), 0.0, output.data());
+    scran_markers::internal::PrecomputedPairwiseWeights preweights(group_sizes.size(), 1, group_sizes.data());
+    scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, 1, preweights, 0.0, output.data());
 
     for (size_t g = 0; g < ngroups; ++g) {
         for (size_t g2 = 0; g2 < ngroups; ++g2) {
@@ -44,7 +45,8 @@ TEST(CohensD, Thresholded) {
 
     size_t ngroups = means.size();
     std::vector<double> output(ngroups * ngroups);
-    scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, 1, group_sizes.data(), 1.0, output.data());
+    scran_markers::internal::PrecomputedPairwiseWeights preweights(group_sizes.size(), 1, group_sizes.data());
+    scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, 1, preweights, 1.0, output.data());
 
     for (size_t g = 0; g < ngroups; ++g) {
         for (size_t g2 = 0; g2 < ngroups; ++g2) {
@@ -63,7 +65,8 @@ TEST(CohensD, MissingValues) {
 
     size_t ngroups = means.size();
     std::vector<double> output(means.size() * means.size());
-    scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, 1, group_sizes.data(), 0.0, output.data());
+    scran_markers::internal::PrecomputedPairwiseWeights preweights(ngroups, 1, group_sizes.data());
+    scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, 1, preweights, 0.0, output.data());
 
     for (size_t g = 0; g < ngroups; ++g) {
         for (size_t g2 = 0; g2 < ngroups; ++g2) {
@@ -95,7 +98,8 @@ TEST(CohensD, Blocked) {
     std::vector<int> combo_sizes{ 10, 5, 12, 34, 15, 2, 3, 6 }; 
 
     std::vector<double> output(ngroups * ngroups);
-    scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, nblocks, combo_sizes.data(), 0.0, output.data());
+    scran_markers::internal::PrecomputedPairwiseWeights preweights(ngroups, nblocks, combo_sizes.data());
+    scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, nblocks, preweights, 0.0, output.data());
 
     for (int g1 = 0; g1 < ngroups; ++g1) {
         for (int g2 = 0; g2 < ngroups; ++g2) {
@@ -123,14 +127,16 @@ TEST(CohensD, BlockedMissing) {
     std::vector<int> combo_sizes{ 0, 1, 0, 0, 15, 2, 3, 6 }; 
 
     std::vector<double> output(ngroups * ngroups);
-    scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, nblocks, combo_sizes.data(), 0.0, output.data());
+    scran_markers::internal::PrecomputedPairwiseWeights preweights(ngroups, nblocks, combo_sizes.data());
+    scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, nblocks, preweights, 0.0, output.data());
 
     // Effectively excising the first block, as there is no comparison with a
     // non-zero product for the combined weight. We shouldn't see any NaNs
     // bleeding through, as the 0-size groups should be skipped.
 
     std::vector<double> output2(ngroups * ngroups);
-    scran_markers::internal::compute_pairwise_cohens_d(means.data() + ngroups, variances.data() + ngroups, ngroups, nblocks - 1, combo_sizes.data() + ngroups, 0.0, output2.data());
+    scran_markers::internal::PrecomputedPairwiseWeights preweights2(ngroups, nblocks - 1, combo_sizes.data() + ngroups);
+    scran_markers::internal::compute_pairwise_cohens_d(means.data() + ngroups, variances.data() + ngroups, ngroups, nblocks - 1, preweights2, 0.0, output2.data());
 
     EXPECT_EQ(output, output2);
 }
