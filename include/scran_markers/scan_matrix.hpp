@@ -5,6 +5,10 @@
 #include "auc.hpp"
 #include "simple_diff.hpp"
 
+#include <vector>
+#include <cassert>
+#include <algorithm>
+
 #include "tatami/tatami.hpp"
 #include "tatami_stats/tatami_stats.hpp"
 
@@ -22,13 +26,13 @@ struct AucWorkspace {
     std::vector<Stat_> full_weight;
 };
 
-template<typename Value_, typename Group_, typename Index_, typename Stat_, typename BlockWeight_>
+template<typename Value_, typename Group_, typename Index_, typename Stat_, typename Weight_>
 void initialize_auc_workspace(
     AucWorkspace<Value_, Group_, Index_, Stat_>& work,
     size_t ngroups,
     size_t nblocks,
     const std::vector<Index_>& combo_size,
-    const std::vector<BlockWeight_>& combo_weight) 
+    const std::vector<Weight_>& combo_weight) 
 {
     work.paired.resize(nblocks);
 
@@ -122,21 +126,21 @@ void process_auc_for_rows(
     }
 }
 
-template<bool single_block_, typename Value_, typename Index_, typename Group_, typename Block_, typename Combination_, typename Stat_, typename BlockWeight_>
+template<bool single_block_, typename Value_, typename Index_, typename Group_, typename Block_, typename Stat_, typename Weight_>
 void scan_matrix_by_row(
     const tatami::Matrix<Value_, Index_>& matrix, 
     size_t ngroups,
     const Group_* group,
-    size_t nblocks,
-    const Block_* block, // this may be NULL if nblocks == 1.
-    size_t ncombos,
-    const Combination_* combinations, // this may be NULL if nblocks == 1.
+    size_t nblocks, // should be equal to 1 if single_block_ = 1.
+    const Block_* block, // ignored if single_block_ = true.
+    size_t ncombos, // should be equal to ngroups if single_block_ = true. 
+    const size_t* combinations, // ignored if single_block_ = true.
     std::vector<Stat_>& combo_means,
     std::vector<Stat_>& combo_vars,
     std::vector<Stat_>& combo_detected,
     Stat_* auc,
     const std::vector<Index_>& combo_size,
-    const std::vector<BlockWeight_>& combo_weights,
+    const std::vector<Weight_>& combo_weights,
     int num_threads)
 {
     Index_ NC = matrix.ncol();
@@ -147,6 +151,11 @@ void scan_matrix_by_row(
             return combinations;
         }
     }();
+
+    if constexpr(single_block_) {
+        assert(ngroups == ncombos);
+        assert(nblocks == 1);
+    }
 
     tatami::parallelize([&](size_t, Index_ start, Index_ length) -> void {
         std::vector<Value_> vbuffer(NC);
