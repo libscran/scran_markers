@@ -23,14 +23,16 @@ std::vector<Weight_> compute_total_weight_per_group(size_t ngroups, size_t nbloc
 template<typename Stat_, typename Weight_>
 void average_group_stats(
     size_t gene, 
-    const std::vector<Stat_*>& means,
-    const std::vector<Stat_*>& detected,
     size_t ngroups,
     size_t nblocks,
+    const Stat_* tmp_means,
+    const Stat_* tmp_detected,
     const Weight_* combo_weights,
-    const Weight_* total_weights) 
+    const Weight_* total_weights,
+    const std::vector<Stat_*>& means,
+    const std::vector<Stat_*>& detected)
 {
-    for (size_t g = 0; g < ngroups ++g) {
+    for (size_t g = 0; g < ngroups; ++g) {
         auto& gmean = means[g][gene];
         auto& gdet = detected[g][gene];
 

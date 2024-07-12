@@ -52,7 +52,7 @@ void initialize_auc_workspace(
 
     work.auc_buffer.resize(ngroups * ngroups);
     work.block_scale.reserve(nblocks);
-    work.full_weight.resize(ngroups * ngroups)
+    work.full_weight.resize(ngroups * ngroups);
     for (size_t b = 0; b < nblocks; ++b) {
         work.block_scale.emplace_back(ngroups * ngroups);
 
@@ -126,7 +126,7 @@ void process_auc_for_rows(
     }
 }
 
-template<bool single_block_, typename Value_, typename Index_, typename Group_, typename Block_, typename Stat_, typename Weight_>
+template<bool single_block_, typename Value_, typename Index_, typename Group_, typename Block_, typename Stat_, typename Weight_, typename Threshold_>
 void scan_matrix_by_row(
     const tatami::Matrix<Value_, Index_>& matrix, 
     size_t ngroups,
@@ -141,6 +141,7 @@ void scan_matrix_by_row(
     Stat_* auc,
     const std::vector<Index_>& combo_size,
     const std::vector<Weight_>& combo_weights,
+    Threshold_ threshold,
     int num_threads)
 {
     Index_ NC = matrix.ncol();
@@ -167,7 +168,7 @@ void scan_matrix_by_row(
 
         // A vast array of AUC-related bits and pieces.
         size_t effect_shift = ngroups * ngroups;
-        AucWorkspace<Value_, Group_, Index_, Stat_, Weight_> auc_work;
+        AucWorkspace<Value_, Group_, Index_, Stat_> auc_work;
         auto auc_ptr = auc;
         if (auc_ptr) {
             auc_ptr += static_cast<size_t>(start) * effect_shift;
@@ -181,7 +182,7 @@ void scan_matrix_by_row(
 
             for (size_t r = start, end = start + length; r < end; ++r) {
                 auto range = ext->fetch(vbuffer.data(), ibuffer.data());
-                tatami_stats::variances::direct(
+                tatami_stats::grouped_variances::direct(
                     range.value,
                     range.index,
                     range.number,
@@ -192,7 +193,7 @@ void scan_matrix_by_row(
                     var_ptr,
                     tmp_index.data(),
                     /* skip_nan = */ false,
-                    /* invalid_count = */ NULL
+                    /* invalid_count = */ static_cast<Index_*>(NULL)
                 );
                 mean_ptr += ncombos;
                 var_ptr += ncombos;
@@ -200,58 +201,8 @@ void scan_matrix_by_row(
                 for (Index_ i = 0; i < range.number; ++i) {
                     det_ptr[grouping[range.index[i]]] += (range.value[i] != 0);
                 }
-                det_ptr += ncombos;
-
-                if (auc_ptr) {
-                    for (auto& z : auc_work.num_zeros) {
-                        std::fill(z.begin(), z.end(), 0);
-                    }
-                    for (auto& p : auc_work.paired) {
-                        p.clear();
-                    }
-
-                    for (size_t c = 0; c < NC; ++c) {
-                        auto b = [&]{
-                            if constexpr(single_block_) {
-                                return 0;
-                            } else {
-                                return block[c];
-                            }
-                        }();
-                        auto g = group[c];
-                        if (ptr[c]) {
-                            auc_work.paired[b].emplace_back(ptr[c], g);
-                        } else {
-                            ++(auc_work.num_zeros[b][g]);
-                        }
-                    }
-
-                    process_auc_for_rows(auc_work, ngroups, nblocks, threshold, auc_ptr);
-                    auc_ptr += effect_shift;
-                }
-            }
-
-        } else {
-            auto ext = tatami::consecutive_extractor<false>(&matrix, true, start, length);
-
-            for (size_t r = start, end = start + length; r < end; ++r) {
-                auto ptr = ext->fetch(vbuffer.data());
-                tatami_stats::variances::direct(
-                    ptr,
-                    NC,
-                    grouping,
-                    ncombos,
-                    combo_size.data(),
-                    mean_ptr,
-                    var_ptr,
-                    /* skip_nan = */ false,
-                    /* invalid_count = */ NULL
-                );
-                mean_ptr += ncombos;
-                var_ptr += ncombos;
-
-                for (Index_ c = 0; c < NC; ++c) {
-                    det_ptr[grouping[c]] += (ptr[c] != 0);
+                for (size_t co = 0; co < ncombos; ++co) {
+                    det_ptr[co] /= combo_size[co];
                 }
                 det_ptr += ncombos;
 
@@ -285,6 +236,62 @@ void scan_matrix_by_row(
                     auc_ptr += effect_shift;
                 }
             }
+
+        } else {
+            auto ext = tatami::consecutive_extractor<false>(&matrix, true, start, length);
+
+            for (size_t r = start, end = start + length; r < end; ++r) {
+                auto ptr = ext->fetch(vbuffer.data());
+                tatami_stats::grouped_variances::direct(
+                    ptr,
+                    NC,
+                    grouping,
+                    ncombos,
+                    combo_size.data(),
+                    mean_ptr,
+                    var_ptr,
+                    /* skip_nan = */ false,
+                    /* invalid_count = */ static_cast<Index_*>(NULL)
+                );
+                mean_ptr += ncombos;
+                var_ptr += ncombos;
+
+                for (Index_ c = 0; c < NC; ++c) {
+                    det_ptr[grouping[c]] += (ptr[c] != 0);
+                }
+                for (size_t co = 0; co < ncombos; ++co) {
+                    det_ptr[co] /= combo_size[co];
+                }
+                det_ptr += ncombos;
+
+                if (auc_ptr) {
+                    for (auto& z : auc_work.num_zeros) {
+                        std::fill(z.begin(), z.end(), 0);
+                    }
+                    for (auto& p : auc_work.paired) {
+                        p.clear();
+                    }
+
+                    for (Index_ c = 0; c < NC; ++c) {
+                        auto b = [&]{
+                            if constexpr(single_block_) {
+                                return 0;
+                            } else {
+                                return block[c];
+                            }
+                        }();
+                        auto g = group[c];
+                        if (ptr[c]) {
+                            auc_work.paired[b].emplace_back(ptr[c], g);
+                        } else {
+                            ++(auc_work.num_zeros[b][g]);
+                        }
+                    }
+
+                    process_auc_for_rows(auc_work, ngroups, nblocks, threshold, auc_ptr);
+                    auc_ptr += effect_shift;
+                }
+            }
         }
     }, matrix.nrow(), num_threads);
 }
@@ -297,14 +304,15 @@ void scan_matrix_by_column(
     std::vector<Stat_>& combo_means,
     std::vector<Stat_>& combo_vars,
     std::vector<Stat_>& combo_detected,
+    const std::vector<Index_>& combo_size,
     int num_threads)
 {
-    Idnex_ NC = matrix.ncol();
+    Index_ NC = matrix.ncol();
     tatami::parallelize([&](size_t, Index_ start, Index_ length) -> void {
         std::vector<Value_> vbuffer(length);
 
         // Using local buffers to avoid problems with false sharing.
-        std::vector<std::vector<Stat_> > tmp_means, tmp_vars, tmp_det;
+        std::vector<std::vector<Stat_> > tmp_means, tmp_vars, tmp_dets;
         tmp_means.reserve(ncombos);
         tmp_vars.reserve(ncombos);
         tmp_dets.reserve(ncombos);
@@ -317,7 +325,7 @@ void scan_matrix_by_column(
         if (matrix.is_sparse()) {
             std::vector<Index_> ibuffer(NC);
             auto ext = tatami::consecutive_extractor<true>(&matrix, false, static_cast<Index_>(0), NC, start, length);
-            std::vector<tatami_stats::RunningSparse<Stat_, Value_, Index_> > runners;
+            std::vector<tatami_stats::variances::RunningSparse<Stat_, Value_, Index_> > runners;
             runners.reserve(ncombos);
             for (size_t co = 0; co < ncombos; ++co) {
                 runners.emplace_back(length, tmp_means[co].data(), tmp_vars[co].data(), /* skip_nan = */ false, start);
@@ -340,7 +348,7 @@ void scan_matrix_by_column(
 
         } else {
             auto ext = tatami::consecutive_extractor<false>(&matrix, false, static_cast<Index_>(0), NC, start, length);
-            std::vector<tatami_stats::RunningDense<Stat_, Value_, Index_> > runners;
+            std::vector<tatami_stats::variances::RunningDense<Stat_, Value_, Index_> > runners;
             runners.reserve(ncombos);
             for (size_t co = 0; co < ncombos; ++co) {
                 runners.emplace_back(length, tmp_means[co].data(), tmp_vars[co].data(), /* skip_nan = */ false);
@@ -372,7 +380,7 @@ void scan_matrix_by_column(
             for (size_t co = 0; co < ncombos; ++co) {
                 *mean_ptr = tmp_means[co][r];
                 *var_ptr = tmp_vars[co][r];
-                *det_ptr = tmp_detected[co][r];
+                *det_ptr = tmp_dets[co][r] / combo_size[co];
                 ++mean_ptr;
                 ++var_ptr;
                 ++det_ptr;

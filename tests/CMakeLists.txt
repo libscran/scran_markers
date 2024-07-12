@@ -24,6 +24,7 @@ macro(create_test name)
         src/simple_diff.cpp
         src/summarize_comparisons.cpp
         src/summarize_effects.cpp
+        src/score_markers_pairwise.cpp
     )
 
     target_link_libraries(

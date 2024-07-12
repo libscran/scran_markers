@@ -12,12 +12,12 @@ FetchContent_Declare(
   GIT_TAG master # ^1.1.0
 )
 
-#FetchContent_Declare(
-#  scran_blocks
-#  GIT_REPOSITORY https://github.com/libscran/scran_blocks
-#  GIT_TAG master # ^1.0.0
-#)
+FetchContent_Declare(
+  scran_blocks
+  GIT_REPOSITORY https://github.com/libscran/scran_blocks
+  GIT_TAG master # ^1.0.0
+)
 
 FetchContent_MakeAvailable(tatami)
 FetchContent_MakeAvailable(tatami_stats)
-#FetchContent_MakeAvailable(scran_blocks)
+FetchContent_MakeAvailable(scran_blocks)
