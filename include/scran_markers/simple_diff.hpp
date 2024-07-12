@@ -7,28 +7,30 @@ namespace scran_markers {
 
 namespace internal {
 
+// 'values' and 'combo_weights' are expected to be 'ngroups * nblocks' arrays
+// where groups are the faster-changing dimension and the blocks are slower.
 template<typename Stat_, typename Weight_>
-Stat_ compute_pairwise_simple_diff(size_t g1, size_t g2, const Stat_* values, const Weight_* block_weights, size_t nblocks) {
+Stat_ compute_pairwise_simple_diff(size_t g1, size_t g2, const Stat_* values, size_t ngroups, size_t nblocks, const Weight_* combo_weights) {
     Stat_ total_weight = 0;
     Stat_ output = 0;
 
-    for (size_t b = 0; b < nblocks; ++b) {
-        size_t offset1 = g1 * nblocks + b; // no need to cast, everything's already a size_t.
-        auto left = values[offset1];
-        auto lweight = block_weights[offset1];
+    size_t offset1 = g1, offset2 = g2; 
+    for (size_t b = 0; b < nblocks; ++b, offset1 += ngroups, offset2 += ngroups) {
+        auto lweight = combo_weights[offset1];
         if (!lweight) {
             continue;
         }
 
-        size_t offset2 = g2 * nblocks + b;
-        auto right = values[offset2]; 
-        auto rweight = block_weights[offset2];
+        auto rweight = combo_weights[offset2];
         if (!rweight) {
             continue;
         }
 
         Stat_ weight = static_cast<Stat_>(lweight) * static_cast<Stat_>(rweight);
         total_weight += weight;
+
+        auto left = values[offset1];
+        auto right = values[offset2]; 
         output += (left - right) * weight;
     }
 
@@ -42,10 +44,10 @@ Stat_ compute_pairwise_simple_diff(size_t g1, size_t g2, const Stat_* values, co
 }
 
 template<typename Stat_, typename Weight_>
-void compute_pairwise_simple_diff(const Stat_* values, const Weight_* block_weights, size_t ngroups, size_t nblocks, Stat_* output) {
+void compute_pairwise_simple_diff(const Stat_* values, size_t ngroups, size_t nblocks, const Weight_* combo_weights, Stat_* output) {
     for (size_t g1 = 0; g1 < ngroups; ++g1) {
         for (size_t g2 = 0; g2 < g1; ++g2) {
-            auto d = compute_pairwise_simple_diff(g1, g2, values, block_weights, nblocks);
+            auto d = compute_pairwise_simple_diff(g1, g2, values, ngroups, nblocks, combo_weights);
             output[g1 * ngroups + g2] = d;
             output[g2 * ngroups + g1] = -d;
         }
