@@ -296,7 +296,8 @@ void scan_matrix_by_column(
     const Combination_* combinations,
     std::vector<Stat_>& combo_means,
     std::vector<Stat_>& combo_vars,
-    std::vector<Stat_>& combo_detected)
+    std::vector<Stat_>& combo_detected,
+    int num_threads)
 {
     Idnex_ NC = matrix.ncol();
     tatami::parallelize([&](size_t, Index_ start, Index_ length) -> void {
