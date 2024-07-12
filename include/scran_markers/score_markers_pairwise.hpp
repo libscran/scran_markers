@@ -1,9 +1,11 @@
 #ifndef SCRAN_PAIRWISE_EFFECTS_HPP
 #define SCRAN_PAIRWISE_EFFECTS_HPP
 
-#include "MatrixCalculator.hpp"
 #include "cohens_d.hpp"
 #include "simple_diff.hpp"
+
+#include "scan_matrix.hpp"
+#include "average_group_stats.hpp"
 
 #include "scran_blocks/scran_blocks.hpp"
 #include "tatami/tatami.hpp"
@@ -143,6 +145,13 @@ void process_simple_pairwise_effects(
     double threshold,
     int num_threads)
 {
+    std::vector<Stat_> total_weights_per_group;
+    const Stat_* total_weights_ptr = combo_weights.data();
+    if (nblocks > 1) {
+        total_weights_per_group = compute_total_weight_per_group(ngroups, nblocks, combo_weights.data());
+        total_weights_ptr = total_weights_per_group.data();
+    }
+
     tatami::parallelize([&](size_t, Index_ start, Index_ length) -> void {
         size_t in_offset = ncombos * static_cast<size_t>(start);
         const auto* tmp_means = combo_means.data() + in_offset;
@@ -152,32 +161,7 @@ void process_simple_pairwise_effects(
         size_t squared = ngroups * ngroups;
         size_t out_offset = start * squared;
         for (size_t gene = start, end = start + length; gene < end; ++gene, out_offset += squared) {
-            // Computing the weighted average mean/detected for each gene.
-            size_t offset = 0;
-            for (size_t g = 0; g < ngroups ++g) {
-                auto& gmean = output.means[g][gene];
-                auto& gdet =  output.detected[g][gene];
-                gmean = 0;
-                gdet = 0;
-                Stat_ total_weight = 0;
-
-                for (size_t b = 0; b < nblocks; ++b, ++offset) {
-                    const auto& curweight = combo_weights[offset];
-                    if (curweight) {
-                        gmean += curweight * tmp_means[offset];
-                        gdet += curweight * tmp_detected[offset];
-                        total_weight += curweight;
-                    } 
-                }
-
-                if (total_weight) {
-                    gmean /= total_weight;
-                    gdet /= total_weight;
-                } else {
-                    gdet = std::numeric_limits<Stat_>::quiet_NaN();
-                    gmean = std::numeric_limits<Stat_>::quiet_NaN();
-                }
-            }
+            average_group_stats(gene, output.means, output.detected, ngroups, nblocks, combo_weights.data(), total_weights_ptr);
 
             // Computing the effect sizes.
             if (output.cohens_d != NULL) {
