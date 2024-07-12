@@ -1,5 +1,5 @@
-#ifndef SCRAN_PAIRWISE_EFFECTS_HPP
-#define SCRAN_PAIRWISE_EFFECTS_HPP
+#ifndef SCRAN_MARKERS_SCORE_MARKERS_PAIRWISE_HPP
+#define SCRAN_MARKERS_SCORE_MARKERS_PAIRWISE_HPP
 
 #include "cohens_d.hpp"
 #include "simple_diff.hpp"
@@ -7,8 +7,11 @@
 #include "scan_matrix.hpp"
 #include "average_group_stats.hpp"
 
+#include <vector>
+
 #include "scran_blocks/scran_blocks.hpp"
 #include "tatami/tatami.hpp"
+#include "tatami_stats/tatami_stats.hpp"
 
 /**
  * @file score_markers_pairwise.hpp
@@ -18,7 +21,7 @@
 namespace scran {
 
 /**
- * @brief Options for `score_markers_pairwise()`.
+ * @brief Options for `score_markers_pairwise()` and friends.
  */
 struct ScoreMarkersPairwiseOptions {
     /**
@@ -69,7 +72,7 @@ struct ScoreMarkersPairwiseOptions {
 };
 
 /**
- * @brief Buffers for `score_markers_pairwise()`.
+ * @brief Buffers for `score_markers_pairwise()` and friends.
  * @tparam Stat_ Floating-point type for the output statistics.
  */
 template<typename Stat_>
@@ -104,7 +107,7 @@ struct ScoreMarkersPairwiseBuffers {
     /**
      * Pointer to an array of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the AUC for the comparison between each pair of groups for each gene;
-     * see `ScoreMarkersBuffers::cohens_d` for more details.
+     * see `ScoreMarkersPairwiseBuffers::cohens_d` for more details.
      * Alternatively NULL, in which case the AUC is not stored.
      */
     Stat_* auc = NULL;
@@ -112,7 +115,7 @@ struct ScoreMarkersPairwiseBuffers {
     /**
      * Pointer to an array of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the difference in means for the comparison between each pair of groups for each gene;
-     * see `ScoreMarkersBuffers::cohens_d` for more details.
+     * see `ScoreMarkersPairwiseBuffers::cohens_d` for more details.
      * Alternatively NULL, in which case the difference in means is not stored.
      */
     Stat_* delta_mean = NULL;
@@ -120,10 +123,61 @@ struct ScoreMarkersPairwiseBuffers {
     /**
      * Pointer to an array of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the difference in the detected proportions for the comparison between each pair of groups for each gene;
-     * see `ScoreMarkersBuffers::cohens_d` for more details.
+     * see `ScoreMarkersPairwiseBuffers::cohens_d` for more details.
      * Alternatively NULL, in which case the difference in detected proportions is not stored.
      */
     Stat_* delta_detected = NULL;
+};
+
+/**
+ * @brief Results for `score_markers_pairwise()` and friends.
+ * @tparam Stat_ Floating-point type for the output statistics.
+ */
+template<typename Stat_>
+struct ScoreMarkersPairwiseResults {
+    /**
+     * Vector of length equal to the number of groups.
+     * Each inner vector corresponds to a group and contains the mean expression of each gene in that group. 
+     */
+    std::vector<std::vector<Stat_> > mean;
+
+    /**
+     * Vector of length equal to the number of groups.
+     * Each inner vector corresponds to a group and contains the mean expression of each gene in that group. 
+     */
+    std::vector<std::vector<Stat_> > detected;
+
+    /**
+     * Vector of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
+     * This is a 3-dimensional array to be filled with the Cohen's D for the comparison between each pair of groups for each gene;
+     * see `ScoreMarkersPairwiseBuffers::cohens_d` for details on the layout.
+     * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_cohens_d = false`.
+     */
+    std::vector<Stat_> cohens_d;
+
+    /**
+     * Vector of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
+     * This is a 3-dimensional array to be filled with the AUC for the comparison between each pair of groups for each gene;
+     * see `ScoreMarkersPairwiseBuffers::auc` for details on the layout.
+     * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_auc = false`.
+     */
+    std::vector<Stat_> auc;
+
+    /**
+     * Vector of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
+     * This is a 3-dimensional array to be filled with the delta-mean for the comparison between each pair of groups for each gene;
+     * see `ScoreMarkersPairwiseBuffers::cohens_d` for details on the layout.
+     * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_mean = false`.
+     */
+    std::vector<Stat_> delta_mean;
+
+    /**
+     * Vector of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
+     * This is a 3-dimensional array to be filled with the delta-detected for the comparison between each pair of groups for each gene;
+     * see `ScoreMarkersPairwiseBuffers::cohens_d` for details on the layout.
+     * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_detected = false`.
+     */
+    std::vector<Stat_> delta_detected;
 };
 
 /**
@@ -151,6 +205,7 @@ void process_simple_pairwise_effects(
         total_weights_per_group = compute_total_weight_per_group(ngroups, nblocks, combo_weights.data());
         total_weights_ptr = total_weights_per_group.data();
     }
+    PrecomputedPairwiseWeights<Stat_> preweights(ngroups, nblocks, combo_weights.data());
 
     tatami::parallelize([&](size_t, Index_ start, Index_ length) -> void {
         size_t in_offset = ncombos * static_cast<size_t>(start);
@@ -165,15 +220,15 @@ void process_simple_pairwise_effects(
 
             // Computing the effect sizes.
             if (output.cohens_d != NULL) {
-                differential_analysis::compute_pairwise_cohens_d(tmp_means, tmp_variances, combo_weights, ngroups, nblocks, threshold, output.cohens_d + out_offset);
+                differential_analysis::compute_pairwise_cohens_d(tmp_means, tmp_variances, ngroups, nblocks, preweights, threshold, output.cohens_d + out_offset);
             }
 
             if (output.delta_detected != NULL) {
-                differential_analysis::compute_pairwise_simple_diff(tmp_detected, combo_weights, ngroups, nblocks, output.delta_detected + out_offset);
+                differential_analysis::compute_pairwise_simple_diff(tmp_detected, ngroups, nblocks, preweights, output.delta_detected + out_offset);
             }
 
             if (output.delta_mean != NULL) {
-                differential_analysis::compute_pairwise_simple_diff(tmp_means, combo_weights, ngroups, nblocks, output.delta_mean + out_offset);
+                differential_analysis::compute_pairwise_simple_diff(tmp_means, ngroups, nblocks, preweights, output.delta_mean + out_offset);
             }
 
             tmp_means += ncombos;
@@ -183,30 +238,67 @@ void process_simple_pairwise_effects(
     }, ngenes, nthreads);
 }
 
+template<typename Stat_>
+ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(size_t ngenes, size_t ngroups, ScoreMarkersPairwiseResults<Stat_>& store, const ScoreMarkersPairwiseOptions& opt) {
+    ScoreMarkersPairwiseBuffers<Stat_> output;
+
+    store.mean.reserve(ngroups);
+    store.detected.reserve(ngroups);
+    output.mean.reserve(ngroups);
+    output.detected.reserve(ngroups);
+    for (Index_ g = 0; g < ngroups; ++g) {
+        store.mean.emplace_back(ngenes);
+        store.detected.emplace_back(ngenes);
+        output.mean.emplace_back(store.mean.back().data());
+        output.detected.emplace_back(store.detected.back().data());
+    }
+
+    size_t num_effect_sizes = ngroups * ngroups * ngenes; // everything's already a size_t.
+
+    if (opt.compute_cohens_d) {
+        store.cohens_d.resize(num_effect_sizes);
+        output.cohens_d = store.cohens_d.data();
+    }
+    if (opt.compute_auc) {
+        store.auc.resize(num_effect_sizes);
+        output.auc = store.auc.data();
+    }
+    if (opt.compute_delta_mean) {
+        store.delta_mean.resize(num_effect_sizes);
+        output.delta_mean = store.delta_mean.data();
+    }
+    if (opt.compute_delta_detected) {
+        store.delta_detected.resize(num_effect_sizes);
+        output.delta_detected = store.delta_detected.data();
+    }
+    
+    return output;
+}
+
 }
 /**
  * @endcond
  */
 
 /**
- * @brief Compute pairwise effect size between groups of cells.
- *
- * This class computes the effect sizes for the pairwise comparisons used in `ScoreMarkers`, prior to any ranking of marker genes.
- * It may be desirable to call this function directly if the pairwise effects themselves are of interest, rather than per-group summaries.
+ * Compute the effect sizes for the pairwise comparisons between groups.
+ * This can be used to identify marker genes based on a specific comparison between two groups of interest.
+ * Alternatively, the pairwise effects can be passed to `summarize_effects()` to obtain summaries for each group
+ * (though it would be more efficient to use `score_markers_summary() to do so).
  *
  * @section effect-sizes Choice of effect sizes
- * The log-fold change (LFC) is the difference in the mean log-expression between groups.
- * This is fairly straightforward to interpret - as log-fold change of +1 corresponds to a two-fold upregulation in the first group compared to the second.
- * For this interpretation, we assume that the input matrix contains log-transformed normalized expression values.
+ * The delta-mean is the difference in the mean expression between groups.
+ * This is fairly straightforward to interpret, where a positive delta-mean corresponds to increased expression in the first group compared to the second. 
+ * The delta-mean can also be treated as the log-fold change if the input matrix contains log-transformed normalized expression values.
  *
  * The delta-detected is the difference in the proportion of cells with detected expression between groups.
  * This lies between 1 and -1, with the extremes occurring when a gene is silent in one group and detected in all cells of the other group.
  * For this interpretation, we assume that the input matrix contains non-negative expression values, where a value of zero corresponds to lack of detectable expression.
  *
- * Cohen's d is the standardized log-fold change between two groups.
+ * Cohen's d is the standardized difference between two groups.
  * This is defined as the difference in the mean log-expression for each group scaled by the average standard deviation across the two groups.
- * (Technically, we should use the pooled variance; however, this introduces some unpleasant asymmetry depending on the variance of the larger group, so we take a simple average instead.)
- * A positive value indicates that the gene is upregulated in the first gene compared to the second.
+ * (Technically, we should use the pooled variance; however, this introduces some unintuitive asymmetry depending on the variance of the larger group, so we take a simple average instead.)
+ * A positive value indicates that the gene has increased expression in the first group compared to the second.
  * Cohen's d is analogous to the t-statistic in a two-sample t-test and avoids spuriously large effect sizes from comparisons between highly variable groups.
  * We can also interpret Cohen's d as the number of standard deviations between the two group means.
  *
@@ -217,65 +309,42 @@ void process_simple_pairwise_effects(
  * if two distributions exhibit no overlap, the AUC is the same regardless of the variance of each distribution. 
  * This may or may not be desirable as it improves robustness to outliers but reduces the information available to obtain a highly resolved ranking. 
  *
- * @section lfc-threshold With a log-fold change threshold
- * Setting a log-fold change threshold can be helpful as it prioritizes genes with large shifts in expression instead of those with low variances.
- * Currently, only positive thresholds are supported - this focuses on genes upregulated in the first group compared to the second.
- * The effect size definitions are generalized when testing against a non-zero log-fold change threshold.
+ * @section threshold With a minimum change threshold
+ * Setting a minimum change threshold can be helpful as it prioritizes genes with large shifts in expression instead of those with low variances.
+ * Currently, only positive thresholds are supported - this focuses on genes that are upregulated in the first group compared to the second.
+ * The effect size definitions are generalized when testing against a non-zero threshold.
  *
- * Cohen's d is redefined as the standardized difference between the observed log-fold change and the specified threshold, analogous to the TREAT method from **limma**.
- * Large positive values are only obtained when the observed log-fold change is significantly greater than the threshold.
- * For example, if we had a threshold of 2 and we obtained a Cohen's d of 3, this means that the observed log-fold change was 3 standard deviations above 2.
- * Importantly, a negative Cohen's d cannot be intepreted as downregulation, as the log-fold change may still be positive but less than the threshold.
+ * - Cohen's d is redefined as the standardized difference between the observed log-fold change and the specified threshold, analogous to the TREAT method from **limma**.
+ *   Large positive values are only obtained when the observed difference is significantly greater than the threshold.
+ *   For example, if we had a threshold of 2 and we obtained a Cohen's d of 3, this means that the observed difference was 3 standard deviations above 2.
+ *   Importantly, a negative Cohen's d cannot be intepreted as downregulation, as the difference may still be positive but less than the threshold.
+ * - The AUC is generalized to the probability of obtaining a random observation in one group that is greater than a random observation plus the threshold in the other group.
+ *   For example, if we had a threshold of 2 and we obtained an AUC of 0.8, this means that - 80% of the time - 
+ *   the random observation from the first group would be greater than a random observation from the second group by 2 or more.
+ *   Again, AUCs below 0.5 cannot be interpreted as downregulation, as it may be caused by a positive shift that is less than the threshold.
  * 
- * The AUC generalized to the probability of obtaining a random observation in one group that is greater than a random observation plus the threshold in the other group.
- * For example, if we had a threshold of 2 and we obtained an AUC of 0.8, this means that - 80% of the time - 
- * the random observation from the first group would be greater than a random observation from the second group by 2 or more.
- * Again, AUCs below 0.5 cannot be interpreted as downregulation, as it may be caused by a positive log-fold change that is less than the threshold.
- * 
- * @section blocked Blocked comparisons
- * In the presence of multiple batches, we can block on the batch of origin for each cell.
- * Comparisons are only performed between the groups of cells in the same batch (also called "blocking level" below).
- * The batch-specific effect sizes are then combined into a single aggregate value for output.
- * This strategy avoids most problems related to batch effects as we never directly compare across different blocking levels.
- *
- * Specifically, for each gene and each pair of groups, we obtain one effect size per blocking level.
- * We consolidate these into a single statistic by computing the weighted mean across levels.
- * The weight for each level is defined as the product of the weights of the two groups involved in the comparison,
- * where each weight is computed from the size of the group using the logic described in `variable_block_weight()`.
- *
- * Obviously, blocking levels with no cells in either group will not contribute anything to the weighted mean.
- * If two groups never co-occur in the same blocking level, no effect size will be computed and a `NaN` is reported in the output.
- * We do not attempt to reconcile batch effects in a partially confounded scenario.
- *
  * @section other Other statistics
- * We report the mean log-expression of all cells in each group, as well as the proportion of cells with detectable expression in each group.
+ * We report the mean expression of all cells in each group, as well as the proportion of cells with detectable expression in each group.
  * These statistics are useful for quickly interpreting the differences in expression driving the effect size summaries.
- * If blocking is involved, we compute the grand average across blocks of the mean and proportion for each group,
- * where the weight for each block is defined from `variable_block_weight()` on the size of the group in that block.
  *
  * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.
  * @tparam Group_ Integer type for the group assignments.
  * @tparam Stat_ Floating-point type to store the statistics.
  *
- * @param p Pointer to a **tatami** matrix instance.
- * @param[in] group Pointer to an array of length equal to the number of columns in `p`, containing the group assignments.
- * Group identifiers should be 0-based and should contain all integers in $[0, N)$ where $N$ is the number of unique groups.
- * @param[out] means Vector of length equal to the number of groups.
- * Each element corresponds to a group and is a pointer to an array of length equal to the number of rows in `p`.
- * This is used to store the mean expression of each group across all genes.
- * @param[out] detected Vector of length equal to the number of groups,
- * Each element corresponds to a group and is a pointer to an array of length equal to the number of rows in `p`.
- * This is used to store the proportion of detected expression in each group.
- * @param[out] cohen Pointer to an array of length equal to $GN^2$, where `N` is the number of groups and `G` is the number of genes (see `Results` for details).
- * This is filled with the Cohen's d for the pairwise comparisons between groups across all genes.
- * Ignored if set to `nullptr`, in which case Cohen's d is not computed.
- * @param[out] auc Pointer to an array as described for `cohen`, but instead storing the AUC.
- * Ignored if set to `nullptr`, in which case the AUC is not computed.
- * @param[out] lfc Pointer to an array as described for `cohen`, but instead storing the log-fold change. 
- * Ignored if set to `nullptr`, in which case the log-fold change is not computed.
- * @param[out] delta_detected Pointer to an array as described for `cohen`, but instead the delta in the detected proportions.
- * Ignored if set to `nullptr`, in which case the delta detected is not computed.
+ * @param matrix A **tatami** matrix instance.
+ * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
+ * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
+ * @param[in] block Pointer to an array of length equal to the number of columns in `matrix`, containing the blocking factor.
+ * Block identifiers should be 0-based and should contain all integers in \f$[0, B)\f$ where \f$N\f$ is the number of unique blocking levels.
+ * @param options Further options.
+ * @param[out] output Collection of buffers in which to store the computed statistics.
+ * Each buffer is filled with the corresponding statistic for each group or pairwise comparison.
+ * Any of `ScoreMarkersPairwiseBuffers::cohens_d`, 
+ * `ScoreMarkersPairwiseBuffers::auc`, 
+ * `ScoreMarkersPairwiseBuffers::delta_mean` or
+ * `ScoreMarkersPairwiseBuffers::delta_detected`
+ * may be NULL, in which case the corresponding statistic is not computed.
  */
 template<typename Value_, typename Index_, typename Group_, typename Stat_>
 void score_markers_pairwise(
@@ -338,35 +407,41 @@ void score_markers_pairwise(
 
 /**
  * Compute effect sizes for pairwise comparisons between groups, accounting for any blocking factor in the dataset.
- * On completion, `means`, `detected`, `cohen`, `auc`, `lfc` and `delta_detected` are filled with their corresponding statistics. 
+ * Comparisons are only performed between the groups of cells in the same level of the blocking factor.
+ * The batch-specific effect sizes are then combined into a single aggregate value for output.
+ * This strategy avoids most problems related to batch effects as we never directly compare across different blocking levels.
  *
- * @tparam Data_ Matrix data type.
+ * Specifically, for each gene and each pair of groups, we obtain one effect size per blocking level.
+ * We consolidate these into a single statistic by computing the weighted mean across levels.
+ * The weight for each level is defined as the product of the weights of the two groups involved in the comparison,
+ * where each weight is computed from the size of the group using the logic described in `scran_blocks::compute_weights()`.
+ *
+ * Obviously, blocking levels with no cells in either group will not contribute anything to the weighted mean.
+ * If two groups never co-occur in the same blocking level, no effect size will be computed and a `NaN` is reported in the output.
+ * We do not attempt to reconcile batch effects in a partially confounded scenario.
+ *
+ * For the mean and detected proportion in each group, we compute a weighted average of each statistic across blocks for each gene.
+ * Again, the weight for each block is defined from `scran_blocks::compute_weights()` on the size of the group in that block.
+ *
+ * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.
  * @tparam Group_ Integer type for the group assignments.
  * @tparam Block_ Integer type for the block assignments.
  * @tparam Stat_ Floating-point type to store the statistics.
  *
- * @param p Pointer to a **tatami** matrix instance.
- * @param[in] group Pointer to an array of length equal to the number of columns in `p`, containing the group assignments.
- * Group identifiers should be 0-based and should contain all integers in $[0, N)$ where $N$ is the number of unique groups.
- * @param[in] block Pointer to an array of length equal to the number of columns in `p`, containing the blocking factor.
- * Block identifiers should be 0-based and should contain all integers in $[0, N)$ where $N$ is the number of unique groups.
- * This can also be `NULL` in which case all cells are assumed to belong to the same block (i.e., like `run()`).
- * @param[out] means Vector of length equal to the number of groups.
- * Each element corresponds to a group and is another vector of length equal to the number of genes.
- * Each entry of the inner vector contains the grand average of the mean expression across all blocks.
- * @param[out] detected Vector of length equal to the number of groups.
- * Each element corresponds to a group and is another vector of length equal to the number of genes.
- * Each entry of the inner vector contains the grand average of the detected proportion across all blocks.
- * @param[out] cohen Pointer to an array of length equal to $GN^2$, where `N` is the number of groups and `G` is the number of genes (see `Results` for details).
- * This is filled with the Cohen's d for the pairwise comparisons between groups across all genes.
- * Ignored if set to `nullptr`, in which case Cohen's d is not computed.
- * @param[out] auc Pointer to an array as described for `cohen`, but instead storing the AUC.
- * Ignored if set to `nullptr`, in which case the AUC is not computed.
- * @param[out] lfc Pointer to an array as described for `cohen`, but instead storing the log-fold change. 
- * Ignored if set to `nullptr`, in which case the log-fold change is not computed.
- * @param[out] delta_detected Pointer to an array as described for `cohen`, but instead the delta in the detected proportions.
- * Ignored if set to `nullptr`, in which case the delta detected is not computed.
+ * @param matrix A **tatami** matrix instance.
+ * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
+ * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
+ * @param[in] block Pointer to an array of length equal to the number of columns in `matrix`, containing the blocking factor.
+ * Block identifiers should be 0-based and should contain all integers in \f$[0, B)\f$ where \f$B\f$ is the number of unique blocking levels.
+ * @param options Further options.
+ * @param[out] output Collection of buffers in which to store the computed statistics.
+ * Each buffer is filled with the corresponding statistic for each group or pairwise comparison.
+ * Any of `ScoreMarkersPairwiseBuffers::cohens_d`, 
+ * `ScoreMarkersPairwiseBuffers::auc`, 
+ * `ScoreMarkersPairwiseBuffers::delta_mean` or
+ * `ScoreMarkersPairwiseBuffers::delta_detected`
+ * may be NULL, in which case the corresponding statistic is not computed.
  */
 template<typename Value_, typename Index_, typename Group_, typename Block_, typename Stat_>
 void score_markers_pairwise_blocked(
@@ -431,68 +506,53 @@ void score_markers_pairwise_blocked(
 }
 
 /**
- * Score potential marker genes by computing summary statistics across pairwise comparisons between groups.
+ * Overload of `score_markers_pairwise()` that allocates memory for the output statistics.
  *
  * @tparam Stat_ Floating-point type to store the statistics.
- * @tparam Data_ Matrix data type.
+ * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.
  * @tparam Group_ Integer type for the group assignments.
  *
- * @param p Pointer to a **tatami** matrix instance.
- * @param[in] group Pointer to an array of length equal to the number of columns in `p`, containing the group assignments.
- * Group identifiers should be 0-based and should contain all integers in $[0, N)$ where $N$ is the number of unique groups.
+ * @param matrix A **tatami** matrix instance.
+ * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
+ * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
+ * @param options Further options.
  *
- * @return A `Results` object is returned containing the pairwise effects, plus the mean expression and detected proportion in each group.
+ * @return Object containing the pairwise effects, plus the mean expression and detected proportion in each group.
  */
-template<typename Stat_ = double, typename Data_ = double, typename Index_ = int, typename Group_ = int>
-Results<Stat_> run(const tatami::Matrix<Data_, Index_>* p, const Group_* group) {
-    size_t ngroups = count_ids(p->ncol(), group);
-    Results<Stat_> res(p->nrow(), ngroups, do_cohen, do_auc, do_lfc, do_delta_detected); 
-    run(
-        p, 
-        group, 
-        vector_to_pointers(res.means), 
-        vector_to_pointers(res.detected), 
-        harvest_pointer(res.cohen, do_cohen),
-        harvest_pointer(res.auc, do_auc),
-        harvest_pointer(res.lfc, do_lfc),
-        harvest_pointer(res.delta_detected, do_delta_detected)
-    );
+template<typename Stat_ = double, typename Value_, typename Index_, typename Group_>
+ScoreMarkersPairwiseResults<Stat_> score_markers_pairwise(const tatami::Matrix<Value_, Index_>& matrix, const Group_* group, const ScoreMarkersPairwiseOptions& options) {
+    size_t ngroups = tatami_stats::count_group(matrix.ncol(), group);
+    ScoreMarkersPairwiseResults<Stat_> res;
+    auto buffers = fill_pairwise_results(matrix.nrow(), ngroups, res, options);
+    score_markers_pairwise(matrix, group, options, buffers);
     return res; 
 }
 
 /**
- * Score potential marker genes by computing summary statistics across pairwise comparisons between groups in multiple blocks.
+ * Overload of `score_markers_pairwise_blocked()` that allocates memory for the output statistics.
  *
  * @tparam Stat_ Floating-point type to store the statistics.
- * @tparam Data_ Matrix data type.
+ * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.
  * @tparam Group_ Integer type for the group assignments.
  * @tparam Block_ Integer type for the block assignments. 
  *
- * @param p Pointer to a **tatami** matrix instance.
- * @param[in] group Pointer to an array of length equal to the number of columns in `p`, containing the group assignments.
- * Group identifiers should be 0-based and should contain all integers in $[0, N)$ where $N$ is the number of unique groups.
- * @param[in] block Pointer to an array of length equal to the number of columns in `p`, containing the blocking factor.
- * See `run_blocked()` for more details.
+ * @param matrix A **tatami** matrix instance.
+ * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
+ * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
+ * @param[in] block Pointer to an array of length equal to the number of columns in `matrix`, containing the blocking factor.
+ * Block identifiers should be 0-based and should contain all integers in \f$[0, B)\f$ where \f$B\f$ is the number of unique blocking levels.
+ * @param options Further options.
  *
- * @return A `Results` object is returned containing the pairwise effects, plus the mean expression and detected proportion in each group and block.
+ * @return Object containing the pairwise effects, plus the mean expression and detected proportion in each group.
  */
-template<typename Stat_ = double, typename Data_ = double, typename Index_ = int, typename Group_ = int, typename Block_ = int>
-Results<Stat_> run_blocked(const tatami::Matrix<Data_, Index_>* p, const Group_* group, const Block_* block) {
-    size_t ngroups = count_ids(p->ncol(), group);
-    Results<Stat_> res(p->nrow(), ngroups, do_cohen, do_auc, do_lfc, do_delta_detected); 
-    run_blocked(
-        p,
-        group,
-        block,
-        vector_to_pointers(res.means),
-        vector_to_pointers(res.detected),
-        harvest_pointer(res.cohen, do_cohen),
-        harvest_pointer(res.auc, do_auc),
-        harvest_pointer(res.lfc, do_lfc),
-        harvest_pointer(res.delta_detected, do_delta_detected)
-    );
+template<typename Stat_ = double, typename Value_, typename Index_, typename Group_, typename Block_>
+ScoreMarkersPairwiseResults<Stat_> score_pairwise_markers_blocked(const tatami::Matrix<Value_, Index_>* p, const Group_* group, const Block_* block, const ScoreMarkersPairwiseOptions& options) {
+    size_t ngroups = tatami_stats::count_group(matrix.ncol(), group);
+    ScoreMarkersPairwiseResults<Stat_> res;
+    auto buffers = fill_pairwise_results(matrix.nrow(), ngroups, res, options);
+    score_markers_pairwise_blocked(matrix, group, block, options, buffers);
     return res;
 }
 
