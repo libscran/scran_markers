@@ -8,19 +8,45 @@ namespace scran_markers {
 
 namespace internal {
 
-template<typename Value_, typename Group_>
-using PairedStore = std::vector<std::pair<Value_, Group_> >;
+template<typename Value_, typename Group_, typename Output_>
+struct AucWorkspace {
+    AucWorkspace(size_t ngroups, Output_* buffer) : less_than(ngroups), equal(ngroups), outputs(ngroups) {
+        output_start = buffer;
+        for (size_t i = 0; i < ngroups; ++i) {
+            outputs[i] = buffer;
+            buffer += ngroups;
+        }
+        output_end = buffer;
+    }
+
+    std::vector<std::pair<Value_, Group_> > paired;
+
+    std::vector<Output_> less_than, equal;
+
+    std::vector<Output_*> outputs;
+
+    Output_* output_start;
+
+    Output_* output_end;
+};
+
+template<typename Value_, typename Group_, typename Output_>
+void prepare_auc_workspace(AucWorkspace<Value_, Group_, Output_>& work) {
+    std::sort(work.paired.begin(), work.paired.end());
+    std::fill(work.less_than.begin(), work.less_than.end(), 0);
+    std::fill(work.equal.begin(), work.equal.end(), 0);
+    std::fill(work.output_start, work.output_end, 0);
+}
 
 template<typename Value_, typename Group_, typename Count_, typename Output_>
-void compute_pairwise_auc(PairedStore<Value_, Group_>& input, const std::vector<Count_>& num_zeros, const std::vector<Count_>& totals, Output_* output, bool normalize) {
-    size_t ngroups = num_zeros.size();
-    std::sort(input.begin(), input.end());
-    std::vector<Output_> less_than(ngroups), equal(ngroups);
+void compute_pairwise_auc(AucWorkspace<Value_, Group_, Output_>& work, const std::vector<Count_>& num_zeros, const std::vector<Count_>& totals, bool normalize) {
+    prepare_auc_workspace(work);
 
-    std::vector<Output_*> outputs(ngroups, output);
-    for (size_t i = 0; i < ngroups; ++i) {
-        outputs[i] += i * ngroups; // already size_t, so no need to cast to avoid overflow.
-    }
+    auto& input = work.paired;
+    auto& less_than = work.less_than;
+    auto& equal = work.equal;
+    auto& outputs = work.outputs;
+    size_t ngroups = num_zeros.size();
 
     auto inner_loop = [&](size_t& pos) -> void {
         const auto& current = input[pos];
@@ -105,15 +131,14 @@ void compute_pairwise_auc(PairedStore<Value_, Group_>& input, const std::vector<
 }
 
 template<typename Value_, typename Group_, typename Count_, typename Output_, typename Threshold_>
-void compute_pairwise_auc(PairedStore<Value_, Group_>& input, const std::vector<Count_>& num_zeros, const std::vector<Count_>& totals, Output_* output, Threshold_ threshold, bool normalize) {
-    size_t ngroups = num_zeros.size();
-    std::sort(input.begin(), input.end());
-    std::vector<Output_> less_than(ngroups), equal(ngroups);
+void compute_pairwise_auc(AucWorkspace<Value_, Group_, Output_>& work, const std::vector<Count_>& num_zeros, const std::vector<Count_>& totals, Threshold_ threshold, bool normalize) {
+    prepare_auc_workspace(work);
 
-    std::vector<Output_*> outputs(ngroups, output);
-    for (size_t i = 0; i < ngroups; ++i) {
-        outputs[i] += i * ngroups; // already size_t, so no need to cast to avoid overflow.
-    }
+    auto& input = work.paired;
+    auto& less_than = work.less_than;
+    auto& equal = work.equal;
+    auto& outputs = work.outputs;
+    size_t ngroups = num_zeros.size();
 
     auto inner_loop = [&](size_t& pos, size_t& comp) -> void {
         const auto& current = input[pos];

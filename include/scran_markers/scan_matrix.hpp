@@ -17,51 +17,59 @@ namespace scran_markers {
 namespace internal {
 
 template<typename Value_, typename Group_, typename Index_, typename Stat_>
-struct AucWorkspace {
-    std::vector<PairedStore<Value_, Group_> > paired;
-    std::vector<std::vector<Index_> > num_zeros;
-    std::vector<std::vector<Index_> > totals;
-    std::vector<Stat_> auc_buffer;
+struct AucScanWorkspace {
+    std::vector<AucWorkspace<Value_, Group_, Stat_> > block_workspaces;
+    std::vector<std::vector<Index_> > block_num_zeros;
+    std::vector<std::vector<Index_> > block_totals;
     std::vector<std::vector<Stat_> > block_scale;
+    std::vector<Stat_> common_buffer;
     std::vector<Stat_> full_weight;
 };
 
 template<typename Value_, typename Group_, typename Index_, typename Stat_, typename Weight_>
 void initialize_auc_workspace(
-    AucWorkspace<Value_, Group_, Index_, Stat_>& work,
+    AucScanWorkspace<Value_, Group_, Index_, Stat_>& work,
     size_t ngroups,
     size_t nblocks,
     const std::vector<Index_>& combo_size,
     const std::vector<Weight_>& combo_weight) 
 {
-    work.paired.resize(nblocks);
+    size_t ngroups2 = ngroups * ngroups;
+    work.common_buffer.resize(ngroups2);
 
-    work.num_zeros.reserve(nblocks);
-    work.totals.reserve(nblocks);
+    work.block_workspaces.reserve(nblocks);
+    work.block_num_zeros.reserve(nblocks);
+    work.block_totals.reserve(nblocks);
     for (size_t b = 0; b < nblocks; ++b) {
-        work.num_zeros.emplace_back(ngroups);
-        work.totals.emplace_back(ngroups);
+        // All workspaces just re-use the same buffer for the AUCs, so make sure to run compute_pairwise_auc() for only one block at a time.
+        work.block_workspaces.emplace_back(ngroups, work.common_buffer.data()); 
+        work.block_num_zeros.emplace_back(ngroups);
+        work.block_totals.emplace_back(ngroups);
     }
 
     auto lsIt = combo_size.begin();
     for (size_t b = 0; b < nblocks; ++b) {
         for (size_t g = 0; g < ngroups; ++g, ++lsIt) { // remember that the groups are the fastest changing dimension in this array.
-            work.totals[b][g] = *lsIt;
+            work.block_totals[b][g] = *lsIt;
         }
     }
 
-    work.auc_buffer.resize(ngroups * ngroups);
     work.block_scale.reserve(nblocks);
-    work.full_weight.resize(ngroups * ngroups);
+    work.full_weight.resize(ngroups2);
     for (size_t b = 0; b < nblocks; ++b) {
         size_t in_offset = b * ngroups;
         work.block_scale.emplace_back(ngroups * ngroups);
+        auto& cur_scale = work.block_scale[b];
+        auto& cur_totals = work.block_totals[b];
 
-        for (size_t g1 = 0; g1 < ngroups; ++g1) {
-            auto w1 = combo_weight[in_offset + g1]; // all size_t's already, so no need to cast.
+        size_t pair_offset1_raw = ngroups, pair_offset2_raw = 1;
+        for (size_t g1 = 1; g1 < ngroups; ++g1, pair_offset1_raw += ngroups, ++pair_offset2_raw) {
+            auto w1 = combo_weight[in_offset + g1];
+            Stat_ denom1 = cur_totals[g1];
+            auto pair_offset1 = pair_offset1_raw, pair_offset2 = pair_offset2_raw;
 
-            for (size_t g2 = 0; g2 < g1; ++g2) {
-                Stat_ block_denom = static_cast<Stat_>(work.totals[b][g1]) * static_cast<Stat_>(work.totals[b][g2]);
+            for (size_t g2 = 0; g2 < g1; ++g2, ++pair_offset1, pair_offset2 += ngroups) {
+                Stat_ block_denom = denom1 * static_cast<Stat_>(cur_totals[g2]);
                 if (block_denom == 0) {
                     continue;
                 }
@@ -69,13 +77,11 @@ void initialize_auc_workspace(
                 Stat_ block_weight = w1 * combo_weight[in_offset + g2];
                 Stat_ block_scaling = block_denom / block_weight;
 
-                auto offset1 = g1 * ngroups + g2;
-                work.block_scale[b][offset1] = block_scaling;
-                work.full_weight[offset1] += block_weight;
+                cur_scale[pair_offset1 /* = g1 * ngroups + g2 */] = block_scaling;
+                work.full_weight[pair_offset1] += block_weight;
 
-                auto offset2 = g2 * ngroups + g1;
-                work.block_scale[b][offset2] = block_scaling;
-                work.full_weight[offset2] += block_weight;
+                cur_scale[pair_offset2 /* = g2 * ngroups + g1 */] = block_scaling;
+                work.full_weight[pair_offset2] += block_weight;
             }
         }
     }
@@ -83,26 +89,25 @@ void initialize_auc_workspace(
 
 template<typename Value_, typename Group_, typename Index_, typename Stat_, typename Threshold_>
 void process_auc_for_rows(
-    AucWorkspace<Value_, Group_, Index_, Stat_>& work,
+    AucScanWorkspace<Value_, Group_, Index_, Stat_>& work,
     size_t ngroups,
     size_t nblocks,
     Threshold_ threshold,
     Stat_* output) 
 {
-    size_t ngroups2 = ngroups * ngroups;
+    auto& auc_buffer = work.common_buffer;
+    size_t ngroups2 = auc_buffer.size();
     std::fill_n(output, ngroups2, 0);
-    auto& auc_buffer = work.auc_buffer;
 
     for (size_t b = 0; b < nblocks; ++b) {
-        auto& pr = work.paired[b];
-        auto& nz = work.num_zeros[b];
-        const auto& tt = work.totals[b];
+        auto& wrk = work.block_workspaces[b];
+        auto& nz = work.block_num_zeros[b];
+        const auto& tt = work.block_totals[b];
 
-        std::fill(auc_buffer.begin(), auc_buffer.end(), 0);
         if (threshold) {
-            compute_pairwise_auc(pr, nz, tt, auc_buffer.data(), threshold, false);
+            compute_pairwise_auc(wrk, nz, tt, threshold, false);
         } else {
-            compute_pairwise_auc(pr, nz, tt, auc_buffer.data(), false);
+            compute_pairwise_auc(wrk, nz, tt, false);
         }
 
         // Adding to the blocks.
@@ -169,7 +174,7 @@ void scan_matrix_by_row(
 
         // A vast array of AUC-related bits and pieces.
         size_t effect_shift = ngroups * ngroups;
-        AucWorkspace<Value_, Group_, Index_, Stat_> auc_work;
+        AucScanWorkspace<Value_, Group_, Index_, Stat_> auc_work;
         auto auc_ptr = auc;
         if (auc_ptr) {
             auc_ptr += static_cast<size_t>(start) * effect_shift;
@@ -208,13 +213,13 @@ void scan_matrix_by_row(
                 det_ptr += ncombos;
 
                 if (auc_ptr) {
-                    auto nzIt = auc_work.num_zeros.begin();
-                    for (const auto& t : auc_work.totals) {
+                    auto nzIt = auc_work.block_num_zeros.begin();
+                    for (const auto& t : auc_work.block_totals) {
                         std::copy(t.begin(), t.end(), nzIt->begin());
                         ++nzIt;
                     }
-                    for (auto& p : auc_work.paired) {
-                        p.clear();
+                    for (auto& p : auc_work.block_workspaces) {
+                        p.paired.clear();
                     }
 
                     for (Index_ j = 0; j < range.number; ++j) {
@@ -228,8 +233,8 @@ void scan_matrix_by_row(
                                 }
                             }();
                             auto g = group[c];
-                            auc_work.paired[b].emplace_back(range.value[j], g);
-                            --(auc_work.num_zeros[b][g]);
+                            auc_work.block_workspaces[b].paired.emplace_back(range.value[j], g);
+                            --(auc_work.block_num_zeros[b][g]);
                         }
                     }
 
@@ -266,11 +271,11 @@ void scan_matrix_by_row(
                 det_ptr += ncombos;
 
                 if (auc_ptr) {
-                    for (auto& z : auc_work.num_zeros) {
+                    for (auto& z : auc_work.block_num_zeros) {
                         std::fill(z.begin(), z.end(), 0);
                     }
-                    for (auto& p : auc_work.paired) {
-                        p.clear();
+                    for (auto& p : auc_work.block_workspaces) {
+                        p.paired.clear();
                     }
 
                     for (Index_ c = 0; c < NC; ++c) {
@@ -283,9 +288,9 @@ void scan_matrix_by_row(
                         }();
                         auto g = group[c];
                         if (ptr[c]) {
-                            auc_work.paired[b].emplace_back(ptr[c], g);
+                            auc_work.block_workspaces[b].paired.emplace_back(ptr[c], g);
                         } else {
-                            ++(auc_work.num_zeros[b][g]);
+                            ++(auc_work.block_num_zeros[b][g]);
                         }
                     }
 

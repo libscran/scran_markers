@@ -35,7 +35,7 @@ protected:
 
     static void add_to_store(
         std::vector<double>& contents, 
-        scran_markers::internal::PairedStore<double, int>& input, 
+        std::vector<std::pair<double, int> >& paired, 
         std::vector<int>& num_zeros, 
         std::vector<int>& totals)
     {
@@ -45,7 +45,7 @@ protected:
         totals.push_back(contents.size());
         for (auto c : contents) {
             if (c) {
-                input.push_back(std::make_pair(c, group));
+                paired.push_back(std::make_pair(c, group));
             } else {
                 ++num_zeros[group];
             }
@@ -56,31 +56,40 @@ protected:
 TEST_F(AucTest, Self) {
     std::vector<double> group1 { 0, -0.1, 1, 2.2, 3.5, 5 }; 
 
-    scran_markers::internal::PairedStore<double, int> input;
-    std::vector<int> num_zeros, totals;
-    add_to_store(group1, input, num_zeros, totals); 
-    add_to_store(group1, input, num_zeros, totals);
-    EXPECT_FLOAT_EQ(slow_reference(group1, group1), 0.5); // checking that the default calculation is correct.
+    {
+        std::vector<double> output(4);
+        scran_markers::internal::AucWorkspace<double, int, double> input(2, output.data());
 
-    std::vector<double> output(4);
-    scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, output.data(), true);
+        std::vector<int> num_zeros, totals;
+        add_to_store(group1, input.paired, num_zeros, totals); 
+        add_to_store(group1, input.paired, num_zeros, totals);
+        EXPECT_FLOAT_EQ(slow_reference(group1, group1), 0.5); // checking that the default calculation is correct.
 
-    EXPECT_FLOAT_EQ(output[1], 0.5);
-    EXPECT_FLOAT_EQ(output[2], 0.5);
+        scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, true);
+
+        EXPECT_FLOAT_EQ(output[1], 0.5);
+        EXPECT_FLOAT_EQ(output[2], 0.5);
+    }
 
     // Trying again with 3 groups.
-    add_to_store(group1, input, num_zeros, totals);
+    {
+        std::vector<double> output(9);
+        scran_markers::internal::AucWorkspace<double, int, double> input(3, output.data());
 
-    output.clear();
-    output.resize(9);
-    scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, output.data(), true);
+        std::vector<int> num_zeros, totals;
+        add_to_store(group1, input.paired, num_zeros, totals); 
+        add_to_store(group1, input.paired, num_zeros, totals);
+        add_to_store(group1, input.paired, num_zeros, totals);
 
-    EXPECT_FLOAT_EQ(output[0 + 1], 0.5); 
-    EXPECT_FLOAT_EQ(output[0 + 2], 0.5); 
-    EXPECT_FLOAT_EQ(output[3 + 0], 0.5); 
-    EXPECT_FLOAT_EQ(output[3 + 2], 0.5); 
-    EXPECT_FLOAT_EQ(output[6 + 0], 0.5); 
-    EXPECT_FLOAT_EQ(output[6 + 1], 0.5); 
+        scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, true);
+
+        EXPECT_FLOAT_EQ(output[0 + 1], 0.5); 
+        EXPECT_FLOAT_EQ(output[0 + 2], 0.5); 
+        EXPECT_FLOAT_EQ(output[3 + 0], 0.5); 
+        EXPECT_FLOAT_EQ(output[3 + 2], 0.5); 
+        EXPECT_FLOAT_EQ(output[6 + 0], 0.5); 
+        EXPECT_FLOAT_EQ(output[6 + 1], 0.5); 
+    }
 }
 
 TEST_F(AucTest, NoZeros) {
@@ -88,14 +97,15 @@ TEST_F(AucTest, NoZeros) {
     std::vector<double> group2 { 1, 5, 3.4, 5, -0.1, 5, -0.2, -5 };
     std::vector<double> group3 { -0.12, 4, -0.1, 5, 2, -0.1, 3, 5, 6.2, 1.2, 1.11 };
 
-    scran_markers::internal::PairedStore<double, int> input;
-    std::vector<int> num_zeros, totals;
-    add_to_store(group1, input, num_zeros, totals); 
-    add_to_store(group2, input, num_zeros, totals); 
-    add_to_store(group3, input, num_zeros, totals); 
-
     std::vector<double> output(9);
-    scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, output.data(), true);
+    scran_markers::internal::AucWorkspace<double, int, double> input(3, output.data());
+
+    std::vector<int> num_zeros, totals;
+    add_to_store(group1, input.paired, num_zeros, totals); 
+    add_to_store(group2, input.paired, num_zeros, totals); 
+    add_to_store(group3, input.paired, num_zeros, totals); 
+
+    scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, true);
 
     EXPECT_FLOAT_EQ(output[3 + 0], slow_reference(group2, group1)); 
     EXPECT_FLOAT_EQ(output[6 + 0], slow_reference(group3, group1)); 
@@ -111,14 +121,15 @@ TEST_F(AucTest, Zeros) {
     std::vector<double> group2 { 0, 1, 5, 0, 5, 0, 5, -0.2, -5 };
     std::vector<double> group3 { -0.12, 4, 0, 5, 2, 0, 3, 5, 0, 1.2, 1.11 };
 
-    scran_markers::internal::PairedStore<double, int> input;
-    std::vector<int> num_zeros, totals;
-    add_to_store(group1, input, num_zeros, totals); 
-    add_to_store(group2, input, num_zeros, totals); 
-    add_to_store(group3, input, num_zeros, totals); 
-
     std::vector<double> output(9);
-    scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, output.data(), true);
+    scran_markers::internal::AucWorkspace<double, int, double> input(3, output.data());
+
+    std::vector<int> num_zeros, totals;
+    add_to_store(group1, input.paired, num_zeros, totals); 
+    add_to_store(group2, input.paired, num_zeros, totals); 
+    add_to_store(group3, input.paired, num_zeros, totals); 
+
+    scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, true);
 
     EXPECT_FLOAT_EQ(output[3 + 0], slow_reference(group2, group1)); 
     EXPECT_FLOAT_EQ(output[6 + 0], slow_reference(group3, group1)); 
@@ -128,22 +139,21 @@ TEST_F(AucTest, Zeros) {
 TEST_F(AucTest, ThresholdSelf) {
     std::vector<double> group { -1, 0, 1, 4, 3, 2, 5, 6, 7, 9 };
 
-    scran_markers::internal::PairedStore<double, int> input;
+    std::vector<double> output(4);
+    scran_markers::internal::AucWorkspace<double, int, double> input(2, output.data());
+
     std::vector<int> num_zeros, totals;
-    add_to_store(group, input, num_zeros, totals); 
-    add_to_store(group, input, num_zeros, totals); 
+    add_to_store(group, input.paired, num_zeros, totals); 
+    add_to_store(group, input.paired, num_zeros, totals); 
 
     for (double threshold = 0.5; threshold <= 2; ++threshold) { 
-        std::vector<double> output(4);
-
-        scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, output.data(), threshold, true);
+        scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, threshold, true);
         EXPECT_FLOAT_EQ(output[2], slow_reference(group, group, threshold));
         EXPECT_FLOAT_EQ(output[1], output[2]);
     }
 
     // Consistent results with a threshold of zero.
-    std::vector<double> output(4);
-    scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, output.data(), 0, true);
+    scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, 0, true);
 
     EXPECT_FLOAT_EQ(output[2], 0.5);
     EXPECT_FLOAT_EQ(output[1], output[2]);
@@ -155,15 +165,16 @@ TEST_F(AucTest, ThresholdNoZero) {
     std::vector<double> group2 { -0.5, 1.5, 1.5, 1.5, 2.5, -0.5, -0.5 };
     std::vector<double> group3 { -0.5, 6, 2, -1.5, 0.5, 0.15, 1, 2, 5 };
 
-    scran_markers::internal::PairedStore<double, int> input;
+    std::vector<double> output(9);
+    scran_markers::internal::AucWorkspace<double, int, double> input(3, output.data());
+
     std::vector<int> num_zeros, totals;
-    add_to_store(group1, input, num_zeros, totals); 
-    add_to_store(group2, input, num_zeros, totals); 
-    add_to_store(group3, input, num_zeros, totals); 
+    add_to_store(group1, input.paired, num_zeros, totals); 
+    add_to_store(group2, input.paired, num_zeros, totals); 
+    add_to_store(group3, input.paired, num_zeros, totals); 
 
     for (double threshold = 0; threshold <= 2; threshold += 0.5) {
-        std::vector<double> output(9);
-        scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, output.data(), threshold, true);
+        scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, threshold, true);
 
         EXPECT_FLOAT_EQ(output[0 + 1], slow_reference(group1, group2, threshold)); 
         EXPECT_FLOAT_EQ(output[0 + 2], slow_reference(group1, group3, threshold)); 
@@ -179,15 +190,16 @@ TEST_F(AucTest, ThresholdZeros) {
     std::vector<double> group2 { -0.5, 0, 1.5, 1.5, 0, 1.5, 2.5, 0, -0.5, -0.5 };
     std::vector<double> group3 { -0.5, 6, 2, 0, -1.5, 0.5, 0.15, 1, 2, 0, 5 };
 
-    scran_markers::internal::PairedStore<double, int> input;
+    std::vector<double> output(9);
+    scran_markers::internal::AucWorkspace<double, int, double> input(3, output.data());
+
     std::vector<int> num_zeros, totals;
-    add_to_store(group1, input, num_zeros, totals); 
-    add_to_store(group2, input, num_zeros, totals); 
-    add_to_store(group3, input, num_zeros, totals); 
+    add_to_store(group1, input.paired, num_zeros, totals); 
+    add_to_store(group2, input.paired, num_zeros, totals); 
+    add_to_store(group3, input.paired, num_zeros, totals); 
 
     for (double threshold = 0; threshold <= 0; threshold += 0.5) {
-        std::vector<double> output(9);
-        scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, output.data(), threshold, true);
+        scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, threshold, true);
 
         EXPECT_FLOAT_EQ(output[0 + 1], slow_reference(group1, group2, threshold)); 
         EXPECT_FLOAT_EQ(output[0 + 2], slow_reference(group1, group3, threshold)); 
