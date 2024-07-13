@@ -47,7 +47,7 @@ void average_group_stats(
         gdet = 0;
 
         size_t offset = g;
-        for (size_t b = 0; b < nblocks; ++b, offset += ngroups) {
+        for (size_t b = 0; b < nblocks; ++b, offset += ngroups) { // remember, blocks are the slower changing dimension, so we need to jump by 'ngroups'.
             const auto& curweight = combo_weights[offset];
             if (curweight) {
                 gmean += curweight * tmp_means[offset];

@@ -130,6 +130,23 @@ TEST_P(ScoreMarkersPairwiseUnblockedTest, Reference) {
     if (nthreads == 1) {
         auto simple = simple_reference(*dense_row, groupings.data(), threshold);
         compare_results(ref, simple, /* include_auc = */ false);
+
+        if (auc) {
+            for (int r = 0; r < dense_row->nrow(); ++r) {
+                for (int g1 = 0; g1 < ngroups; ++g1) {
+                    for (int g2 = 0; g2 < ngroups; ++g2) {
+                        auto val = ref.auc[r * ngroups * ngroups + g1 * ngroups + g2];
+                        if (g1 == g2) {
+                            EXPECT_EQ(val, 0);
+                        } else {
+                            EXPECT_GE(val, 0); // checking correct bounds.
+                            EXPECT_LE(val, 1);
+                        }
+                    }
+                }
+            }
+        }
+
     } else {
         opt.num_threads = nthreads;
         auto drres = scran_markers::score_markers_pairwise(*dense_row, groupings.data(), opt);
@@ -164,7 +181,7 @@ protected:
     inline static std::shared_ptr<tatami::Matrix<double, int> > dense_row, dense_column, sparse_row, sparse_column;
 
     static void SetUpTestSuite() {
-        size_t nr = 398, nc = 50;
+        size_t nr = 398, nc = 53; // use a prime number of columns to check for non-equal weights.
         dense_row.reset(
             new tatami::DenseRowMatrix<double, int>(
                 nr,
@@ -191,7 +208,6 @@ protected:
 
         size_t ngenes = mat.nrow();
         size_t ngroups = tatami_stats::total_groups(group, mat.ncol());
-        size_t nblocks = tatami_stats::total_groups(blocks, mat.ncol());
         output.mean.reserve(ngroups);
         output.detected.reserve(ngroups);
         for (size_t g = 0; g < ngroups; ++g) {
@@ -206,25 +222,30 @@ protected:
             output.auc = output.cohens_d;
         }
 
-        for (size_t b = 0; b < nblocks; ++b) {
+        int nblocks = tatami_stats::total_groups(blocks, mat.ncol());
+        std::vector<double> total_group_weights(ngroups);
+        std::vector<double> total_product_weights(ngroups * ngroups);
+
+        for (int b = 0; b < nblocks; ++b) {
             // Slicing the matrix.
             std::vector<int> subset;
             std::vector<int> subgroups;
+            int ncols = mat.ncol();
             for (int i = 0; i < ncols; ++i) {
                 if (blocks[i] == b) {
                     subset.push_back(i);
-                    subgroups.push_back(groups[i]);
+                    subgroups.push_back(group[i]);
                 }
             }
 
             auto sub = tatami::make_DelayedSubset(dense_row, std::move(subset), false);
-            auto res = scran_markers::score_markers_pairwise(sub.get(), subgroups.data(), opt);
+            auto res = scran_markers::score_markers_pairwise(*sub, subgroups.data(), opt);
             auto subcount = tatami_stats::tabulate_groups(subgroups.data(), subgroups.size());
-            std::vector<double> subweights = scran::compute_block_weights(subcount, policy, {});
+            std::vector<double> subweights = scran_blocks::compute_weights(subcount, opt.block_weight_policy, opt.variable_block_weight_parameters);
 
-            for (size_t i = 0; i < nrows; ++i) {
-                for (int g1 = 0; g1 < ngroups; ++g1) {
-                    for (int g2 = 0; g2 < ngroups; ++g2) {
+            for (size_t i = 0; i < ngenes; ++i) {
+                for (size_t g1 = 0; g1 < ngroups; ++g1) {
+                    for (size_t g2 = 0; g2 < ngroups; ++g2) {
                         size_t offset = i * ngroups * ngroups + g1 * ngroups + g2;
                         double weight = subweights[g1] * subweights[g2];
                         output.cohens_d[offset] += weight * res.cohens_d[offset];
@@ -236,33 +257,37 @@ protected:
                     }
                 }
 
-                for (int g = 0; g < ngroups; ++g) {
+                for (size_t g = 0; g < ngroups; ++g) {
                     output.mean[g][i] += res.mean[g][i] * subweights[g];
                     output.detected[g][i] += res.detected[g][i] * subweights[g];
                 }
             }
 
-            for (int g1 = 0; g1 < ngroups; ++g1) {
+            for (size_t g1 = 0; g1 < ngroups; ++g1) {
                 total_group_weights[g1] += subweights[g1];
-                for (int g2 = 0; g2 < ngroups; ++g2) {
+                for (size_t g2 = 0; g2 < ngroups; ++g2) {
                     total_product_weights[g1 * ngroups + g2] += subweights[g1] * subweights[g2];
                 }
             }
         }
 
-        for (size_t i = 0; i < nrows; ++i) {
+        for (size_t i = 0; i < ngenes; ++i) {
             auto offset = i * ngroups * ngroups;
 
-            for (int g = 0; g < ngroups * ngroups; ++g) {
-                output.cohens_d[offset + g] /= total_product_weights[g];
-                output.delta_mean[offset + g] /= total_product_weights[g];
-                output.delta_detected[offset + g] /= total_product_weights[g];
-                if (opt.compute_auc) {
-                    output.auc[offset + g] /= total_product_weights[g];
+            for (size_t g1 = 0; g1 < ngroups; ++g1) {
+                for (size_t g2 = 0; g2 < ngroups; ++g2) {
+                    size_t from = g1 * ngroups + g2;
+                    size_t to = offset + from;
+                    output.cohens_d[to] /= total_product_weights[from];
+                    output.delta_mean[to] /= total_product_weights[from];
+                    output.delta_detected[to] /= total_product_weights[from];
+                    if (opt.compute_auc) {
+                        output.auc[to] /= total_product_weights[from];
+                    }
                 }
             }
 
-            for (int g = 0; g < ngroups; ++g) {
+            for (size_t g = 0; g < ngroups; ++g) {
                 output.mean[g][i] /= total_group_weights[g];
                 output.detected[g][i] /= total_group_weights[g];
             }
@@ -280,30 +305,31 @@ TEST_P(ScoreMarkersPairwiseBlockedTest, VersusReference) {
     auto policy = std::get<3>(param);
     auto nthreads = std::get<4>(param);
 
-    scran::ScoreMarkersPairwiseOptions opt;
+    scran_markers::ScoreMarkersPairwiseOptions opt;
     opt.block_weight_policy = policy;
     opt.compute_auc = auc;
 
+    auto ncols = dense_row->ncol();
     auto groups = create_groupings(ncols, ngroups);
     auto blocks = create_blocks(ncols, nblocks);
-    auto ref = scran_markers::score_markers_pairwise_blocked(*dense_row, groupings.data(), blocks.data(), opt);
+    auto ref = scran_markers::score_markers_pairwise_blocked(*dense_row, groups.data(), blocks.data(), opt);
 
     if (nthreads == 1) {
-        auto simple = blocked_reference(*dense_row, groupings.data(), blocks.data(), opt);
-        compare_results(ref, simple);
+        auto simple = blocked_reference(*dense_row, groups.data(), blocks.data(), opt);
+        compare_results(ref, simple, auc);
     } else {
         opt.num_threads = nthreads;
-        auto drres = scran_markers::score_markers_pairwise_blocked(*dense_row, groupings.data(), blocks.data(), opt);
+        auto drres = scran_markers::score_markers_pairwise_blocked(*dense_row, groups.data(), blocks.data(), opt);
         compare_results(ref, drres, auc);
     }
 
-    auto dcres = scran_markers::score_markers_pairwise_blocked(*dense_column, groupings.data(), blocks.data(), opt);
+    auto dcres = scran_markers::score_markers_pairwise_blocked(*dense_column, groups.data(), blocks.data(), opt);
     compare_results(ref, dcres, auc);
 
-    auto srres = scran_markers::score_markers_pairwise_blocked(*sparse_row, groupings.data(), blocks.data(), opt);
+    auto srres = scran_markers::score_markers_pairwise_blocked(*sparse_row, groups.data(), blocks.data(), opt);
     compare_results(ref, srres, auc);
 
-    auto scres = scran_markers::score_markers_pairwise_blocked(*sparse_column, groupings.data(), blocks.data(), opt);
+    auto scres = scran_markers::score_markers_pairwise_blocked(*sparse_column, groups.data(), blocks.data(), opt);
     compare_results(ref, scres, auc);
 }
 
@@ -314,7 +340,7 @@ INSTANTIATE_TEST_SUITE_P(
         ::testing::Values(2, 3, 4, 5), // number of clusters
         ::testing::Values(1, 2, 3), // number of blocks
         ::testing::Values(false, true), // whether to compute AUC or not.
-        ::testing::Values(scran::WeightPolicy::NONE, scran::WeightPolicy::EQUAL), // block weighting method.
+        ::testing::Values(scran_blocks::WeightPolicy::NONE, scran_blocks::WeightPolicy::EQUAL), // block weighting method.
         ::testing::Values(1, 3) // number of threads
     )
 );

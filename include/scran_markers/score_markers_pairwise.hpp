@@ -7,6 +7,7 @@
 #include "scan_matrix.hpp"
 #include "average_group_stats.hpp"
 #include "PrecomputedPairwiseWeights.hpp"
+#include "create_combinations.hpp"
 
 #include <vector>
 
@@ -459,13 +460,10 @@ void score_markers_pairwise_blocked(
 {
     Index_ NC = matrix.ncol();
     size_t ngroups = output.mean.size();
-    size_t nblocks = tatami_stats::total_groups(NC, block); 
+    size_t nblocks = tatami_stats::total_groups(block, NC); 
 
-    std::vector<size_t> combinations(NC);
-    for (Index_ c = 0; c < NC; ++c) {
-        combinations[c] = static_cast<size_t>(group[c]) * nblocks + static_cast<size_t>(block[c]); // block is the faster changing dimension.
-    }
-    auto combo_sizes = tatami_stats::tabulate_groups(NC, combinations.data()); 
+    auto combinations = internal::create_combinations(ngroups, group, block, NC);
+    auto combo_sizes = tatami_stats::tabulate_groups(combinations.data(), NC); 
     auto combo_weights = scran_blocks::compute_weights<Stat_>(combo_sizes, options.block_weight_policy, options.variable_block_weight_parameters);
     size_t ncombos = combo_sizes.size();
 
@@ -561,7 +559,7 @@ ScoreMarkersPairwiseResults<Stat_> score_markers_pairwise(const tatami::Matrix<V
  * @return Object containing the pairwise effects, plus the mean expression and detected proportion in each group.
  */
 template<typename Stat_ = double, typename Value_, typename Index_, typename Group_, typename Block_>
-ScoreMarkersPairwiseResults<Stat_> score_pairwise_markers_blocked(const tatami::Matrix<Value_, Index_>& matrix, const Group_* group, const Block_* block, const ScoreMarkersPairwiseOptions& options) {
+ScoreMarkersPairwiseResults<Stat_> score_markers_pairwise_blocked(const tatami::Matrix<Value_, Index_>& matrix, const Group_* group, const Block_* block, const ScoreMarkersPairwiseOptions& options) {
     size_t ngroups = tatami_stats::total_groups(group, matrix.ncol());
     ScoreMarkersPairwiseResults<Stat_> res;
     auto buffers = internal::fill_pairwise_results(matrix.nrow(), ngroups, res, options);

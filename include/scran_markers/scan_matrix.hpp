@@ -38,14 +38,14 @@ void initialize_auc_workspace(
 
     work.num_zeros.reserve(nblocks);
     work.totals.reserve(nblocks);
-    for (size_t g = 0; g < ngroups; ++g) {
+    for (size_t b = 0; b < nblocks; ++b) {
         work.num_zeros.emplace_back(ngroups);
         work.totals.emplace_back(ngroups);
     }
 
     auto lsIt = combo_size.begin();
-    for (size_t g = 0; g < ngroups; ++g) {
-        for (size_t b = 0; b < nblocks; ++b, ++lsIt) {
+    for (size_t b = 0; b < nblocks; ++b) {
+        for (size_t g = 0; g < ngroups; ++g, ++lsIt) { // remember that the groups are the fastest changing dimension in this array.
             work.totals[b][g] = *lsIt;
         }
     }
@@ -54,10 +54,11 @@ void initialize_auc_workspace(
     work.block_scale.reserve(nblocks);
     work.full_weight.resize(ngroups * ngroups);
     for (size_t b = 0; b < nblocks; ++b) {
+        size_t in_offset = b * ngroups;
         work.block_scale.emplace_back(ngroups * ngroups);
 
         for (size_t g1 = 0; g1 < ngroups; ++g1) {
-            auto w1 = combo_weight[g1 * nblocks + b]; // all size_t's already, so no need to cast.
+            auto w1 = combo_weight[in_offset + g1]; // all size_t's already, so no need to cast.
 
             for (size_t g2 = 0; g2 < g1; ++g2) {
                 Stat_ block_denom = static_cast<Stat_>(work.totals[b][g1]) * static_cast<Stat_>(work.totals[b][g2]);
@@ -65,7 +66,7 @@ void initialize_auc_workspace(
                     continue;
                 }
 
-                Stat_ block_weight = w1 * combo_weight[g2 * nblocks + b];
+                Stat_ block_weight = w1 * combo_weight[in_offset + g2];
                 Stat_ block_scaling = block_denom / block_weight;
 
                 auto offset1 = g1 * ngroups + g2;
