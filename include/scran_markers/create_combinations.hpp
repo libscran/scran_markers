@@ -21,6 +21,17 @@ std::vector<size_t> create_combinations(size_t ngroups, const Group_* group, con
     return combinations;
 }
 
+// We can't just use tatami_stats::tabulate_groups as downstream is expecting a 'ngroups * nblocks' array;
+// tabulate_groups() will not report the full length if not all combinations are observed.
+template<typename Index_>
+std::vector<Index_> tabulate_combinations(size_t ngroups, size_t nblocks, const std::vector<size_t>& combinations) {
+    std::vector<Index_> output(ngroups * nblocks);
+    for (auto c : combinations) {
+        ++output[c];
+    }
+    return output;
+}
+
 }
 
 }

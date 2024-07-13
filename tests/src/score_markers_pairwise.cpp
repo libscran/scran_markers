@@ -42,7 +42,7 @@ protected:
     inline static std::shared_ptr<tatami::Matrix<double, int> > dense_row, dense_column, sparse_row, sparse_column;
 
     static void SetUpTestSuite() {
-        size_t nr = 898, nc = 76;
+        size_t nr = 898, nc = 176;
         dense_row.reset(
             new tatami::DenseRowMatrix<double, int>(
                 nr,
@@ -181,7 +181,7 @@ protected:
     inline static std::shared_ptr<tatami::Matrix<double, int> > dense_row, dense_column, sparse_row, sparse_column;
 
     static void SetUpTestSuite() {
-        size_t nr = 398, nc = 53; // use a prime number of columns to check for non-equal weights.
+        size_t nr = 398, nc = 157; // use a prime number of columns to check for non-equal weights.
         dense_row.reset(
             new tatami::DenseRowMatrix<double, int>(
                 nr,
@@ -345,254 +345,272 @@ INSTANTIATE_TEST_SUITE_P(
     )
 );
 
-///*********************************************/
-//
-//class ScoreMarkersPairwiseScenarioTest : public ::testing::Test, public DifferentialAnalysisTestCore {
-//protected:
-//    static constexpr size_t nrows = 100;
-//    static constexpr size_t ncols = 50;
-//
-//    void SetUp() {
-//        assemble(nrows, ncols);
-//    }
-//};
-//
-//TEST_F(ScoreMarkersPairwiseScenarioTest, Self) {
-//    int copies = 3;
-//
-//    // Replicating the same matrix 'ngroups' times.
-//    std::vector<std::shared_ptr<tatami::NumericMatrix> > stuff;
-//    for (int i = 0; i < copies; ++i) {
-//        stuff.push_back(dense_row);
-//    }
-//    auto combined = tatami::make_DelayedBind<1>(std::move(stuff));
-//
-//    // Creating two groups; second group can be larger than the first, to check
-//    // for correct behavior w.r.t. imbalanced groups.
-//    std::vector<int> groupings(ncols * copies);
-//    std::fill(groupings.begin(), groupings.begin() + ncols, 0);
-//    std::fill(groupings.begin() + ncols, groupings.end(), 1); 
-//
-//    scran::ScoreMarkersPairwise chd;
-//    auto res = chd.run(combined.get(), groupings.data());
-//
-//    // All AUCs should be 0.5, all Cohen/LFC/delta-d's should be 0.
-//    int ngroups = 2;
-//    std::vector<double> cohen(ngroups * ngroups * nrows);
-//    auto lfc = cohen, delta_detected = cohen;
-//    std::vector<double> auc(cohen.size(), 0.5);
-//
-//    for (size_t g = 0; g < nrows; ++g) {
-//        for (int l = 0; l < ngroups; ++l) {
-//            size_t offset = g * ngroups * ngroups + l * ngroups + l;  
-//            auc[offset] = 0;
-//        }
-//    }
-//
-//    compare_almost_equal(cohen, res.cohen);
-//    compare_almost_equal(auc, res.auc);
-//    compare_almost_equal(lfc, res.lfc);
-//    compare_almost_equal(delta_detected, res.delta_detected);
-//}
-//
-//TEST_F(ScoreMarkersPairwiseScenarioTest, Perfect) {
-//    int ngroups = 5;
-//    std::vector<int> groupings = create_groupings(ncols, ngroups);
-//
-//    int nrows = 33;
-//    std::vector<double> pretend;
-//    for (int r = 0; r < nrows; ++r) {
-//        pretend.insert(pretend.end(), groupings.begin(), groupings.end());
-//    }
-//
-//    tatami::DenseRowMatrix<double, int> mat(nrows, groupings.size(), std::move(pretend));
-//    scran::ScoreMarkersPairwise chd;
-//    auto res = chd.run(&mat, groupings.data());
-//
-//    for (size_t g = 0; g < nrows; ++g) {
-//        for (int l = 0; l < ngroups; ++l) {
-//            for (int l2 = 0; l2 < ngroups; ++l2) {
-//                if (l == l2) {
-//                    continue;
-//                }
-//
-//                size_t offset = g * ngroups * ngroups + l * ngroups + l2;  
-//                EXPECT_EQ(res.lfc[offset], l - l2);
-//                EXPECT_EQ(res.delta_detected[offset], (l > 0) - (l2 > 0));
-//                EXPECT_EQ(res.auc[offset], static_cast<double>(l > l2));
-//                EXPECT_TRUE(std::isinf(res.cohen[offset]));
-//                EXPECT_EQ(res.cohen[offset] > 0, l > l2);
-//            }
-//        }
-//    }
-//}
-//
-//TEST_F(ScoreMarkersPairwiseScenarioTest, Thresholds) {
-//    int ngroups = 3;
-//    std::vector<int> groupings = create_groupings(ncols, ngroups);
-//
-//    scran::ScoreMarkersPairwise chd;
-//    auto ref = chd.run(dense_row.get(), groupings.data());
-//    auto out = chd.set_threshold(1).run(dense_row.get(), groupings.data());
-//    EXPECT_EQ(ref.lfc, out.lfc);
-//    EXPECT_EQ(ref.delta_detected, out.delta_detected);
-//
-//    bool some_diff = false;
-//    for (size_t g = 0; g < nrows; ++g) {
-//        for (int l = 0; l < ngroups; ++l) {
-//            for (int l2 = 0; l2 < ngroups; ++l2) {
-//                if (l == l2) {
-//                    continue;
-//                }
-//
-//                // Threshold should have some effect for cohen.
-//                size_t offset = g * ngroups * ngroups + l * ngroups + l2;  
-//                EXPECT_TRUE(ref.cohen[offset] > out.cohen[offset]);
-//
-//                // '>' is not guaranteed due to imprecision with ranks... but (see below).
-//                EXPECT_TRUE(ref.auc[offset] >= out.auc[offset]); 
-//            }
-//        }
-//    }
-//
-//    // There should be at least some difference here.
-//    EXPECT_NE(ref.auc, out.auc);
-//}
-//
-//TEST_F(ScoreMarkersPairwiseScenarioTest, Missing) {
-//    int ngroups = 3;
-//    std::vector<int> groupings = create_groupings(ncols, ngroups);
-//
-//    scran::ScoreMarkersPairwise chd;
-//    auto ref = chd.run(dense_row.get(), groupings.data());
-//
-//    // Zero is effectively the missing group here.
-//    for (auto& g : groupings) {
-//        ++g;
-//    }
-//    auto lost = chd.run(dense_row.get(), groupings.data());
-//
-//    // Everything should be NaN.
-//    int ngroups_p1 = ngroups + 1;
-//    for (size_t g = 0; g < nrows; ++g) {
-//        for (int l2 = 1; l2 < ngroups_p1; ++l2) {
-//            // For the comparisons from group 0 to the others.
-//            size_t offset = g * ngroups_p1 * ngroups_p1 + l2;  
-//            EXPECT_TRUE(std::isnan(lost.cohen[offset]));
-//            EXPECT_TRUE(std::isnan(lost.lfc[offset]));
-//            EXPECT_TRUE(std::isnan(lost.delta_detected[offset]));
-//            EXPECT_TRUE(std::isnan(lost.auc[offset]));
-//
-//            // For the comparisons in the other direction.
-//            offset = g * ngroups_p1 * ngroups_p1 + l2 * ngroups_p1;  
-//            EXPECT_TRUE(std::isnan(lost.cohen[offset]));
-//            EXPECT_TRUE(std::isnan(lost.lfc[offset]));
-//            EXPECT_TRUE(std::isnan(lost.delta_detected[offset]));
-//            EXPECT_TRUE(std::isnan(lost.auc[offset]));
-//        }
-//    }
-//
-//    // Other metrics should be the same as usual.
-//    for (size_t g = 0; g < nrows; ++g) {
-//        for (int l = 0; l < ngroups; ++l) {
-//            size_t ref_offset = g * ngroups * ngroups + l * ngroups;  
-//            size_t lost_offset = g * ngroups_p1 * ngroups_p1 + (l + 1) * ngroups_p1 + 1; // skip group 0, and also the NaN in the comparison against group 0.
-//
-//            EXPECT_EQ(
-//                std::vector<double>(ref.cohen.begin() + ref_offset, ref.cohen.begin() + ref_offset + ngroups), 
-//                std::vector<double>(lost.cohen.begin() + lost_offset, lost.cohen.begin() + lost_offset + ngroups)
-//            );
-//
-//            EXPECT_EQ(
-//                std::vector<double>(ref.lfc.begin() + ref_offset, ref.lfc.begin() + ref_offset + ngroups), 
-//                std::vector<double>(lost.lfc.begin() + lost_offset, lost.lfc.begin() + lost_offset + ngroups)
-//            );
-//
-//            EXPECT_EQ(
-//                std::vector<double>(ref.delta_detected.begin() + ref_offset, ref.delta_detected.begin() + ref_offset + ngroups), 
-//                std::vector<double>(lost.delta_detected.begin() + lost_offset, lost.delta_detected.begin() + lost_offset + ngroups)
-//            );
-//
-//            EXPECT_EQ(
-//                std::vector<double>(ref.cohen.begin() + ref_offset, ref.cohen.begin() + ref_offset + ngroups), 
-//                std::vector<double>(lost.cohen.begin() + lost_offset, lost.cohen.begin() + lost_offset + ngroups)
-//            );
-//        }
-//    }
-//}
-//
-//TEST_F(ScoreMarkersPairwiseScenarioTest, BlockConfounded) {
-//    auto ngroups = 4;
-//    std::vector<int> groupings = create_groupings(ncols, ngroups);
-//
-//    // Block is fully confounded with one group.
-//    std::vector<int> blocks(ncols);
-//    for (size_t c = 0; c < ncols; ++c) {
-//        blocks[c] = groupings[c] == 0;
-//    }
-//
-//    scran::ScoreMarkersPairwise chd;
-//    auto comres = chd.run_blocked(dense_row.get(), groupings.data(), blocks.data());
-//
-//    // First group should only be NaN's.
-//    size_t ngenes = dense_row->nrow();
-//    for (size_t g = 0; g < nrows; ++g) {
-//        for (int l2 = 1; l2 < ngroups; ++l2) {
-//            // For the comparisons from group 0 to the others.
-//            size_t offset = g * ngroups * ngroups + l2;  
-//            EXPECT_TRUE(std::isnan(comres.cohen[offset]));
-//            EXPECT_TRUE(std::isnan(comres.lfc[offset]));
-//            EXPECT_TRUE(std::isnan(comres.delta_detected[offset]));
-//            EXPECT_TRUE(std::isnan(comres.auc[offset]));
-//
-//            // For the comparisons in the other direction.
-//            offset = g * ngroups * ngroups + l2 * ngroups;  
-//            EXPECT_TRUE(std::isnan(comres.cohen[offset]));
-//            EXPECT_TRUE(std::isnan(comres.lfc[offset]));
-//            EXPECT_TRUE(std::isnan(comres.delta_detected[offset]));
-//            EXPECT_TRUE(std::isnan(comres.auc[offset]));
-//        }
-//    }
-//
-//    // Excluding the confounded group and running on the remaining samples.
-//    std::vector<int> subgroups;
-//    std::vector<int> keep;
-//    for (size_t c = 0; c < ncols; ++c) {
-//        auto g = groupings[c];
-//        if (g != 0) {
-//            subgroups.push_back(g - 1);
-//            keep.push_back(c);
-//        }
-//    }
-//
-//    auto sub = tatami::make_DelayedSubset<1>(dense_row, std::move(keep));
-//    auto ref = chd.run(sub.get(), subgroups.data()); 
-//    int ngroups_m1 = ngroups - 1;
-//
-//    for (size_t g = 0; g < nrows; ++g) {
-//        for (int l = 0; l < ngroups_m1; ++l) {
-//            size_t ref_offset = g * ngroups_m1 * ngroups_m1 + l * ngroups_m1;  
-//            size_t comres_offset = g * ngroups * ngroups + (l + 1) * ngroups + 1; // skip group 0 as well as the NaN in the comparison against group 0.
-//
-//            EXPECT_EQ(
-//                std::vector<double>(ref.cohen.begin() + ref_offset, ref.cohen.begin() + ref_offset + ngroups_m1), 
-//                std::vector<double>(comres.cohen.begin() + comres_offset, comres.cohen.begin() + comres_offset + ngroups_m1)
-//            );
-//
-//            EXPECT_EQ(
-//                std::vector<double>(ref.lfc.begin() + ref_offset, ref.lfc.begin() + ref_offset + ngroups_m1), 
-//                std::vector<double>(comres.lfc.begin() + comres_offset, comres.lfc.begin() + comres_offset + ngroups_m1)
-//            );
-//
-//            EXPECT_EQ(
-//                std::vector<double>(ref.delta_detected.begin() + ref_offset, ref.delta_detected.begin() + ref_offset + ngroups_m1), 
-//                std::vector<double>(comres.delta_detected.begin() + comres_offset, comres.delta_detected.begin() + comres_offset + ngroups_m1)
-//            );
-//
-//            EXPECT_EQ(
-//                std::vector<double>(ref.cohen.begin() + ref_offset, ref.cohen.begin() + ref_offset + ngroups_m1), 
-//                std::vector<double>(comres.cohen.begin() + comres_offset, comres.cohen.begin() + comres_offset + ngroups_m1)
-//            );
-//        }
-//    }
-//}
+/*********************************************/
+
+TEST(ScoreMarkersPairwiseScenarios, Self) {
+    int nrows = 132, ncols = 97;
+    std::shared_ptr<tatami::NumericMatrix> mat(
+        new tatami::DenseRowMatrix<double, int>(
+            nrows,
+            ncols,
+            scran_tests::simulate_vector(
+                nrows * ncols,
+                []{
+                    scran_tests::SimulationParameters sparam;
+                    sparam.seed = 69;
+                    return sparam;
+                }()
+            )
+        )
+    );
+
+    // Replicating the same matrix 3 times.
+    const int copies = 3;
+    std::vector<std::shared_ptr<tatami::NumericMatrix> > stuff;
+    for (int i = 0; i < copies; ++i) {
+        stuff.push_back(mat);
+    }
+    auto combined = tatami::make_DelayedBind(std::move(stuff), false);
+
+    // Creating two groups; second group can be larger than the first, to check
+    // for correct behavior w.r.t. imbalanced groups.
+    std::vector<int> groupings(ncols * copies);
+    std::fill(groupings.begin(), groupings.begin() + ncols, 0);
+    std::fill(groupings.begin() + ncols, groupings.end(), 1); 
+
+    scran_markers::ScoreMarkersPairwiseOptions opt;
+    auto res = scran_markers::score_markers_pairwise(*combined, groupings.data(), opt);
+
+    // All AUCs should be 0.5, all Cohen/LFC/delta-d's should be 0.
+    int ngroups = 2;
+    std::vector<double> cohen(ngroups * ngroups * nrows);
+    auto lfc = cohen, delta_detected = cohen;
+    std::vector<double> auc(cohen.size(), 0.5);
+
+    for (int g = 0; g < nrows; ++g) {
+        for (int l = 0; l < ngroups; ++l) {
+            size_t offset = g * ngroups * ngroups + l * ngroups + l;  
+            auc[offset] = 0;
+        }
+    }
+
+    scran_tests::compare_almost_equal(cohen, res.cohens_d);
+    scran_tests::compare_almost_equal(auc, res.auc);
+    scran_tests::compare_almost_equal(lfc, res.delta_mean);
+    scran_tests::compare_almost_equal(delta_detected, res.delta_detected);
+}
+
+TEST(ScoreMarkersPairwiseScenarios, Perfect) {
+    int ngroups = 5;
+    int ncols = 71;
+    std::vector<int> groupings = create_groupings(ncols, ngroups);
+
+    int nrows = 33;
+    std::vector<double> pretend;
+    for (int r = 0; r < nrows; ++r) {
+        pretend.insert(pretend.end(), groupings.begin(), groupings.end());
+    }
+
+    tatami::DenseRowMatrix<double, int> mat(nrows, groupings.size(), std::move(pretend));
+    scran_markers::ScoreMarkersPairwiseOptions opt;
+    auto res = scran_markers::score_markers_pairwise(mat, groupings.data(), opt);
+
+    for (int g = 0; g < nrows; ++g) {
+        for (int l = 0; l < ngroups; ++l) {
+            for (int l2 = 0; l2 < ngroups; ++l2) {
+                if (l == l2) {
+                    continue;
+                }
+
+                size_t offset = g * ngroups * ngroups + l * ngroups + l2;  
+                EXPECT_EQ(res.delta_mean[offset], l - l2);
+                EXPECT_EQ(res.delta_detected[offset], (l > 0) - (l2 > 0));
+                EXPECT_EQ(res.auc[offset], static_cast<double>(l > l2));
+                EXPECT_TRUE(std::isinf(res.cohens_d[offset]));
+                EXPECT_EQ(res.cohens_d[offset] > 0, l > l2);
+            }
+        }
+    }
+}
+
+TEST(ScoreMarkersPairwiseScenarios, Thresholds) {
+    int nrows = 67, ncols = 91;
+    tatami::DenseRowMatrix<double, int> mat(
+        nrows,
+        ncols,
+        scran_tests::simulate_vector(
+            nrows * ncols,
+            []{
+                scran_tests::SimulationParameters sparam;
+                sparam.seed = 696969;
+                return sparam;
+            }()
+        )
+    );
+
+    int ngroups = 3;
+    std::vector<int> groupings = create_groupings(ncols, ngroups);
+    scran_markers::ScoreMarkersPairwiseOptions opt;
+    auto ref = scran_markers::score_markers_pairwise(mat, groupings.data(), opt);
+
+    opt.threshold = 1;
+    auto out = scran_markers::score_markers_pairwise(mat, groupings.data(), opt);
+    EXPECT_EQ(ref.delta_mean, out.delta_mean);
+    EXPECT_EQ(ref.delta_detected, out.delta_detected);
+
+    for (int g = 0; g < nrows; ++g) {
+        for (int l = 0; l < ngroups; ++l) {
+            for (int l2 = 0; l2 < ngroups; ++l2) {
+                if (l == l2) {
+                    continue;
+                }
+
+                // Threshold should have some effect for cohen.
+                size_t offset = g * ngroups * ngroups + l * ngroups + l2;  
+                EXPECT_TRUE(ref.cohens_d[offset] > out.cohens_d[offset]);
+
+                // '>' is not guaranteed due to imprecision with ranks... but (see below).
+                EXPECT_TRUE(ref.auc[offset] >= out.auc[offset]); 
+            }
+        }
+    }
+
+    // There should be at least some difference here.
+    EXPECT_NE(ref.auc, out.auc);
+}
+
+TEST(ScoreMarkersPairwiseScenarios, Missing) {
+    int nrows = 144, ncols = 109;
+    tatami::DenseRowMatrix<double, int> mat(
+        nrows,
+        ncols,
+        scran_tests::simulate_vector(
+            nrows * ncols,
+            []{
+                scran_tests::SimulationParameters sparam;
+                sparam.seed = 696969;
+                return sparam;
+            }()
+        )
+    );
+
+    int ngroups = 4;
+    std::vector<int> groupings = create_groupings(ncols, ngroups);
+    scran_markers::ScoreMarkersPairwiseOptions opt;
+    auto ref = scran_markers::score_markers_pairwise(mat, groupings.data(), opt);
+
+    // Zero is effectively the missing group here.
+    for (auto& g : groupings) {
+        ++g;
+    }
+    auto lost = scran_markers::score_markers_pairwise(mat, groupings.data(), opt);
+
+    // Everything should be NaN.
+    int ngroups_p1 = ngroups + 1;
+    for (int g = 0; g < nrows; ++g) {
+        for (int l2 = 1; l2 < ngroups_p1; ++l2) {
+            // For the comparisons from group 0 to the others.
+            size_t offset = g * ngroups_p1 * ngroups_p1 + l2;  
+            EXPECT_TRUE(std::isnan(lost.cohens_d[offset]));
+            EXPECT_TRUE(std::isnan(lost.delta_mean[offset]));
+            EXPECT_TRUE(std::isnan(lost.delta_detected[offset]));
+            EXPECT_TRUE(std::isnan(lost.auc[offset]));
+
+            // For the comparisons in the other direction.
+            offset = g * ngroups_p1 * ngroups_p1 + l2 * ngroups_p1;  
+            EXPECT_TRUE(std::isnan(lost.cohens_d[offset]));
+            EXPECT_TRUE(std::isnan(lost.delta_mean[offset]));
+            EXPECT_TRUE(std::isnan(lost.delta_detected[offset]));
+            EXPECT_TRUE(std::isnan(lost.auc[offset]));
+        }
+    }
+
+    // Other metrics should be the same as usual.
+    for (int g = 0; g < nrows; ++g) {
+        for (int l = 0; l < ngroups; ++l) {
+            size_t ref_offset = g * ngroups * ngroups + l * ngroups;  
+            size_t lost_offset = g * ngroups_p1 * ngroups_p1 + (l + 1) * ngroups_p1 + 1; // skip group 0, and also the NaN in the comparison against group 0.
+
+            EXPECT_EQ(scran_tests::vector_n(ref.cohens_d.data() + ref_offset, ngroups), scran_tests::vector_n(lost.cohens_d.data() + lost_offset, ngroups));
+            EXPECT_EQ(scran_tests::vector_n(ref.auc.data() + ref_offset, ngroups), scran_tests::vector_n(lost.auc.data() + lost_offset, ngroups));
+            EXPECT_EQ(scran_tests::vector_n(ref.delta_mean.data() + ref_offset, ngroups), scran_tests::vector_n(lost.delta_mean.data() + lost_offset, ngroups));
+            EXPECT_EQ(scran_tests::vector_n(ref.delta_detected.data() + ref_offset, ngroups), scran_tests::vector_n(lost.delta_detected.data() + lost_offset, ngroups));
+        }
+    }
+}
+
+TEST(ScoreMarkersPairwiseScenarios, BlockConfounded) {
+    int nrows = 198, ncols = 99;
+    std::shared_ptr<tatami::Matrix<double, int> > mat(
+        new tatami::DenseRowMatrix<double, int>(
+            nrows,
+            ncols,
+            scran_tests::simulate_vector(
+                nrows * ncols,
+                []{
+                    scran_tests::SimulationParameters sparam;
+                    sparam.seed = 69696969;
+                    return sparam;
+                }()
+            )
+        )
+    );
+
+    int ngroups = 4;
+    std::vector<int> groupings = create_groupings(ncols, ngroups);
+
+    // Block is fully confounded with one group.
+    std::vector<int> blocks(ncols);
+    for (int c = 0; c < ncols; ++c) {
+        blocks[c] = groupings[c] == 0;
+    }
+
+    scran_markers::ScoreMarkersPairwiseOptions opt;
+    auto comres = scran_markers::score_markers_pairwise_blocked(*mat, groupings.data(), blocks.data(), opt);
+
+    // First group should only be NaN's.
+    for (int g = 0; g < nrows; ++g) {
+        for (int l2 = 1; l2 < ngroups; ++l2) {
+            // For the comparisons from group 0 to the others.
+            size_t offset = g * ngroups * ngroups + l2;  
+            EXPECT_TRUE(std::isnan(comres.cohens_d[offset]));
+            EXPECT_TRUE(std::isnan(comres.delta_mean[offset]));
+            EXPECT_TRUE(std::isnan(comres.delta_detected[offset]));
+            EXPECT_TRUE(std::isnan(comres.auc[offset]));
+
+            // For the comparisons in the other direction.
+            offset = g * ngroups * ngroups + l2 * ngroups;  
+            EXPECT_TRUE(std::isnan(comres.cohens_d[offset]));
+            EXPECT_TRUE(std::isnan(comres.delta_mean[offset]));
+            EXPECT_TRUE(std::isnan(comres.delta_detected[offset]));
+            EXPECT_TRUE(std::isnan(comres.auc[offset]));
+        }
+    }
+
+    // Excluding the confounded group and running on the remaining samples.
+    std::vector<int> subgroups;
+    std::vector<int> keep;
+    for (int c = 0; c < ncols; ++c) {
+        auto g = groupings[c];
+        if (g != 0) {
+            subgroups.push_back(g - 1);
+            keep.push_back(c);
+        }
+    }
+
+    auto sub = tatami::make_DelayedSubset(mat, std::move(keep), false);
+    auto ref = scran_markers::score_markers_pairwise(*sub, subgroups.data(), opt);
+    int ngroups_m1 = ngroups - 1;
+
+    for (int g = 0; g < nrows; ++g) {
+        for (int l = 0; l < ngroups_m1; ++l) {
+            size_t ref_offset = g * ngroups_m1 * ngroups_m1 + l * ngroups_m1;  
+            size_t comres_offset = g * ngroups * ngroups + (l + 1) * ngroups + 1; // skip group 0 as well as the NaN in the comparison against group 0.
+
+            EXPECT_EQ(scran_tests::vector_n(ref.cohens_d.data() + ref_offset, ngroups_m1), scran_tests::vector_n(comres.cohens_d.data() + comres_offset, ngroups_m1));
+            EXPECT_EQ(scran_tests::vector_n(ref.delta_mean.data() + ref_offset, ngroups_m1), scran_tests::vector_n(comres.delta_mean.data() + comres_offset, ngroups_m1));
+            EXPECT_EQ(scran_tests::vector_n(ref.delta_detected.data() + ref_offset, ngroups_m1), scran_tests::vector_n(comres.delta_detected.data() + comres_offset, ngroups_m1));
+            EXPECT_EQ(scran_tests::vector_n(ref.auc.data() + ref_offset, ngroups_m1), scran_tests::vector_n(comres.auc.data() + comres_offset, ngroups_m1));
+        }
+    }
+}

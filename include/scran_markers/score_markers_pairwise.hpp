@@ -463,9 +463,9 @@ void score_markers_pairwise_blocked(
     size_t nblocks = tatami_stats::total_groups(block, NC); 
 
     auto combinations = internal::create_combinations(ngroups, group, block, NC);
-    auto combo_sizes = tatami_stats::tabulate_groups(combinations.data(), NC); 
-    auto combo_weights = scran_blocks::compute_weights<Stat_>(combo_sizes, options.block_weight_policy, options.variable_block_weight_parameters);
+    auto combo_sizes = internal::tabulate_combinations<Index_>(ngroups, nblocks, combinations);
     size_t ncombos = combo_sizes.size();
+    auto combo_weights = scran_blocks::compute_weights<Stat_>(combo_sizes, options.block_weight_policy, options.variable_block_weight_parameters);
 
     size_t payload_size = static_cast<size_t>(matrix.nrow()) * ncombos; // cast to size_t to avoid overflow.
     std::vector<Stat_> combo_means(payload_size), combo_vars(payload_size), combo_detected(payload_size);
