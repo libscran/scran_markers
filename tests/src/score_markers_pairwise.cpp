@@ -8,6 +8,30 @@
 
 #include "utils.h"
 
+void compare_results(
+    const scran_markers::ScoreMarkersPairwiseResults<double>& expected, 
+    const scran_markers::ScoreMarkersPairwiseResults<double>& observed,
+    bool include_auc) 
+{
+    ASSERT_EQ(expected.mean.size(), observed.mean.size());
+    for (size_t g = 0; g < expected.mean.size(); ++g) {
+        scran_tests::compare_almost_equal(expected.mean[g], observed.mean[g]);
+    }
+
+    ASSERT_EQ(expected.detected.size(), observed.detected.size());
+    for (size_t g = 0; g < expected.detected.size(); ++g) {
+        scran_tests::compare_almost_equal(expected.detected[g], observed.detected[g]);
+    }
+
+    scran_tests::compare_almost_equal(expected.cohens_d, observed.cohens_d);
+    scran_tests::compare_almost_equal(expected.delta_mean, observed.delta_mean);
+    scran_tests::compare_almost_equal(expected.delta_detected, observed.delta_detected);
+
+    if (include_auc) {
+        scran_tests::compare_almost_equal(expected.auc, observed.auc);
+    }
+}
+
 /*********************************************/
 
 // We compare against the reference to check that the account-keeping
@@ -86,30 +110,6 @@ protected:
 
         return output;
     }
-
-    static void compare_results(
-        const scran_markers::ScoreMarkersPairwiseResults<double>& expected, 
-        const scran_markers::ScoreMarkersPairwiseResults<double>& observed,
-        bool include_auc) 
-    {
-        ASSERT_EQ(expected.mean.size(), observed.mean.size());
-        for (size_t g = 0; g < expected.mean.size(); ++g) {
-            scran_tests::compare_almost_equal(expected.mean[g], observed.mean[g]);
-        }
-
-        ASSERT_EQ(expected.detected.size(), observed.detected.size());
-        for (size_t g = 0; g < expected.detected.size(); ++g) {
-            scran_tests::compare_almost_equal(expected.detected[g], observed.detected[g]);
-        }
-
-        scran_tests::compare_almost_equal(expected.cohens_d, observed.cohens_d);
-        scran_tests::compare_almost_equal(expected.delta_mean, observed.delta_mean);
-        scran_tests::compare_almost_equal(expected.delta_detected, observed.delta_detected);
-
-        if (include_auc) {
-            scran_tests::compare_almost_equal(expected.auc, observed.auc);
-        }
-    }
 };
 
 TEST_P(ScoreMarkersPairwiseUnblockedTest, Reference) {
@@ -157,126 +157,168 @@ INSTANTIATE_TEST_SUITE_P(
     )
 );
 
-///*********************************************/
-//
-//class ScoreMarkersPairwiseBlockedTest : public ::testing::TestWithParam<std::tuple<int, int, scran::WeightPolicy, int> >, public DifferentialAnalysisTestCore {
-//protected:
-//    static constexpr size_t nrows = 100;
-//    static constexpr size_t ncols = 50;
-//
-//    void SetUp() {
-//        assemble(nrows, ncols);
-//    }
-//};
-//
-//TEST_P(ScoreMarkersPairwiseBlockedTest, VersusReference) {
-//    auto param = GetParam();
-//    auto ngroups = std::get<0>(param);
-//    auto nblocks = std::get<1>(param);
-//    auto policy = std::get<2>(param);
-//    auto nthreads = std::get<3>(param);
-//
-//    scran::ScoreMarkersPairwise chd;
-//    chd.set_num_threads(nthreads);
-//    chd.set_block_weight_policy(policy);
-//    scran::VariableBlockWeightParameters vparams{0, 10};
-//    chd.set_variable_block_weight_parameters(vparams); // get some interesting variable weights, if we can.
-//
-//    auto groups = create_groupings(ncols, ngroups);
-//    auto blocks = create_blocks(ncols, nblocks);
-//
-//    std::vector<double> ref_cohen(ngroups * ngroups * nrows);
-//    auto ref_auc = ref_cohen;
-//    auto ref_lfc = ref_cohen;
-//    auto ref_delta_detected = ref_cohen;
-//    std::vector<int> total_product_weights(ngroups * ngroups);
-//
-//    std::vector<std::vector<double> > ref_means(ngroups, std::vector<double>(nrows));
-//    auto ref_detected = ref_means;
-//    std::vector<int> total_group_weights(ngroups);
-//
-//    for (int b = 0; b < nblocks; ++b) {
-//        std::vector<int> subset;
-//        std::vector<int> subgroups;
-//        for (int i = 0; i < ncols; ++i) {
-//            if (blocks[i] == b) {
-//                subset.push_back(i);
-//                subgroups.push_back(groups[i]);
-//            }
-//        }
-//
-//        auto sub = tatami::make_DelayedSubset<1>(dense_row, std::move(subset));
-//        auto res = chd.run(sub.get(), subgroups.data());
-//
-//        auto subcount = scran::tabulate_ids(subgroups.size(), subgroups.data());
-//        std::vector<double> subweights = scran::compute_block_weights(subcount, policy, vparams);
-//
-//        for (size_t i = 0; i < nrows; ++i) {
-//            for (int g1 = 0; g1 < ngroups; ++g1) {
-//                for (int g2 = 0; g2 < ngroups; ++g2) {
-//                    size_t offset = i * ngroups * ngroups + g1 * ngroups + g2;
-//                    double weight = subweights[g1] * subweights[g2];
-//                    ref_cohen[offset] += weight * res.cohen[offset];
-//                    ref_lfc[offset] += weight * res.lfc[offset];
-//                    ref_delta_detected[offset] += weight * res.delta_detected[offset];
-//                    ref_auc[offset] += weight * res.auc[offset];
-//                }
-//            }
-//
-//            for (int g = 0; g < ngroups; ++g) {
-//                ref_means[g][i] += res.means[g][i] * subweights[g];
-//                ref_detected[g][i] += res.detected[g][i] * subweights[g];
-//            }
-//        }
-//
-//        for (int g1 = 0; g1 < ngroups; ++g1) {
-//            total_group_weights[g1] += subweights[g1];
-//            for (int g2 = 0; g2 < ngroups; ++g2) {
-//                total_product_weights[g1 * ngroups + g2] += subweights[g1] * subweights[g2];
-//            }
-//        }
-//    }
-//
-//    for (size_t i = 0; i < nrows; ++i) {
-//        auto offset = i * ngroups * ngroups;
-//
-//        for (int g = 0; g < ngroups * ngroups; ++g) {
-//            ref_cohen[offset + g] /= total_product_weights[g];
-//            ref_lfc[offset + g] /= total_product_weights[g];
-//            ref_auc[offset + g] /= total_product_weights[g];
-//            ref_delta_detected[offset + g] /= total_product_weights[g];
-//        }
-//
-//        for (int g = 0; g < ngroups; ++g) {
-//            ref_means[g][i] /= total_group_weights[g];
-//            ref_detected[g][i] /= total_group_weights[g];
-//        }
-//    }
-//
-//    // Alright, running all the tests.
-//    auto res = chd.run_blocked(sparse_row.get(), groups.data(), blocks.data());
-//    compare_almost_equal(ref_cohen, res.cohen);
-//    compare_almost_equal(ref_lfc, res.lfc);
-//    compare_almost_equal(ref_delta_detected, res.delta_detected);
-//    compare_almost_equal(ref_auc, res.auc);
-//
-//    for (int g = 0; g < ngroups; ++g) {
-//        compare_almost_equal(ref_means[g], res.means[g]);
-//        compare_almost_equal(ref_detected[g], res.detected[g]);
-//    }
-//}
-//
-//INSTANTIATE_TEST_SUITE_P(
-//    ScoreMarkersPairwiseBlocked,
-//    ScoreMarkersPairwiseBlockedTest,
-//    ::testing::Combine(
-//        ::testing::Values(2, 3, 4, 5), // number of clusters
-//        ::testing::Values(1, 2, 3), // number of blocks
-//        ::testing::Values(scran::WeightPolicy::NONE, scran::WeightPolicy::EQUAL, scran::WeightPolicy::VARIABLE), // block weighting method.
-//        ::testing::Values(1, 3) // number of threads
-//    )
-//);
-//
+/*********************************************/
+
+class ScoreMarkersPairwiseBlockedTest : public ::testing::TestWithParam<std::tuple<int, int, bool, scran_blocks::WeightPolicy, int> > {
+protected:
+    inline static std::shared_ptr<tatami::Matrix<double, int> > dense_row, dense_column, sparse_row, sparse_column;
+
+    static void SetUpTestSuite() {
+        size_t nr = 398, nc = 50;
+        dense_row.reset(
+            new tatami::DenseRowMatrix<double, int>(
+                nr,
+                nc,
+                scran_tests::simulate_vector(
+                    nr * nc, 
+                    []{
+                        scran_tests::SimulationParameters sparam;
+                        sparam.density = 0.1;
+                        sparam.seed = 999998;
+                        return sparam;
+                    }()
+                )
+            )
+        );
+
+        dense_column = tatami::convert_to_dense(dense_row.get(), false);
+        sparse_row = tatami::convert_to_compressed_sparse(dense_row.get(), true);
+        sparse_column = tatami::convert_to_compressed_sparse(dense_row.get(), false);
+    }
+
+    static auto blocked_reference(const tatami::Matrix<double, int>& mat, const int* group, const int* blocks, const scran_markers::ScoreMarkersPairwiseOptions& opt) {
+        scran_markers::ScoreMarkersPairwiseResults<double> output;
+
+        size_t ngenes = mat.nrow();
+        size_t ngroups = tatami_stats::total_groups(group, mat.ncol());
+        size_t nblocks = tatami_stats::total_groups(blocks, mat.ncol());
+        output.mean.reserve(ngroups);
+        output.detected.reserve(ngroups);
+        for (size_t g = 0; g < ngroups; ++g) {
+            output.mean.emplace_back(ngenes);
+            output.detected.emplace_back(ngenes);
+        }
+
+        output.cohens_d.resize(ngroups * ngroups * ngenes);
+        output.delta_mean = output.cohens_d;
+        output.delta_detected = output.cohens_d;
+        if (opt.compute_auc) {
+            output.auc = output.cohens_d;
+        }
+
+        for (size_t b = 0; b < nblocks; ++b) {
+            // Slicing the matrix.
+            std::vector<int> subset;
+            std::vector<int> subgroups;
+            for (int i = 0; i < ncols; ++i) {
+                if (blocks[i] == b) {
+                    subset.push_back(i);
+                    subgroups.push_back(groups[i]);
+                }
+            }
+
+            auto sub = tatami::make_DelayedSubset(dense_row, std::move(subset), false);
+            auto res = scran_markers::score_markers_pairwise(sub.get(), subgroups.data(), opt);
+            auto subcount = tatami_stats::tabulate_groups(subgroups.data(), subgroups.size());
+            std::vector<double> subweights = scran::compute_block_weights(subcount, policy, {});
+
+            for (size_t i = 0; i < nrows; ++i) {
+                for (int g1 = 0; g1 < ngroups; ++g1) {
+                    for (int g2 = 0; g2 < ngroups; ++g2) {
+                        size_t offset = i * ngroups * ngroups + g1 * ngroups + g2;
+                        double weight = subweights[g1] * subweights[g2];
+                        output.cohens_d[offset] += weight * res.cohens_d[offset];
+                        output.delta_mean[offset] += weight * res.delta_mean[offset];
+                        output.delta_detected[offset] += weight * res.delta_detected[offset];
+                        if (opt.compute_auc) {
+                            output.auc[offset] += weight * res.auc[offset];
+                        }
+                    }
+                }
+
+                for (int g = 0; g < ngroups; ++g) {
+                    output.mean[g][i] += res.mean[g][i] * subweights[g];
+                    output.detected[g][i] += res.detected[g][i] * subweights[g];
+                }
+            }
+
+            for (int g1 = 0; g1 < ngroups; ++g1) {
+                total_group_weights[g1] += subweights[g1];
+                for (int g2 = 0; g2 < ngroups; ++g2) {
+                    total_product_weights[g1 * ngroups + g2] += subweights[g1] * subweights[g2];
+                }
+            }
+        }
+
+        for (size_t i = 0; i < nrows; ++i) {
+            auto offset = i * ngroups * ngroups;
+
+            for (int g = 0; g < ngroups * ngroups; ++g) {
+                output.cohens_d[offset + g] /= total_product_weights[g];
+                output.delta_mean[offset + g] /= total_product_weights[g];
+                output.delta_detected[offset + g] /= total_product_weights[g];
+                if (opt.compute_auc) {
+                    output.auc[offset + g] /= total_product_weights[g];
+                }
+            }
+
+            for (int g = 0; g < ngroups; ++g) {
+                output.mean[g][i] /= total_group_weights[g];
+                output.detected[g][i] /= total_group_weights[g];
+            }
+        }
+
+        return output;
+    }
+};
+
+TEST_P(ScoreMarkersPairwiseBlockedTest, VersusReference) {
+    auto param = GetParam();
+    auto ngroups = std::get<0>(param);
+    auto nblocks = std::get<1>(param);
+    auto auc = std::get<2>(param);
+    auto policy = std::get<3>(param);
+    auto nthreads = std::get<4>(param);
+
+    scran::ScoreMarkersPairwiseOptions opt;
+    opt.block_weight_policy = policy;
+    opt.compute_auc = auc;
+
+    auto groups = create_groupings(ncols, ngroups);
+    auto blocks = create_blocks(ncols, nblocks);
+    auto ref = scran_markers::score_markers_pairwise_blocked(*dense_row, groupings.data(), blocks.data(), opt);
+
+    if (nthreads == 1) {
+        auto simple = blocked_reference(*dense_row, groupings.data(), blocks.data(), opt);
+        compare_results(ref, simple);
+    } else {
+        opt.num_threads = nthreads;
+        auto drres = scran_markers::score_markers_pairwise_blocked(*dense_row, groupings.data(), blocks.data(), opt);
+        compare_results(ref, drres, auc);
+    }
+
+    auto dcres = scran_markers::score_markers_pairwise_blocked(*dense_column, groupings.data(), blocks.data(), opt);
+    compare_results(ref, dcres, auc);
+
+    auto srres = scran_markers::score_markers_pairwise_blocked(*sparse_row, groupings.data(), blocks.data(), opt);
+    compare_results(ref, srres, auc);
+
+    auto scres = scran_markers::score_markers_pairwise_blocked(*sparse_column, groupings.data(), blocks.data(), opt);
+    compare_results(ref, scres, auc);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ScoreMarkersPairwiseBlocked,
+    ScoreMarkersPairwiseBlockedTest,
+    ::testing::Combine(
+        ::testing::Values(2, 3, 4, 5), // number of clusters
+        ::testing::Values(1, 2, 3), // number of blocks
+        ::testing::Values(false, true), // whether to compute AUC or not.
+        ::testing::Values(scran::WeightPolicy::NONE, scran::WeightPolicy::EQUAL), // block weighting method.
+        ::testing::Values(1, 3) // number of threads
+    )
+);
+
 ///*********************************************/
 //
 //class ScoreMarkersPairwiseScenarioTest : public ::testing::Test, public DifferentialAnalysisTestCore {
