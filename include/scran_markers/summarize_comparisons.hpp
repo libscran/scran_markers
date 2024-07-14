@@ -26,30 +26,35 @@ struct SummaryBuffers {
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the minimum effect size for each gene.
+     * If NULL, the minimum is not computed.
      */ 
     Stat_* min = NULL;
 
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the mean effect size for each gene.
+     * If NULL, the mean is not computed.
      */ 
     Stat_* mean = NULL;
 
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the median effect size for each gene.
+     * If NULL, the median is not computed.
      */ 
     Stat_* median = NULL;
 
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the maximum effect size for each gene.
+     * If NULL, the maximum is not computed.
      */ 
     Stat_* max = NULL;
 
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the minimum rank of the effect sizes for each gene.
+     * If NULL, the minimum rank is not computed.
      */ 
     Rank_* min_rank = NULL;
 };
@@ -99,7 +104,7 @@ struct SummaryResults {
 namespace internal {
 
 template<typename Stat_, typename Rank_>
-void summarize_comparisons_internal(size_t ngroups, const Stat_* effects, size_t group, size_t gene, const SummaryBuffers<Stat_, Rank_>& output, std::vector<Stat_>& buffer) {
+void summarize_comparisons(size_t ngroups, const Stat_* effects, size_t group, size_t gene, const SummaryBuffers<Stat_, Rank_>& output, std::vector<Stat_>& buffer) {
     auto ebegin = buffer.data();
     auto elast = ebegin;	
 
@@ -158,7 +163,7 @@ void summarize_comparisons(size_t ngenes, size_t ngroups, const Stat_* effects, 
         for (size_t gene = start, end = start + length; gene < end; ++gene, effect_ptr += shift) {
             auto current_effects = effect_ptr;
             for (size_t l = 0; l < ngroups; ++l, current_effects += ngroups) {
-                summarize_comparisons_internal(ngroups, current_effects, l, gene, output[l], buffer);
+                summarize_comparisons(ngroups, current_effects, l, gene, output[l], buffer);
             }
         }
     }, ngenes, threads);
@@ -249,6 +254,62 @@ void compute_min_rank_pairwise(Index_ ngenes, size_t ngroups, const Stat_* effec
             }
         }
     }, ngroups, threads);
+}
+
+template<typename Stat_, typename Rank_>
+SummaryBuffers<Stat_, Rank_> fill_summary_results(
+    size_t ngenes,
+    SummaryResults<Stat_, Rank_>& out, 
+    bool compute_min,
+    bool compute_mean,
+    bool compute_median,
+    bool compute_max,
+    bool compute_min_rank) 
+{
+    SummaryBuffers<Stat_, Rank_> ptr;
+
+    if (compute_min) {
+        out.min.resize(ngenes);
+        ptr.min = out.min.data();
+    }
+    if (compute_mean) {
+        out.mean.resize(ngenes);
+        ptr.mean = out.mean.data();
+    }
+    if (compute_median) {
+        out.median.resize(ngenes);
+        ptr.median = out.median.data();
+    }
+    if (compute_max) {
+        out.max.resize(ngenes);
+        ptr.max = out.max.data();
+    }
+    if (compute_min_rank) {
+        out.min_rank.resize(ngenes);
+        ptr.min_rank = out.min_rank.data();
+    }
+
+    return ptr;
+}
+
+template<typename Stat_, typename Rank_>
+std::vector<SummaryBuffers<Stat_, Rank_> > fill_summary_results(
+    size_t ngenes,
+    size_t ngroups,
+    std::vector<SummaryResults<Stat_, Rank_> >& outputs, 
+    bool compute_min,
+    bool compute_mean,
+    bool compute_median,
+    bool compute_max,
+    bool compute_min_rank) 
+{
+    outputs.resize(ngroups);
+    std::vector<SummaryBuffers<Stat_, Rank_> > ptrs;
+    ptrs.reserve(ngroups);
+    for (size_t g = 0; g < ngroups; ++g) {
+        ptrs.emplace_back(fill_summary_results(ngenes, outputs[g], compute_min, compute_mean, compute_median, compute_max, compute_min_rank));
+    }
+    return ptrs;
 }
 
 }

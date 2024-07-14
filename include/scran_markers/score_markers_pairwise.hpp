@@ -39,25 +39,25 @@ struct ScoreMarkersPairwiseOptions {
 
     /**
      * Whether to compute Cohen's d. 
-     * This only affects the `score_markers_pairwise()` overload that return `Results`.
+     * This only affects the `score_markers_pairwise()` overload that returns a `ScoreMarkersPairwiseResults`.
      */
     bool compute_cohens_d = true;
 
     /**
      * Whether to compute the AUC.
-     * This only affects the `score_markers_pairwise()` overload that return `Results`.
+     * This only affects the `score_markers_pairwise()` overload that returns a `ScoreMarkersPairwiseResults`.
      */
     bool compute_auc = true;
 
     /**
      * Whether to compute the difference in means.
-     * This only affects the `score_markers_pairwise()` overload that return `Results`.
+     * This only affects the `score_markers_pairwise()` overload that returns a `ScoreMarkersPairwiseResults`.
      */
     bool compute_delta_mean = true;
 
     /**
      * Whether to compute the difference in the detected proportion.
-     * This only affects the `score_markers_pairwise()` overload that return `Results`.
+     * This only affects the `score_markers_pairwise()` overload that returns a `ScoreMarkersPairwiseResults`.
      */
     bool compute_delta_detected = true;
 
@@ -244,18 +244,9 @@ template<typename Stat_>
 ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(size_t ngenes, size_t ngroups, ScoreMarkersPairwiseResults<Stat_>& store, const ScoreMarkersPairwiseOptions& opt) {
     ScoreMarkersPairwiseBuffers<Stat_> output;
 
-    store.mean.reserve(ngroups);
-    store.detected.reserve(ngroups);
-    output.mean.reserve(ngroups);
-    output.detected.reserve(ngroups);
-    for (size_t g = 0; g < ngroups; ++g) {
-        store.mean.emplace_back(ngenes);
-        store.detected.emplace_back(ngenes);
-        output.mean.emplace_back(store.mean.back().data());
-        output.detected.emplace_back(store.detected.back().data());
-    }
+    internal::fill_average_results(ngenes, ngroups, store.mean, store.detected, output.mean, output.detected);
 
-    size_t num_effect_sizes = ngroups * ngroups * ngenes; // everything's already a size_t.
+    size_t num_effect_sizes = ngenes * ngroups * ngroups; // already size_t's, no need to cast.
 
     if (opt.compute_cohens_d) {
         store.cohens_d.resize(num_effect_sizes);
@@ -337,8 +328,6 @@ ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(size_t ngenes, size_t n
  * @param matrix A **tatami** matrix instance.
  * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
  * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
- * @param[in] block Pointer to an array of length equal to the number of columns in `matrix`, containing the blocking factor.
- * Block identifiers should be 0-based and should contain all integers in \f$[0, B)\f$ where \f$N\f$ is the number of unique blocking levels.
  * @param options Further options.
  * @param[out] output Collection of buffers in which to store the computed statistics.
  * Each buffer is filled with the corresponding statistic for each group or pairwise comparison.

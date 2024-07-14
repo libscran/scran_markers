@@ -22,31 +22,31 @@ struct SummarizeEffectsOptions {
     int num_threads = 1;
 
     /**
-     * Whether to report the minimum of the pairwise effects.
+     * Whether to report the minimum of the effect sizes for each group.
      * Only affects the `summarize_effects()` overload that returns a vector of `SummaryResults`.
      */
     bool compute_min = true;
 
     /**
-     * Whether to report the mean of the pairwise effects.
+     * Whether to report the mean of the effect sizes for each group.
      * Only affects the `summarize_effects()` overload that returns a vector of `SummaryResults`.
      */
     bool compute_mean = true;
 
     /**
-     * Whether to report the median of the pairwise effects.
+     * Whether to report the median of the effect sizes for each group.
      * Only affects the `summarize_effects()` overload that returns a vector of `SummaryResults`.
      */
     bool compute_median = true;
 
     /**
-     * Whether to report the maximum of the pairwise effects.
+     * Whether to report the maximum of the effect sizes for each group.
      * Only affects the `summarize_effects()` overload that returns a vector of `SummaryResults`.
      */
     bool compute_max = true;
 
     /**
-     * Whether to report the min-rank of the pairwise effects.
+     * Whether to report the min-rank of the effect sizes for each group.
      * Only affects the `summarize_effects()` overload that returns a vector of `SummaryResults`.
      */
     bool compute_min_rank = true;
@@ -138,35 +138,17 @@ void summarize_effects(Index_ ngenes, size_t ngroups, const Stat_* effects, cons
  */
 template<typename Stat_ = double, typename Rank_ = int, typename Index_>
 std::vector<SummaryResults<Stat_, Rank_> > summarize_effects(Index_ ngenes, size_t ngroups, const Stat_* effects, const SummarizeEffectsOptions& options) {
-    std::vector<SummaryResults<Stat_, Rank_> > output(ngroups);
-    std::vector<SummaryBuffers<Stat_, Rank_> > ptrs(ngroups);
-
-    for (size_t g = 0; g < ngroups; ++g) {
-        auto& out = output[g];
-        auto& ptr = ptrs[g];
-
-        if (options.compute_min) {
-            out.min.resize(ngenes);
-            ptr.min = out.min.data();
-        }
-        if (options.compute_mean) {
-            out.mean.resize(ngenes);
-            ptr.mean = out.mean.data();
-        }
-        if (options.compute_median) {
-            out.median.resize(ngenes);
-            ptr.median = out.median.data();
-        }
-        if (options.compute_max) {
-            out.max.resize(ngenes);
-            ptr.max = out.max.data();
-        }
-        if (options.compute_min_rank) {
-            out.min_rank.resize(ngenes);
-            ptr.min_rank = out.min_rank.data();
-        }
-    }
-
+    std::vector<SummaryResults<Stat_, Rank_> > output;
+    auto ptrs = internal::fill_summary_results(
+        ngenes,
+        ngroups,
+        output,
+        options.compute_min,
+        options.compute_mean,
+        options.compute_median,
+        options.compute_max,
+        options.compute_min_rank
+    );
     summarize_effects(ngenes, ngroups, effects, ptrs, options);
     return output;
 }

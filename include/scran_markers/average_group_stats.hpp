@@ -60,6 +60,27 @@ void average_group_stats(
     }
 }
 
+template<typename Stat_>
+void fill_average_results(
+    size_t ngenes,
+    size_t ngroups,
+    std::vector<std::vector<Stat_> >& mean_res, 
+    std::vector<std::vector<Stat_> >& detected_res, 
+    std::vector<Stat_*>& mean_ptrs,
+    std::vector<Stat_*>& detected_ptrs)
+{
+    mean_res.reserve(ngroups);
+    detected_res.reserve(ngroups);
+    mean_ptrs.reserve(ngroups);
+    detected_ptrs.reserve(ngroups);
+    for (size_t g = 0; g < ngroups; ++g) {
+        mean_res.emplace_back(ngenes);
+        detected_res.emplace_back(ngenes);
+        mean_ptrs.emplace_back(mean_res.back().data());
+        detected_ptrs.emplace_back(detected_res.back().data());
+    }
+}
+
 }
 
 }
