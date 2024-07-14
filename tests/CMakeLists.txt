@@ -25,6 +25,7 @@ macro(create_test name)
         src/summarize_comparisons.cpp
         src/summarize_effects.cpp
         src/score_markers_pairwise.cpp
+        src/score_markers_summary.cpp
         src/create_combinations.cpp
         src/average_group_stats.cpp
     )

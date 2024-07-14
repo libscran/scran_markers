@@ -39,25 +39,25 @@ struct ScoreMarkersPairwiseOptions {
 
     /**
      * Whether to compute Cohen's d. 
-     * This only affects the `score_markers_pairwise()` overload that return `Results`.
+     * This only affects the `score_markers_pairwise()` overload that returns a `ScoreMarkersPairwiseResults`.
      */
     bool compute_cohens_d = true;
 
     /**
      * Whether to compute the AUC.
-     * This only affects the `score_markers_pairwise()` overload that return `Results`.
+     * This only affects the `score_markers_pairwise()` overload that returns a `ScoreMarkersPairwiseResults`.
      */
     bool compute_auc = true;
 
     /**
      * Whether to compute the difference in means.
-     * This only affects the `score_markers_pairwise()` overload that return `Results`.
+     * This only affects the `score_markers_pairwise()` overload that returns a `ScoreMarkersPairwiseResults`.
      */
     bool compute_delta_mean = true;
 
     /**
      * Whether to compute the difference in the detected proportion.
-     * This only affects the `score_markers_pairwise()` overload that return `Results`.
+     * This only affects the `score_markers_pairwise()` overload that returns a `ScoreMarkersPairwiseResults`.
      */
     bool compute_delta_detected = true;
 
@@ -246,56 +246,23 @@ ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(size_t ngenes, size_t n
 
     internal::fill_average_results(ngenes, ngroups, store.mean, store.detected, output.mean, output.detected);
 
+    size_t num_effect_sizes = ngenes * ngroups * ngroups; // already size_t's, no need to cast.
+
     if (opt.compute_cohens_d) {
-        output.cohens_d = internal::fill_summary_results(
-            ngenes,
-            ngroups,
-            store.cohens_d,
-            options.compute_min,
-            options.compute_mean,
-            options.compute_median,
-            options.compute_max,
-            options.compute_min_rank
-        );
+        store.cohens_d.resize(num_effect_sizes);
+        output.cohens_d = store.cohens_d.data();
     }
-
     if (opt.compute_auc) {
-        output.auc = internal::fill_summary_results(
-            ngenes,
-            ngroups,
-            store.auc,
-            options.compute_min,
-            options.compute_mean,
-            options.compute_median,
-            options.compute_max,
-            options.compute_min_rank
-        );
+        store.auc.resize(num_effect_sizes);
+        output.auc = store.auc.data();
     }
-
     if (opt.compute_delta_mean) {
-        output.delta_mean = internal::fill_summary_results(
-            ngenes,
-            ngroups,
-            store.delta_mean,
-            options.compute_min,
-            options.compute_mean,
-            options.compute_median,
-            options.compute_max,
-            options.compute_min_rank
-        );
+        store.delta_mean.resize(num_effect_sizes);
+        output.delta_mean = store.delta_mean.data();
     }
-
     if (opt.compute_delta_detected) {
-        output.delta_detected = internal::fill_summary_results(
-            ngenes,
-            ngroups,
-            store.delta_detected,
-            options.compute_min,
-            options.compute_detected,
-            options.compute_median,
-            options.compute_max,
-            options.compute_min_rank
-        );
+        store.delta_detected.resize(num_effect_sizes);
+        output.delta_detected = store.delta_detected.data();
     }
 
     return output;
@@ -361,8 +328,6 @@ ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(size_t ngenes, size_t n
  * @param matrix A **tatami** matrix instance.
  * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
  * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
- * @param[in] block Pointer to an array of length equal to the number of columns in `matrix`, containing the blocking factor.
- * Block identifiers should be 0-based and should contain all integers in \f$[0, B)\f$ where \f$N\f$ is the number of unique blocking levels.
  * @param options Further options.
  * @param[out] output Collection of buffers in which to store the computed statistics.
  * Each buffer is filled with the corresponding statistic for each group or pairwise comparison.

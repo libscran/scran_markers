@@ -22,31 +22,31 @@ struct SummarizeEffectsOptions {
     int num_threads = 1;
 
     /**
-     * Whether to report the minimum of the pairwise effects.
+     * Whether to report the minimum of the effect sizes for each group.
      * Only affects the `summarize_effects()` overload that returns a vector of `SummaryResults`.
      */
     bool compute_min = true;
 
     /**
-     * Whether to report the mean of the pairwise effects.
+     * Whether to report the mean of the effect sizes for each group.
      * Only affects the `summarize_effects()` overload that returns a vector of `SummaryResults`.
      */
     bool compute_mean = true;
 
     /**
-     * Whether to report the median of the pairwise effects.
+     * Whether to report the median of the effect sizes for each group.
      * Only affects the `summarize_effects()` overload that returns a vector of `SummaryResults`.
      */
     bool compute_median = true;
 
     /**
-     * Whether to report the maximum of the pairwise effects.
+     * Whether to report the maximum of the effect sizes for each group.
      * Only affects the `summarize_effects()` overload that returns a vector of `SummaryResults`.
      */
     bool compute_max = true;
 
     /**
-     * Whether to report the min-rank of the pairwise effects.
+     * Whether to report the min-rank of the effect sizes for each group.
      * Only affects the `summarize_effects()` overload that returns a vector of `SummaryResults`.
      */
     bool compute_min_rank = true;
@@ -139,7 +139,7 @@ void summarize_effects(Index_ ngenes, size_t ngroups, const Stat_* effects, cons
 template<typename Stat_ = double, typename Rank_ = int, typename Index_>
 std::vector<SummaryResults<Stat_, Rank_> > summarize_effects(Index_ ngenes, size_t ngroups, const Stat_* effects, const SummarizeEffectsOptions& options) {
     std::vector<SummaryResults<Stat_, Rank_> > output;
-    internal::fill_summary_results(
+    auto ptrs = internal::fill_summary_results(
         ngenes,
         ngroups,
         output,

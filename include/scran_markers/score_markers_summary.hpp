@@ -5,6 +5,8 @@
 #include "cohens_d.hpp"
 #include "simple_diff.hpp"
 #include "summarize_comparisons.hpp"
+#include "average_group_stats.hpp"
+#include "create_combinations.hpp"
 
 #include "scran_blocks/scran_blocks.hpp"
 #include "tatami/tatami.hpp"
@@ -44,27 +46,57 @@ struct ScoreMarkersSummaryOptions {
 
     /**
      * Whether to compute Cohen's d. 
-     * This only affects the `score_markers_summary()` overload that return `Results`.
+     * This only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
      */
     bool compute_cohens_d = true;
 
     /**
      * Whether to compute the AUC.
-     * This only affects the `score_markers_summary()` overload that return `Results`.
+     * This only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
      */
     bool compute_auc = true;
 
     /**
      * Whether to compute the difference in means.
-     * This only affects the `score_markers_summary()` overload that return `Results`.
+     * This only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
      */
     bool compute_delta_mean = true;
 
     /**
      * Whether to compute the difference in the detected proportion.
-     * This only affects the `score_markers_summary()` overload that return `Results`.
+     * This only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
      */
     bool compute_delta_detected = true;
+
+    /**
+     * Whether to report the minimum of the effect sizes for each group.
+     * Only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
+     */
+    bool compute_min = true;
+
+    /**
+     * Whether to report the mean of the effect sizes for each group.
+     * Only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
+     */
+    bool compute_mean = true;
+
+    /**
+     * Whether to report the median of the effect sizes for each group.
+     * Only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
+     */
+    bool compute_median = true;
+
+    /**
+     * Whether to report the maximum of the effect sizes for each group.
+     * Only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
+     */
+    bool compute_max = true;
+
+    /**
+     * Whether to report the minimum rank of the effect sizes for each group.
+     * Only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
+     */
+    bool compute_min_rank = true;
 
     /**
      * Policy to use for weighting blocks when computing average statistics/effect sizes across blocks.
@@ -270,7 +302,7 @@ public:
                 continue;
             }
 
-            if (cache_size == 0) {
+            if (my_cache_size == 0) {
                 my_actions[other] = CacheAction::COMPUTE;
                 continue;
             }
@@ -311,24 +343,24 @@ public:
                 full_effects[offset /* = other + ngroups * i */] = curcache[i];
             }
 
-            my_unused_pool.push_back(x);
-            my_cached.erase(cached.begin());
+            my_unused_pool.push_back(curcache);
+            my_cached.erase(my_cached.begin());
         }
 
         // Refining our choice of cacheable entries by doing a dummy run and
         // seeing whether eviction actually happens. If it doesn't, we won't
         // bother caching, because that would be a waste of memory accesses.
-        for (size_t other = 0; other < ngroups; ++other) {
+        for (size_t other = 0; other < my_ngroups; ++other) {
             if (my_actions[other] != CacheAction::CACHE) {
                 continue;
             }
 
             std::pair<size_t, size_t> key(other, group);
-            if (cached.size() < cache_size) {
-                auto ptr = my_vector_pool.back();
+            if (my_cached.size() < my_cache_size) {
+                auto ptr = my_unused_pool.back();
                 my_cached[key] = ptr;
                 my_staging_cache[other] = ptr;
-                my_vector_pool.pop_back();
+                my_unused_pool.pop_back();
                 continue;
             }
 
@@ -361,9 +393,9 @@ public:
     }
 };
 
-template<typename Index_, typename Stat_, typename Rank_>
+template<typename Stat_, typename Rank_>
 void process_simple_summary_effects(
-    Index_ ngenes, 
+    size_t ngenes, 
     size_t ngroups,
     size_t nblocks,
     size_t ncombos,
@@ -387,7 +419,7 @@ void process_simple_summary_effects(
     EffectsCacher<Stat_> cache(ngenes, ngroups, cache_size);
     std::vector<Stat_> full_effects(ngroups * ngenes);
     std::vector<std::vector<Stat_> > effect_buffers(num_threads);
-    for (auto& ef : effect_buffer) {
+    for (auto& ef : effect_buffers) {
         ef.resize(ngroups);
     }
 
@@ -396,14 +428,14 @@ void process_simple_summary_effects(
         for (size_t group = 0; group < ngroups; ++group) {
             cache.fill_effects_from_cache(group, full_effects);
 
-            tatami::parallelize([&](size_t t, Index_ start, Index_ length) -> void {
+            tatami::parallelize([&](size_t t, size_t start, size_t length) -> void {
                 size_t in_offset = ncombos * static_cast<size_t>(start); // cast to avoid oerflow.
-                auto my_means = tmp_means + in_offset;
-                auto my_variances = tmp_variances + in_offset;
+                auto my_means = combo_means.data() + in_offset;
+                auto my_variances = combo_vars.data() + in_offset;
                 auto store_ptr = full_effects.data() + static_cast<size_t>(start) * ngroups; // cast to avoid overflow.
                 auto& effect_buffer = effect_buffers[t];
 
-                for (Index_ gene = start, end = start + length; gene < end; ++gene, my_means += ncombos, my_variances += ncombos, store_ptr += ngroups) {
+                for (size_t gene = start, end = start + length; gene < end; ++gene, my_means += ncombos, my_variances += ncombos, store_ptr += ngroups) {
                     for (size_t other = 0; other < ngroups; ++other) {
                         auto cache_action = cache.get_action(other);
                         if (cache_action == internal::CacheAction::COMPUTE) {
@@ -420,7 +452,7 @@ void process_simple_summary_effects(
 
             auto mr = output.cohens_d[group].min_rank;
             if (mr) {
-                differential_analysis::compute_min_rank(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
+                compute_min_rank(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
             }
         }
     }
@@ -430,29 +462,29 @@ void process_simple_summary_effects(
         for (int group = 0; group < ngroups; ++group) {
             cache.fill_effects_from_cache(group, full_effects);
 
-            tatami::parallelize([&](size_t t, Index_ start, Index_ length) -> void {
-                auto my_means = tmp_means + ncombos * static_cast<size_t>(start); // cast to size_t to avoid overflow.
-                auto store_ptr = full_set.data() + static_cast<size_t>(start) * ngroups;
+            tatami::parallelize([&](size_t t, size_t start, size_t length) -> void {
+                auto my_means = combo_means.data() + ncombos * static_cast<size_t>(start); // cast to size_t to avoid overflow.
+                auto store_ptr = full_effects.data() + static_cast<size_t>(start) * ngroups;
                 auto& effect_buffer = effect_buffers[t];
 
-                for (Index_ gene = start, end = start + length; gene < end; ++gene, my_means += ncombos, store_ptr += ngroups) {
+                for (size_t gene = start, end = start + length; gene < end; ++gene, my_means += ncombos, store_ptr += ngroups) {
                     for (size_t other = 0; other < ngroups; ++other) {
                         auto cache_action = cache.get_action(other);
                         if (cache_action != internal::CacheAction::SKIP) {
                             auto val = compute_pairwise_simple_diff(group, other, my_means, ngroups, nblocks, preweights);
                             store_ptr[other] = val;
-                            if (cache_action == differential_analysis::CacheAction::CACHE) {
+                            if (cache_action == CacheAction::CACHE) {
                                 cache.get_cache_location(other)[gene] = -val;
                             } 
                         }
                     }
-                    summarize_comparisons(ngroups, store_ptr, group, gene, output.delta_mean[g], effect_buffer);
+                    summarize_comparisons(ngroups, store_ptr, group, gene, output.delta_mean[group], effect_buffer);
                 }
-            }, ngenes, nthreads);
+            }, ngenes, num_threads);
 
             auto mr = output.delta_mean[group].min_rank;
             if (mr) {
-                differential_analysis::compute_min_rank(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
+                compute_min_rank(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
             }
         }
     }
@@ -462,64 +494,90 @@ void process_simple_summary_effects(
         for (int group = 0; group < ngroups; ++group) {
             cache.fill_effects_from_cache(group, full_effects);
 
-            tatami::parallelize([&](size_t t, Index_ start, Index_ length) -> void {
-                auto my_detected = tmp_detected + ncombos * static_cast<size_t>(start); // cast to size_t to avoid overflow.
-                auto store_ptr = full_set.data() + static_cast<size_t>(start) * ngroups;
+            tatami::parallelize([&](size_t t, size_t start, size_t length) -> void {
+                auto my_detected = combo_detected.data() + ncombos * static_cast<size_t>(start); // cast to size_t to avoid overflow.
+                auto store_ptr = full_effects.data() + static_cast<size_t>(start) * ngroups;
                 auto& effect_buffer = effect_buffers[t];
 
-                for (Index_ gene = start, end = start + length; gene < end; ++gene, my_detected += ncombos, store_ptr += ngroups) {
+                for (size_t gene = start, end = start + length; gene < end; ++gene, my_detected += ncombos, store_ptr += ngroups) {
                     for (size_t other = 0; other < ngroups; ++other) {
                         auto cache_action = cache.get_action(other);
-                        if (cache_action != internal::CacheAction::SKIP) {
+                        if (cache_action != CacheAction::SKIP) {
                             auto val = compute_pairwise_simple_diff(group, other, my_detected, ngroups, nblocks, preweights);
                             store_ptr[other] = val;
-                            if (cache_action == differential_analysis::CacheAction::CACHE) {
+                            if (cache_action == CacheAction::CACHE) {
                                 cache.get_cache_location(other)[gene] = -val;
                             } 
                         }
                     }
-                    summarize_comparisons(ngroups, store_ptr, group, gene, output.delta_detected[g], effect_buffer);
+                    summarize_comparisons(ngroups, store_ptr, group, gene, output.delta_detected[group], effect_buffer);
                 }
-            }, ngenes, nthreads);
+            }, ngenes, num_threads);
 
             auto mr = output.delta_detected[group].min_rank;
             if (mr) {
-                differential_analysis::compute_min_rank(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
+                compute_min_rank(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
             }
         }
     }
 }
 
-template<typename Stat_>
-ScoreMarkersSummaryBuffers<Stat_> fill_summary_results(size_t ngenes, size_t ngroups, ScoreMarkersSummaryResults<Stat_>& store, const ScoreMarkersSummaryOptions& opt) {
-    ScoreMarkersSummaryBuffers<Stat_> output;
+template<typename Stat_, typename Rank_>
+ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(size_t ngenes, size_t ngroups, ScoreMarkersSummaryResults<Stat_, Rank_>& store, const ScoreMarkersSummaryOptions& options) {
+    ScoreMarkersSummaryBuffers<Stat_, Rank_> output;
 
-    store.mean.reserve(ngroups);
-    store.detected.reserve(ngroups);
-    output.mean.reserve(ngroups);
-    output.detected.reserve(ngroups);
-    for (size_t g = 0; g < ngroups; ++g) {
-        store.mean.emplace_back(ngenes);
-        store.detected.emplace_back(ngenes);
-        output.mean.emplace_back(store.mean.back().data());
-        output.detected.emplace_back(store.detected.back().data());
+    internal::fill_average_results(ngenes, ngroups, store.mean, store.detected, output.mean, output.detected);
+
+    if (options.compute_cohens_d) {
+        output.cohens_d = internal::fill_summary_results(
+            ngenes,
+            ngroups,
+            store.cohens_d,
+            options.compute_min,
+            options.compute_mean,
+            options.compute_median,
+            options.compute_max,
+            options.compute_min_rank
+        );
     }
 
-    if (opt.compute_cohens_d) {
-        store.cohens_d.resize(num_effect_sizes);
-        output.cohens_d = store.cohens_d.data();
+    if (options.compute_auc) {
+        output.auc = internal::fill_summary_results(
+            ngenes,
+            ngroups,
+            store.auc,
+            options.compute_min,
+            options.compute_mean,
+            options.compute_median,
+            options.compute_max,
+            options.compute_min_rank
+        );
     }
-    if (opt.compute_auc) {
-        store.auc.resize(num_effect_sizes);
-        output.auc = store.auc.data();
+
+    if (options.compute_delta_mean) {
+        output.delta_mean = internal::fill_summary_results(
+            ngenes,
+            ngroups,
+            store.delta_mean,
+            options.compute_min,
+            options.compute_mean,
+            options.compute_median,
+            options.compute_max,
+            options.compute_min_rank
+        );
     }
-    if (opt.compute_delta_mean) {
-        store.delta_mean.resize(num_effect_sizes);
-        output.delta_mean = store.delta_mean.data();
-    }
-    if (opt.compute_delta_detected) {
-        store.delta_detected.resize(num_effect_sizes);
-        output.delta_detected = store.delta_detected.data();
+
+    if (options.compute_delta_detected) {
+        output.delta_detected = internal::fill_summary_results(
+            ngenes,
+            ngroups,
+            store.delta_detected,
+            options.compute_min,
+            options.compute_mean,
+            options.compute_median,
+            options.compute_max,
+            options.compute_min_rank
+        );
     }
 
     return output;
@@ -555,28 +613,28 @@ ScoreMarkersSummaryBuffers<Stat_> fill_summary_results(size_t ngenes, size_t ngr
  * @param options Further options.
  * @param[out] output Collection of buffers in which to store the computed statistics.
  * Each buffer is filled with the corresponding statistic for each group or pairwise comparison.
- * Any of `ScoreMarkersPairwiseBuffers::cohens_d`, 
- * `ScoreMarkersPairwiseBuffers::auc`, 
- * `ScoreMarkersPairwiseBuffers::delta_mean` or
- * `ScoreMarkersPairwiseBuffers::delta_detected`
+ * Any of `ScoreMarkersSummaryBuffers::cohens_d`, 
+ * `ScoreMarkersSummaryBuffers::auc`, 
+ * `ScoreMarkersSummaryBuffers::delta_mean` or
+ * `ScoreMarkersSummaryBuffers::delta_detected`
  * may be empty, in which case the corresponding statistic is not computed or summarized.
  */
-template<typename Value_, typename Index_, typename Group_, typename Stat_>
+template<typename Value_, typename Index_, typename Group_, typename Stat_, typename Rank_>
 void score_markers_summary(
     const tatami::Matrix<Value_, Index_>& matrix, 
     const Group_* group, 
-    const ScoreMarkersPairwiseOptions& options,
-    const ScoreMarkersPairwiseBuffers<Stat_>& output) 
+    const ScoreMarkersSummaryOptions& options,
+    const ScoreMarkersSummaryBuffers<Stat_, Rank_>& output) 
 {
     Index_ NC = matrix.ncol();
     auto group_sizes = tatami_stats::tabulate_groups(group, NC); 
+    size_t ngenes = static_cast<size_t>(matrix.nrow());
+    size_t ngroups = group_sizes.size();
 
     // In most cases this doesn't really matter, but we do it for consistency with the 1-block case,
     // and to account for variable weighting where non-zero block sizes get zero weight.
     auto group_weights = scran_blocks::compute_weights<Stat_>(group_sizes, options.block_weight_policy, options.variable_block_weight_parameters);
 
-    size_t ngroups = group_sizes.size();
-    size_t ngenes = static_cast<size_t>(matrix.nrow());
     size_t payload_size = ngenes * ngroups; // already cast to size_t to avoid overflow.
     std::vector<Stat_> group_means(payload_size), group_vars(payload_size), group_detected(payload_size);
 
@@ -636,8 +694,8 @@ void score_markers_summary(
     );
 
     if (do_auc) {
-        differential_analysis::summarize_comparisons(ngenes, ngroups, auc_ptr, output.auc, num_threads);
-        differential_analysis::compute_min_rank(ngenes, ngroups, auc_ptr, output.auc, num_threads);
+        internal::summarize_comparisons(ngenes, ngroups, auc_ptr, output.auc, options.num_threads);
+        internal::compute_min_rank_pairwise(ngenes, ngroups, auc_ptr, output.auc, options.num_threads);
     }
 }
 
@@ -662,21 +720,22 @@ void score_markers_summary(
  * @param options Further options.
  * @param[out] output Collection of buffers in which to store the computed statistics.
  * Each buffer is filled with the corresponding statistic for each group or pairwise comparison.
- * Any of `ScoreMarkersPairwiseBuffers::cohens_d`, 
- * `ScoreMarkersPairwiseBuffers::auc`, 
- * `ScoreMarkersPairwiseBuffers::delta_mean` or
- * `ScoreMarkersPairwiseBuffers::delta_detected`
+ * Any of `ScoreMarkersSummaryBuffers::cohens_d`, 
+ * `ScoreMarkersSummaryBuffers::auc`, 
+ * `ScoreMarkersSummaryBuffers::delta_mean` or
+ * `ScoreMarkersSummaryBuffers::delta_detected`
  * may be empty, in which case the corresponding statistic is not computed or summarized.
  */
-template<typename Value_, typename Index_, typename Group_, typename Block_, typename Stat_>
+template<typename Value_, typename Index_, typename Group_, typename Block_, typename Stat_, typename Rank_>
 void score_markers_summary_blocked(
     const tatami::Matrix<Value_, Index_>& matrix, 
     const Group_* group, 
     const Block_* block,
-    const ScoreMarkersPairwiseOptions& options,
-    const ScoreMarkersPairwiseBuffers<Stat_>& output) 
+    const ScoreMarkersSummaryOptions& options,
+    const ScoreMarkersSummaryBuffers<Stat_, Rank_>& output) 
 {
     Index_ NC = matrix.ncol();
+    size_t ngenes = static_cast<size_t>(matrix.nrow());
     size_t ngroups = output.mean.size();
     size_t nblocks = tatami_stats::total_groups(block, NC); 
 
@@ -685,7 +744,7 @@ void score_markers_summary_blocked(
     size_t ncombos = combo_sizes.size();
     auto combo_weights = scran_blocks::compute_weights<Stat_>(combo_sizes, options.block_weight_policy, options.variable_block_weight_parameters);
 
-    size_t payload_size = static_cast<size_t>(matrix.nrow()) * ncombos; // cast to size_t to avoid overflow.
+    size_t payload_size = ngenes * ncombos; // already cast to size_t to avoid overflow.
     std::vector<Stat_> combo_means(payload_size), combo_vars(payload_size), combo_detected(payload_size);
 
     bool do_auc = !output.auc.empty();
@@ -743,8 +802,8 @@ void score_markers_summary_blocked(
     );
 
     if (do_auc) {
-        differential_analysis::summarize_comparisons(ngenes, ngroups, auc_ptr, output.auc, num_threads);
-        differential_analysis::compute_min_rank(ngenes, ngroups, auc_ptr, output.auc, num_threads);
+        internal::summarize_comparisons(ngenes, ngroups, auc_ptr, output.auc, options.num_threads);
+        internal::compute_min_rank_pairwise(ngenes, ngroups, auc_ptr, output.auc, options.num_threads);
     }
 }
 

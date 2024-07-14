@@ -26,30 +26,35 @@ struct SummaryBuffers {
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the minimum effect size for each gene.
+     * If NULL, the minimum is not computed.
      */ 
     Stat_* min = NULL;
 
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the mean effect size for each gene.
+     * If NULL, the mean is not computed.
      */ 
     Stat_* mean = NULL;
 
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the median effect size for each gene.
+     * If NULL, the median is not computed.
      */ 
     Stat_* median = NULL;
 
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the maximum effect size for each gene.
+     * If NULL, the maximum is not computed.
      */ 
     Stat_* max = NULL;
 
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the minimum rank of the effect sizes for each gene.
+     * If NULL, the minimum rank is not computed.
      */ 
     Rank_* min_rank = NULL;
 };
@@ -298,11 +303,11 @@ std::vector<SummaryBuffers<Stat_, Rank_> > fill_summary_results(
     bool compute_max,
     bool compute_min_rank) 
 {
-    output.resize(ngroups);
+    outputs.resize(ngroups);
     std::vector<SummaryBuffers<Stat_, Rank_> > ptrs;
     ptrs.reserve(ngroups);
     for (size_t g = 0; g < ngroups; ++g) {
-        ptrs.emplace_back(fill_summary_results(ngenes, output[g], compute_min, compute_mean, compute_median, compute_max, compute_min_rank));
+        ptrs.emplace_back(fill_summary_results(ngenes, outputs[g], compute_min, compute_mean, compute_median, compute_max, compute_min_rank));
     }
     return ptrs;
 }
