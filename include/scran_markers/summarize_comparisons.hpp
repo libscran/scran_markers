@@ -99,7 +99,7 @@ struct SummaryResults {
 namespace internal {
 
 template<typename Stat_, typename Rank_>
-void summarize_comparisons_internal(size_t ngroups, const Stat_* effects, size_t group, size_t gene, const SummaryBuffers<Stat_, Rank_>& output, std::vector<Stat_>& buffer) {
+void summarize_comparisons(size_t ngroups, const Stat_* effects, size_t group, size_t gene, const SummaryBuffers<Stat_, Rank_>& output, std::vector<Stat_>& buffer) {
     auto ebegin = buffer.data();
     auto elast = ebegin;	
 
@@ -158,7 +158,7 @@ void summarize_comparisons(size_t ngenes, size_t ngroups, const Stat_* effects, 
         for (size_t gene = start, end = start + length; gene < end; ++gene, effect_ptr += shift) {
             auto current_effects = effect_ptr;
             for (size_t l = 0; l < ngroups; ++l, current_effects += ngroups) {
-                summarize_comparisons_internal(ngroups, current_effects, l, gene, output[l], buffer);
+                summarize_comparisons(ngroups, current_effects, l, gene, output[l], buffer);
             }
         }
     }, ngenes, threads);
