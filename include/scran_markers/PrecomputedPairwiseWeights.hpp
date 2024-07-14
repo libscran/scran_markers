@@ -43,7 +43,7 @@ public:
         size_t out_offset1_raw = ngroups, out_offset2_raw = 1;
         for (size_t g1 = 1; g1 < ngroups; ++g1, out_offset1_raw += ngroups, ++out_offset2_raw) {
             size_t out_offset1 = out_offset1_raw, out_offset2 = out_offset2_raw;
-            for (size_t g2 = 0; g1 < g2; ++g1, ++out_offset1, out_offset2 += ngroups) {
+            for (size_t g2 = 0; g2 < g1; ++g2, ++out_offset1, out_offset2 += ngroups) {
                 my_total[out_offset2] = my_total[out_offset1];
             }
         }

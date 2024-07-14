@@ -247,12 +247,11 @@ public:
         my_ngenes(ngenes),
         my_ngroups(ngroups),
         my_cache_size(std::min(cache_size, ngroups * (ngroups - 1) / 2)), // cap it at the maximum possible number of comparisons.
-        my_common_cache(ngenes * my_cache_size),
         my_actions(ngroups),
+        my_common_cache(ngenes * my_cache_size),
         my_staging_cache(ngroups)
     {
         my_unused_pool.reserve(my_cache_size);
-        my_cached.reserve(my_cache_size);
         auto ptr = my_common_cache.data();
         for (size_t c = 0; c < my_cache_size; ++c, ptr += ngenes) {
             my_unused_pool.push_back(ptr);
@@ -399,23 +398,35 @@ void process_simple_summary_effects(
     size_t ngroups,
     size_t nblocks,
     size_t ncombos,
-    std::vector<Stat_>& combo_means,
-    std::vector<Stat_>& combo_vars,
-    std::vector<Stat_>& combo_detected,
+    const std::vector<Stat_>& combo_means,
+    const std::vector<Stat_>& combo_vars,
+    const std::vector<Stat_>& combo_detected,
     const ScoreMarkersSummaryBuffers<Stat_, Rank_>& output,
     const std::vector<Stat_>& combo_weights,
     double threshold,
     size_t cache_size,
     int num_threads)
 {
-    std::vector<Stat_> total_weights_per_group;
-    const Stat_* total_weights_ptr = combo_weights.data();
-    if (nblocks > 1) {
-        total_weights_per_group = compute_total_weight_per_group(ngroups, nblocks, combo_weights.data());
-        total_weights_ptr = total_weights_per_group.data();
-    }
-    PrecomputedPairwiseWeights<Stat_> preweights(ngroups, nblocks, combo_weights.data());
+    // First, computing the pooled averages to get that out of the way.
+    {
+        std::vector<Stat_> total_weights_per_group;
+        const Stat_* total_weights_ptr = combo_weights.data();
+        if (nblocks > 1) {
+            total_weights_per_group = compute_total_weight_per_group(ngroups, nblocks, combo_weights.data());
+            total_weights_ptr = total_weights_per_group.data();
+        }
 
+        tatami::parallelize([&](size_t, size_t start, size_t length) -> void {
+            size_t in_offset = ncombos * static_cast<size_t>(start);
+            const auto* tmp_means = combo_means.data() + in_offset;
+            const auto* tmp_detected = combo_detected.data() + in_offset;
+            for (size_t gene = start, end = start + length; gene < end; ++gene, tmp_means += ncombos, tmp_detected += ncombos) {
+                average_group_stats(gene, ngroups, nblocks, tmp_means, tmp_detected, combo_weights.data(), total_weights_ptr, output.mean, output.detected);
+            }
+        }, ngenes, num_threads);
+    }
+
+    PrecomputedPairwiseWeights<Stat_> preweights(ngroups, nblocks, combo_weights.data());
     EffectsCacher<Stat_> cache(ngenes, ngroups, cache_size);
     std::vector<Stat_> full_effects(ngroups * ngenes);
     std::vector<std::vector<Stat_> > effect_buffers(num_threads);
@@ -452,14 +463,14 @@ void process_simple_summary_effects(
 
             auto mr = output.cohens_d[group].min_rank;
             if (mr) {
-                compute_min_rank(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
+                compute_min_rank_for_group(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
             }
         }
     }
 
     if (output.delta_mean.size()) {
         cache.clear();
-        for (int group = 0; group < ngroups; ++group) {
+        for (size_t group = 0; group < ngroups; ++group) {
             cache.fill_effects_from_cache(group, full_effects);
 
             tatami::parallelize([&](size_t t, size_t start, size_t length) -> void {
@@ -484,14 +495,14 @@ void process_simple_summary_effects(
 
             auto mr = output.delta_mean[group].min_rank;
             if (mr) {
-                compute_min_rank(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
+                compute_min_rank_for_group(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
             }
         }
     }
 
     if (output.delta_detected.size()) {
         cache.clear();
-        for (int group = 0; group < ngroups; ++group) {
+        for (size_t group = 0; group < ngroups; ++group) {
             cache.fill_effects_from_cache(group, full_effects);
 
             tatami::parallelize([&](size_t t, size_t start, size_t length) -> void {
@@ -516,7 +527,7 @@ void process_simple_summary_effects(
 
             auto mr = output.delta_detected[group].min_rank;
             if (mr) {
-                compute_min_rank(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
+                compute_min_rank_for_group(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
             }
         }
     }
@@ -798,6 +809,7 @@ void score_markers_summary_blocked(
         output,
         combo_weights,
         options.threshold,
+        options.cache_size,
         options.num_threads
     );
 
@@ -865,7 +877,7 @@ ScoreMarkersSummaryResults<Stat_, Rank_> score_markers_summary_blocked(
     size_t ngroups = tatami_stats::total_groups(group, matrix.ncol());
     ScoreMarkersSummaryResults<Stat_, Rank_> output;
     auto buffers = internal::fill_summary_results(matrix.nrow(), ngroups, output, options);
-    score_markers_summary_blocked(matrix, group, options, buffers);
+    score_markers_summary_blocked(matrix, group, block, options, buffers);
     return output;
 }
 

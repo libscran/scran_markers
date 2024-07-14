@@ -64,10 +64,10 @@ template<typename Stat_>
 void fill_average_results(
     size_t ngenes,
     size_t ngroups,
-    std::vector<std::vector<Stat_> > mean_res, 
-    std::vector<std::vector<Stat_> > detected_res, 
-    std::vector<Stat_*> mean_ptrs,
-    std::vector<Stat_*> detected_ptrs)
+    std::vector<std::vector<Stat_> >& mean_res, 
+    std::vector<std::vector<Stat_> >& detected_res, 
+    std::vector<Stat_*>& mean_ptrs,
+    std::vector<Stat_*>& detected_ptrs)
 {
     mean_res.reserve(ngroups);
     detected_res.reserve(ngroups);
