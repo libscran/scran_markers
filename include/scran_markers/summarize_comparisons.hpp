@@ -251,6 +251,62 @@ void compute_min_rank_pairwise(Index_ ngenes, size_t ngroups, const Stat_* effec
     }, ngroups, threads);
 }
 
+template<typename Stat_, typename Rank_>
+SummaryBuffers<Stat_, Rank_> fill_summary_results(
+    size_t ngenes,
+    SummaryResults<Stat_, Rank_>& out, 
+    bool compute_min,
+    bool compute_mean,
+    bool compute_median,
+    bool compute_max,
+    bool compute_min_rank) 
+{
+    SummaryBuffers<Stat_, Rank_> ptr;
+
+    if (compute_min) {
+        out.min.resize(ngenes);
+        ptr.min = out.min.data();
+    }
+    if (compute_mean) {
+        out.mean.resize(ngenes);
+        ptr.mean = out.mean.data();
+    }
+    if (compute_median) {
+        out.median.resize(ngenes);
+        ptr.median = out.median.data();
+    }
+    if (compute_max) {
+        out.max.resize(ngenes);
+        ptr.max = out.max.data();
+    }
+    if (compute_min_rank) {
+        out.min_rank.resize(ngenes);
+        ptr.min_rank = out.min_rank.data();
+    }
+
+    return ptr;
+}
+
+template<typename Stat_, typename Rank_>
+std::vector<SummaryBuffers<Stat_, Rank_> > fill_summary_results(
+    size_t ngenes,
+    size_t ngroups,
+    std::vector<SummaryResults<Stat_, Rank_> >& outputs, 
+    bool compute_min,
+    bool compute_mean,
+    bool compute_median,
+    bool compute_max,
+    bool compute_min_rank) 
+{
+    output.resize(ngroups);
+    std::vector<SummaryBuffers<Stat_, Rank_> > ptrs;
+    ptrs.reserve(ngroups);
+    for (size_t g = 0; g < ngroups; ++g) {
+        ptrs.emplace_back(fill_summary_results(ngenes, output[g], compute_min, compute_mean, compute_median, compute_max, compute_min_rank));
+    }
+    return ptrs;
+}
+
 }
 /**
  * @endcond

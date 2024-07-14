@@ -26,7 +26,7 @@ namespace scran_markers {
  */
 struct ScoreMarkersSummaryOptions {
     /**
-     * Threshold on the differences in expression values, used to adjust the Cohen's D and AUC calculations.
+     * Threshold on the differences in expression values, used to adjust the Cohen's d and AUC calculations.
      * This should be non-negative.
      */
     double threshold = 0;
@@ -83,7 +83,7 @@ struct ScoreMarkersSummaryOptions {
  * @tparam Stat_ Floating-point type for the output statistics.
  * @tparam Rank_ Numeric type for the rank.
  */
-template<typename Stat_>
+template<typename Stat_, typename Rank_>
 struct ScoreMarkersSummaryBuffers {
     /**
      * Vector of length equal to the number of groups.
@@ -102,26 +102,82 @@ struct ScoreMarkersSummaryBuffers {
     /**
      * Vector of length equal to the number of groups.
      * Each entry contains the buffers in which to store the corresponding group's summary statistics for Cohen's d.
+     *
+     * Any of the pointers in any of the `SummaryBuffers` may be NULL, in which case the corresponding summary statistic is not computed.
+     * This vector may also be empty, in which case no summary statistics are computed for this effect size.
      */
     std::vector<SummaryBuffers<Stat_, Rank_> > cohens_d;
 
     /**
      * Vector of length equal to the number of groups.
      * Each entry contains the buffers in which to store the corresponding group's summary statistics for the AUC.
+     *
+     * Any of the pointers in any of the `SummaryBuffers` may be NULL, in which case the corresponding summary statistic is not computed.
+     * This vector may also be empty, in which case no summary statistics are computed for this effect size.
      */
     std::vector<SummaryBuffers<Stat_, Rank_> > auc;
 
     /**
      * Vector of length equal to the number of groups.
-     * Each entry contains the buffers in which to store the corresponding group's summary statistics for the delta-mean.AUC.
+     * Each entry contains the buffers in which to store the corresponding group's summary statistics for the delta-mean.
+     *
+     * Any of the pointers in any of the `SummaryBuffers` may be NULL, in which case the corresponding summary statistic is not computed.
+     * This vector may also be empty, in which case no summary statistics are computed for this effect size.
      */
     std::vector<SummaryBuffers<Stat_, Rank_> > delta_mean;
 
     /**
      * Vector of length equal to the number of groups.
      * Each entry contains the buffers in which to store the corresponding group's summary statistics for the delta-detected.
+     *
+     * Any of the pointers in any of the `SummaryBuffers` may be NULL, in which case the corresponding summary statistic is not computed.
+     * This vector may also be empty, in which case no summary statistics are computed for this effect size.
      */
     std::vector<SummaryBuffers<Stat_, Rank_> > delta_detected;
+};
+
+/**
+ * @brief Results for `score_markers_summary()` and friends.
+ * @tparam Stat_ Floating-point type for the output statistics.
+ * @tparam Rank_ Numeric type for the rank.
+ */
+template<typename Stat_, typename Rank_>
+struct ScoreMarkersSummaryResults {
+    /**
+     * Vector of length equal to the number of groups.
+     * Each inner vector corresponds to a group and contains the mean expression of each gene in that group. 
+     */
+    std::vector<std::vector<Stat_> > mean;
+
+    /**
+     * Vector of length equal to the number of groups.
+     * Each inner vector corresponds to a group and contains the mean expression of each gene in that group. 
+     */
+    std::vector<std::vector<Stat_> > detected;
+
+    /**
+     * Vector of length equal to the number of groups, containing the summaries of the Cohen's d for each group.
+     * This may be an empty vector if `ScoreMarkersPairwiseOptions::compute_cohens_d = false`.
+     */
+    std::vector<SummaryResults<Stat_, Rank_> > cohens_d;
+
+    /**
+     * Vector of length equal to the number of groups, containing the summaries of the AUC for each group.
+     * This may be an empty vector if `ScoreMarkersPairwiseOptions::compute_auc = false`.
+     */
+    std::vector<SummaryResults<Stat_, Rank_> > auc;
+
+    /**
+     * Vector of length equal to the number of groups, containing the summaries of the delta-mean for each group.
+     * This may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_mean = false`.
+     */
+    std::vector<SummaryResults<Stat_, Rank_> > delta_mean;
+
+    /**
+     * Vector of length equal to the number of groups, containing the summaries of the delta-detected for each group.
+     * This may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_detected = false`.
+     */
+    std::vector<SummaryResults<Stat_, Rank_> > delta_detected;
 };
 
 /**
@@ -317,6 +373,7 @@ void process_simple_summary_effects(
     const ScoreMarkersSummaryBuffers<Stat_, Rank_>& output,
     const std::vector<Stat_>& combo_weights,
     double threshold,
+    size_t cache_size,
     int num_threads)
 {
     std::vector<Stat_> total_weights_per_group;
@@ -343,28 +400,21 @@ void process_simple_summary_effects(
                 size_t in_offset = ncombos * static_cast<size_t>(start); // cast to avoid oerflow.
                 auto my_means = tmp_means + in_offset;
                 auto my_variances = tmp_variances + in_offset;
-
                 auto store_ptr = full_effects.data() + static_cast<size_t>(start) * ngroups; // cast to avoid overflow.
-                Index_ end = start + length;
-                auto copy_store = store_ptr;
+                auto& effect_buffer = effect_buffers[t];
 
-                auto cache_action = cache.get_action(other);
-                auto cache_location = cache.get_cache_location(other);
-                for (Index_ gene = start; gene < end; ++gene, my_means += ncombos, my_variances += ncombos, copy_store += ngroups) {
+                for (Index_ gene = start, end = start + length; gene < end; ++gene, my_means += ncombos, my_variances += ncombos, store_ptr += ngroups) {
                     for (size_t other = 0; other < ngroups; ++other) {
+                        auto cache_action = cache.get_action(other);
                         if (cache_action == internal::CacheAction::COMPUTE) {
-                            copy_store[other] = internal::compute_pairwise_cohens_d_one_sided(group, other, my_means, my_variances, ngroups, nblocks, preweights, threshold);
+                            store_ptr[other] = compute_pairwise_cohens_d_one_sided(group, other, my_means, my_variances, ngroups, nblocks, preweights, threshold);
                         } else if (cache_action == internal::CacheAction::CACHE) {
-                            auto tmp = differential_analysis::compute_pairwise_cohens_d_two_sided(group, other, my_means, my_variances, ngroups, nblocks, preweights, threshold);
-                            copy_store[other] = tmp.first;
-                            cache_location[gene] = tmp.second;
+                            auto tmp = compute_pairwise_cohens_d_two_sided(group, other, my_means, my_variances, ngroups, nblocks, preweights, threshold);
+                            store_ptr[other] = tmp.first;
+                            cache.get_cache_location(other)[gene] = tmp.second;
                         }
                     }
-                }
-
-                copy_store = store_ptr;
-                for (Index_ gene = start; gene < end; ++gene, copy_store += ngroups) {
-                    internal::summarize_comparisons(ngroups, copy_store, group, gene, output.cohens_d[group], effect_buffers[t]);
+                    summarize_comparisons(ngroups, store_ptr, group, gene, output.cohens_d[group], effect_buffer);
                 }
             }, ngenes, num_threads);
 
@@ -375,100 +425,104 @@ void process_simple_summary_effects(
         }
     }
 
-    if (lfc.size()) {
+    if (output.delta_mean.size()) {
         cache.clear();
         for (int group = 0; group < ngroups; ++group) {
-            cache.configure(group, full_set);
+            cache.fill_effects_from_cache(group, full_effects);
 
-            tatami::parallelize([&](size_t, size_t start, size_t length) -> void {
-                auto my_means = tmp_means + nlevels * start;
+            tatami::parallelize([&](size_t t, Index_ start, Index_ length) -> void {
+                auto my_means = tmp_means + ncombos * static_cast<size_t>(start); // cast to size_t to avoid overflow.
+                auto store_ptr = full_set.data() + static_cast<size_t>(start) * ngroups;
+                auto& effect_buffer = effect_buffers[t];
 
-                const auto& actions = cache.actions;
-                auto& staging_cache = cache.staging_cache;
-
-                auto lfc_ptr = full_set.data() + start * ngroups;
-                std::vector<double> effect_buffer(ngroups);
-
-                for (size_t gene = start, end = start + length; gene < end; ++gene, my_means += nlevels, lfc_ptr += ngroups) {
-                    for (int other = 0; other < ngroups; ++other) {
-                        if (actions[other] == differential_analysis::CacheAction::SKIP) {
-                            continue;
+                for (Index_ gene = start, end = start + length; gene < end; ++gene, my_means += ncombos, store_ptr += ngroups) {
+                    for (size_t other = 0; other < ngroups; ++other) {
+                        auto cache_action = cache.get_action(other);
+                        if (cache_action != internal::CacheAction::SKIP) {
+                            auto val = compute_pairwise_simple_diff(group, other, my_means, ngroups, nblocks, preweights);
+                            store_ptr[other] = val;
+                            if (cache_action == differential_analysis::CacheAction::CACHE) {
+                                cache.get_cache_location(other)[gene] = -val;
+                            } 
                         }
-
-                        auto val = differential_analysis::compute_pairwise_simple_diff(group, other, my_means, level_weight, ngroups, nblocks);
-                        lfc_ptr[other] = val;
-                        if (actions[other] == differential_analysis::CacheAction::CACHE) {
-                            staging_cache[other][gene] = -val;
-                        } 
                     }
-
-                    differential_analysis::summarize_comparisons(ngroups, lfc_ptr, group, gene, lfc, effect_buffer);
+                    summarize_comparisons(ngroups, store_ptr, group, gene, output.delta_mean[g], effect_buffer);
                 }
             }, ngenes, nthreads);
 
-            if (lfc[differential_analysis::summary::MIN_RANK].size()) {
-                differential_analysis::compute_min_rank(ngenes, ngroups, group, full_set.data(), lfc[differential_analysis::summary::MIN_RANK][group], nthreads);
+            auto mr = output.delta_mean[group].min_rank;
+            if (mr) {
+                differential_analysis::compute_min_rank(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
             }
-
-            cache.transfer(group);
         }
     }
 
-    if (delta_detected.size()) {
+    if (output.delta_detected.size()) {
         cache.clear();
         for (int group = 0; group < ngroups; ++group) {
-            cache.configure(group, full_set);
+            cache.fill_effects_from_cache(group, full_effects);
 
-            tatami::parallelize([&](size_t, size_t start, size_t length) -> void {
-                auto my_detected = tmp_detected + nlevels * start;
+            tatami::parallelize([&](size_t t, Index_ start, Index_ length) -> void {
+                auto my_detected = tmp_detected + ncombos * static_cast<size_t>(start); // cast to size_t to avoid overflow.
+                auto store_ptr = full_set.data() + static_cast<size_t>(start) * ngroups;
+                auto& effect_buffer = effect_buffers[t];
 
-                const auto& actions = cache.actions;
-                auto& staging_cache = cache.staging_cache;
-
-                auto delta_detected_ptr = full_set.data() + start * ngroups;
-                std::vector<double> effect_buffer(ngroups);
-
-                for (size_t gene = start, end = start + length; gene < end; ++gene, my_detected += nlevels, delta_detected_ptr += ngroups) {
-                    for (int other = 0; other < ngroups; ++other) {
-                        if (actions[other] == differential_analysis::CacheAction::SKIP) {
-                            continue;
+                for (Index_ gene = start, end = start + length; gene < end; ++gene, my_detected += ncombos, store_ptr += ngroups) {
+                    for (size_t other = 0; other < ngroups; ++other) {
+                        auto cache_action = cache.get_action(other);
+                        if (cache_action != internal::CacheAction::SKIP) {
+                            auto val = compute_pairwise_simple_diff(group, other, my_detected, ngroups, nblocks, preweights);
+                            store_ptr[other] = val;
+                            if (cache_action == differential_analysis::CacheAction::CACHE) {
+                                cache.get_cache_location(other)[gene] = -val;
+                            } 
                         }
-
-                        auto val = differential_analysis::compute_pairwise_simple_diff(group, other, my_detected, level_weight, ngroups, nblocks);
-                        delta_detected_ptr[other] = val;
-                        if (actions[other] == differential_analysis::CacheAction::CACHE) {
-                            staging_cache[other][gene] = -val;
-                        } 
                     }
-
-                    differential_analysis::summarize_comparisons(ngroups, delta_detected_ptr, group, gene, delta_detected, effect_buffer);
+                    summarize_comparisons(ngroups, store_ptr, group, gene, output.delta_detected[g], effect_buffer);
                 }
             }, ngenes, nthreads);
 
-            if (delta_detected[differential_analysis::summary::MIN_RANK].size()) {
-                differential_analysis::compute_min_rank(ngenes, ngroups, group, full_set.data(), delta_detected[differential_analysis::summary::MIN_RANK][group], nthreads);
+            auto mr = output.delta_detected[group].min_rank;
+            if (mr) {
+                differential_analysis::compute_min_rank(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
             }
-
-            cache.transfer(group);
         }
     }
 }
 
 template<typename Stat_>
-void summarize_auc(
-    size_t ngenes, 
-    size_t ngroups,
-    const differential_analysis::MatrixCalculator::State& state, 
-    std::vector<std::vector<Stat_*> >& auc,
-    std::vector<Stat_>& auc_buffer) 
-const {
-    // If we need the min-rank AUCs, there's no choice but to hold everything in memory.
-    if (auc.size()) {
-        differential_analysis::summarize_comparisons(ngenes, ngroups, auc_buffer.data(), auc, nthreads);
-        if (auc[differential_analysis::summary::MIN_RANK].size()) {
-            differential_analysis::compute_min_rank(ngenes, ngroups, auc_buffer.data(), auc[differential_analysis::summary::MIN_RANK], nthreads);
-        }
+ScoreMarkersSummaryBuffers<Stat_> fill_summary_results(size_t ngenes, size_t ngroups, ScoreMarkersSummaryResults<Stat_>& store, const ScoreMarkersSummaryOptions& opt) {
+    ScoreMarkersSummaryBuffers<Stat_> output;
+
+    store.mean.reserve(ngroups);
+    store.detected.reserve(ngroups);
+    output.mean.reserve(ngroups);
+    output.detected.reserve(ngroups);
+    for (size_t g = 0; g < ngroups; ++g) {
+        store.mean.emplace_back(ngenes);
+        store.detected.emplace_back(ngenes);
+        output.mean.emplace_back(store.mean.back().data());
+        output.detected.emplace_back(store.detected.back().data());
     }
+
+    if (opt.compute_cohens_d) {
+        store.cohens_d.resize(num_effect_sizes);
+        output.cohens_d = store.cohens_d.data();
+    }
+    if (opt.compute_auc) {
+        store.auc.resize(num_effect_sizes);
+        output.auc = store.auc.data();
+    }
+    if (opt.compute_delta_mean) {
+        store.delta_mean.resize(num_effect_sizes);
+        output.delta_mean = store.delta_mean.data();
+    }
+    if (opt.compute_delta_detected) {
+        store.delta_detected.resize(num_effect_sizes);
+        output.delta_detected = store.delta_detected.data();
+    }
+
+    return output;
 }
 
 }
@@ -477,8 +531,7 @@ const {
  */
 
 /**
- * @brief Score each gene as a candidate marker for each group of cells.
- *
+ * Score each gene as a candidate marker for each group of cells.
  * Markers are identified by differential expression analyses between pairs of groups of cells (e.g., clusters, cell types).
  * Given `n` groups, each group is involved in `n - 1` pairwise comparisons and thus has `n - 1` effect sizes.
  * For each group, we compute summary statistics - e.g., median, mean - of the effect sizes across all of that group's comparisons.
@@ -490,11 +543,23 @@ const {
  * For the summary statistics: we compute the minimum, mean, median, maximum and min-rank of the effect sizes across each group's pairwise comparisons,
  * which are described in `summarize_effects()`.
  *
- * If the dataset contains blocking factors such as batch or sample, we compute the effect size within each level of the blocking factor.
- * This avoids interference from batch effects or sample-to-sample variation.
- * Users can also adjust the effect size to account for a minimum log-fold change threshold,
- * in order to focus on markers with larger changes in expression.
- * See `PairwiseEffects` for more details. 
+ * @tparam Value_ Matrix data type.
+ * @tparam Index_ Matrix index type.
+ * @tparam Group_ Integer type for the group assignments.
+ * @tparam Stat_ Floating-point type to store the statistics.
+ * @tparam Rank_ Numeric type to store the minimum rank.
+ *
+ * @param matrix A **tatami** matrix instance.
+ * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
+ * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
+ * @param options Further options.
+ * @param[out] output Collection of buffers in which to store the computed statistics.
+ * Each buffer is filled with the corresponding statistic for each group or pairwise comparison.
+ * Any of `ScoreMarkersPairwiseBuffers::cohens_d`, 
+ * `ScoreMarkersPairwiseBuffers::auc`, 
+ * `ScoreMarkersPairwiseBuffers::delta_mean` or
+ * `ScoreMarkersPairwiseBuffers::delta_detected`
+ * may be empty, in which case the corresponding statistic is not computed or summarized.
  */
 template<typename Value_, typename Index_, typename Group_, typename Stat_>
 void score_markers_summary(
@@ -506,356 +571,244 @@ void score_markers_summary(
     Index_ NC = matrix.ncol();
     auto group_sizes = tatami_stats::tabulate_groups(group, NC); 
 
+    // In most cases this doesn't really matter, but we do it for consistency with the 1-block case,
+    // and to account for variable weighting where non-zero block sizes get zero weight.
+    auto group_weights = scran_blocks::compute_weights<Stat_>(group_sizes, options.block_weight_policy, options.variable_block_weight_parameters);
+
+    size_t ngroups = group_sizes.size();
+    size_t ngenes = static_cast<size_t>(matrix.nrow());
+    size_t payload_size = ngenes * ngroups; // already cast to size_t to avoid overflow.
+    std::vector<Stat_> group_means(payload_size), group_vars(payload_size), group_detected(payload_size);
+
+    bool do_auc = !output.auc.empty();
+    std::vector<Stat_> tmp_auc;
+    Stat_* auc_ptr = NULL;
+    if (do_auc) {
+        tmp_auc.resize(ngroups * ngroups * ngenes);
+        auc_ptr = tmp_auc.data();
+    } 
+
+    if (do_auc || matrix.prefer_rows()) {
+        internal::scan_matrix_by_row<true>(
+            matrix, 
+            ngroups,
+            group,
+            1,
+            static_cast<int*>(NULL),
+            ngroups,
+            NULL,
+            group_means,
+            group_vars,
+            group_detected,
+            auc_ptr,
+            group_sizes,
+            group_weights,
+            options.threshold,
+            options.num_threads
+        );
+
+    } else {
+        internal::scan_matrix_by_column(
+            matrix,
+            ngroups,
+            group,
+            group_means,
+            group_vars,
+            group_detected,
+            group_sizes,
+            options.num_threads
+        );
+    }
+
+    internal::process_simple_summary_effects(
+        matrix.nrow(),
+        ngroups,
+        1,
+        ngroups,
+        group_means,
+        group_vars,
+        group_detected,
+        output,
+        group_weights,
+        options.threshold,
+        options.cache_size,
+        options.num_threads
+    );
+
+    if (do_auc) {
+        differential_analysis::summarize_comparisons(ngenes, ngroups, auc_ptr, output.auc, num_threads);
+        differential_analysis::compute_min_rank(ngenes, ngroups, auc_ptr, output.auc, num_threads);
+    }
 }
 
-public:
-    /**
-     * Score potential marker genes by computing summary statistics across pairwise comparisons between groups.
-     * On completion, `means`, `detected`, `cohen`, `auc`, `lfc` and `delta_detected` are filled with their corresponding statistics.
-     *
-     * If `cohen` is of length 0, Cohen's d is not computed.
-     * If any of the inner vectors are of length 0, the corresponding summary statistic is not computed.
-     * The same applies to `auc`, `lfc` and `delta_detected`.
-     * (`set_compute_cohen()` and related functions have no effect here.)
-     *
-     * @tparam Data_ Matrix data type.
-     * @tparam Index_ Matrix index type.
-     * @tparam Group_ Integer type for the group assignments.
-     * @tparam Stat_ Floating-point type to store the statistics.
-     *
-     * @param p Pointer to a **tatami** matrix instance.
-     * @param[in] group Pointer to an array of length equal to the number of columns in `p`, containing the group assignments.
-     * These should be 0-based and consecutive.
-     * @param[out] means Pointers to arrays of length equal to the number of rows in `p`,
-     * used to store the mean expression of each group.
-     * @param[out] detected Pointers to arrays of length equal to the number of rows in `p`,
-     * used to store the proportion of detected expression in each group.
-     * @param[out] cohen Vector of vector of pointers to arrays of length equal to the number of rows in `p`.
-     * Each inner vector corresponds to a summary statistic for Cohen's d, ordered as in `differential_analysis::summary`.
-     * Each pointer corresponds to a group and is filled with the relevant summary statistic for that group.
-     * @param[out] auc Vector of vector of pointers as described for `cohen`, but instead storing summary statistics for the AUC.
-     * @param[out] lfc Vector of vector of pointers as described for `cohen`, but instead storing summary statistics for the log-fold change instead of Cohen's d.
-     * @param[out] delta_detected Vector of vector of pointers as described for `cohen`, but instead storing summary statistics for the delta in the detected proportions.
-     */
-    template<typename Value_, typename Index_, typename Group_, typename Stat_>
-    void run(const tatami::Matrix<Value_, Index_>* p, const Group_* group, 
-        std::vector<Stat_*> means, 
-        std::vector<Stat_*> detected, 
-        std::vector<std::vector<Stat_*> > cohen, 
-        std::vector<std::vector<Stat_*> > auc,
-        std::vector<std::vector<Stat_*> > lfc,
-        std::vector<std::vector<Stat_*> > delta_detected) 
-    const {
-        differential_analysis::MatrixCalculator runner(nthreads, threshold, block_weight_policy, variable_block_weight_parameters);
+/**
+ * Score potential marker genes by computing summary statistics across pairwise comparisons between groups, accounting for any blocking factor in the dataset.
+ * Comparisons are only performed between the groups of cells in the same level of the blocking factor.
+ * The block-specific effect sizes are combined into a single aggregate value per comparison,
+ * which are in turn summarized as described in `summarize_effects()`.
+ * This strategy avoids most problems related to batch effects as we never directly compare across different blocking levels.
+ *
+ * @tparam Value_ Matrix data type.
+ * @tparam Index_ Matrix index type.
+ * @tparam Group_ Integer type for the group assignments.
+ * @tparam Stat_ Floating-point type to store the statistics.
+ * @tparam Rank_ Numeric type to store the minimum rank.
+ *
+ * @param matrix A **tatami** matrix instance.
+ * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
+ * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
+ * @param[in] block Pointer to an array of length equal to the number of columns in `matrix`, containing the blocking factor.
+ * Block identifiers should be 0-based and should contain all integers in \f$[0, B)\f$ where \f$B\f$ is the number of unique blocking levels.
+ * @param options Further options.
+ * @param[out] output Collection of buffers in which to store the computed statistics.
+ * Each buffer is filled with the corresponding statistic for each group or pairwise comparison.
+ * Any of `ScoreMarkersPairwiseBuffers::cohens_d`, 
+ * `ScoreMarkersPairwiseBuffers::auc`, 
+ * `ScoreMarkersPairwiseBuffers::delta_mean` or
+ * `ScoreMarkersPairwiseBuffers::delta_detected`
+ * may be empty, in which case the corresponding statistic is not computed or summarized.
+ */
+template<typename Value_, typename Index_, typename Group_, typename Block_, typename Stat_>
+void score_markers_summary_blocked(
+    const tatami::Matrix<Value_, Index_>& matrix, 
+    const Group_* group, 
+    const Block_* block,
+    const ScoreMarkersPairwiseOptions& options,
+    const ScoreMarkersPairwiseBuffers<Stat_>& output) 
+{
+    Index_ NC = matrix.ncol();
+    size_t ngroups = output.mean.size();
+    size_t nblocks = tatami_stats::total_groups(block, NC); 
 
-        size_t ngenes = p->nrow();
-        size_t ngroups = means.size();
-        Overlord<Stat_> overlord(ngenes, ngroups, auc.empty());
-        auto state = runner.run(p, group, ngroups, overlord);
+    auto combinations = internal::create_combinations(ngroups, group, block, NC);
+    auto combo_sizes = internal::tabulate_combinations<Index_>(ngroups, nblocks, combinations);
+    size_t ncombos = combo_sizes.size();
+    auto combo_weights = scran_blocks::compute_weights<Stat_>(combo_sizes, options.block_weight_policy, options.variable_block_weight_parameters);
 
-        process_simple_effects(ngenes, ngroups, 1, state, means, detected, cohen, lfc, delta_detected);
-        summarize_auc(ngenes, ngroups, state, auc, overlord.auc_buffer);
-    }
+    size_t payload_size = static_cast<size_t>(matrix.nrow()) * ncombos; // cast to size_t to avoid overflow.
+    std::vector<Stat_> combo_means(payload_size), combo_vars(payload_size), combo_detected(payload_size);
 
-    /**
-     * Score potential marker genes by computing summary statistics across pairwise comparisons between groups in multiple blocks.
-     * On completion, `means`, `detected`, `cohen`, `auc`, `lfc` and `delta_detected` are filled with their corresponding statistics.
-     *
-     * If `cohen` is of length 0, Cohen's d is not computed.
-     * If any of the inner vectors are of length 0, the corresponding summary statistic is not computed.
-     * The same applies to `auc`, `lfc` and `delta_detected`.
-     * (`set_compute_cohen()` and related functions have no effect here.)
-     *
-     * @tparam Data_ Matrix data type.
-     * @tparam Index_ Matrix index type.
-     * @tparam Group_ Integer type for the group assignments.
-     * @tparam Block_ Integer type for the block assignments.
-     * @tparam Stat_ Floating-point type to store the statistics.
-     *
-     * @param p Pointer to a **tatami** matrix instance.
-     * @param[in] group Pointer to an array of length equal to the number of columns in `p`, containing the group assignments.
-     * These should be 0-based and consecutive.
-     * @param[in] block Pointer to an array of length equal to the number of columns in `p`, containing the blocking factor.
-     * Levels should be 0-based and consecutive.
-     * If `NULL`, this is ignored and the result is the same as calling `run()`.
-     * @param[out] means Vector of vectors of pointers to arrays of length equal to the number of rows in `p`.
-     * Each inner vector corresponds to a group and each pointer therein contains the mean expression in a blocking level.
-     * @param[out] detected Pointers to arrays of length equal to the number of rows in `p`.
-     * Each inner vector corresponds to a group and each pointer therein contains the proportion of detected expression in a blocking level.
-     * @param[out] cohen Vector of vector of pointers to arrays of length equal to the number of rows in `p`.
-     * Each inner vector corresponds to a summary statistic for Cohen's d, ordered as in `differential_analysis::summary`.
-     * Each pointer corresponds to a group and is filled with the relevant summary statistic for that group.
-     * @param[out] auc Vector of vector of pointers as described for `cohen`, but instead storing summary statistics for the AUC.
-     * @param[out] lfc Vector of vector of pointers as described for `cohen`, but instead storing summary statistics for the log-fold change instead of Cohen's d.
-     * @param[out] delta_detected Vector of vector of pointers as described for `cohen`, but instead storing summary statistics for the delta in the detected proportions.
-     */
-    template<typename Value_, typename Index_, typename Group_, typename Block_, typename Stat_>
-    void run_blocked(const tatami::Matrix<Value_, Index_>* p, const Group_* group, const Block_* block, 
-        std::vector<Stat_*> means, 
-        std::vector<Stat_*> detected, 
-        std::vector<std::vector<Stat_*> > cohen,
-        std::vector<std::vector<Stat_*> > auc,
-        std::vector<std::vector<Stat_*> > lfc,
-        std::vector<std::vector<Stat_*> > delta_detected) 
-    const {
-        if (block == NULL) {
-            run(
-                p, 
-                group, 
-                std::move(means),
-                std::move(detected),
-                std::move(cohen),
-                std::move(auc),
-                std::move(lfc),
-                std::move(delta_detected)
-            );
-            return;
-        }
+    bool do_auc = !output.auc.empty();
+    std::vector<Stat_> tmp_auc;
+    Stat_* auc_ptr = NULL;
+    if (do_auc) {
+        tmp_auc.resize(ngroups * ngroups * ngenes);
+        auc_ptr = tmp_auc.data();
+    } 
 
-        differential_analysis::MatrixCalculator runner(nthreads, threshold, block_weight_policy, variable_block_weight_parameters);
-
-        size_t ngenes = p->nrow();
-        size_t ngroups = means.size();
-        size_t nblocks = count_ids(p->ncol(), block);
-        Overlord<Stat_> overlord(ngenes, ngroups, auc.empty());
-        auto state = runner.run_blocked(p, group, ngroups, block, nblocks, overlord);
-
-        int ncombos = ngroups * nblocks;
-        std::vector<std::vector<Stat_> > means_store(ncombos), detected_store(ncombos);
-        std::vector<Stat_*> means2(ncombos), detected2(ncombos);
-        for (int c = 0; c < ncombos; ++c) {
-            means_store[c].resize(ngenes);
-            detected_store[c].resize(ngenes);
-            means2[c] = means_store[c].data();
-            detected2[c] = detected_store[c].data();
-        }
-
-        process_simple_effects(ngenes, ngroups, nblocks, state, means2, detected2, cohen, lfc, delta_detected);
-        summarize_auc(ngenes, ngroups, state, auc, overlord.auc_buffer);
-
-        // Averaging the remaining statistics.
-        std::vector<double> weights(nblocks);
-        std::vector<Stat_*> mstats(nblocks), dstats(nblocks);
-
-        for (int gr = 0; gr < ngroups; ++gr) {
-            for (int b = 0; b < nblocks; ++b) {
-                size_t offset = gr * static_cast<size_t>(nblocks) + b;
-                weights[b] = state.level_weight[offset];
-                mstats[b] = means2[offset];
-                dstats[b] = detected2[offset];
-            }
-
-            average_vectors_weighted(ngenes, mstats, weights.data(), means[gr]);
-            average_vectors_weighted(ngenes, dstats, weights.data(), detected[gr]);
-        }
-    }
-
-private:
-    template<typename Stat_>
-    class Overlord {
-    public:
-        Overlord(size_t nr, size_t ng, bool skip_auc) : skipped(skip_auc), auc_buffer(skip_auc ? 0 : nr * ng * ng) {}
-
-        bool needs_auc() const {
-            return !skipped;
-        }
-
-        bool skipped;
-        std::vector<Stat_> auc_buffer;
-
-        Stat_* prepare_auc_buffer(size_t gene, size_t ngroups) { 
-            return auc_buffer.data() + gene * ngroups * ngroups;
-        }
-    };
-
-public:
-    /** 
-     * @brief Results of the marker scoring.
-     * 
-     * @tparam Stat_ Floating-point type to store the statistics.
-     *
-     * Meaningful instances of this object should generally be constructed by calling the `ScoreMarkers::run()` methods.
-     * Empty instances can be default-constructed as placeholders.
-     */
-    template<typename Stat_>
-    struct Results {
-        /**
-         * @cond
-         */
-        Results() {}
-
-        Results(
-            size_t ngenes, 
-            int ngroups, 
-            const ComputeSummaries& do_cohen, 
-            const ComputeSummaries& do_auc, 
-            const ComputeSummaries& do_lfc, 
-            const ComputeSummaries& do_delta_detected)
-        { 
-            auto fill_inner = [&](int N, auto& type) {
-                type.reserve(N);
-                for (int n = 0; n < N; ++n) {
-                    type.emplace_back(ngenes);
-                }
-            };
-
-            fill_inner(ngroups, means);
-            fill_inner(ngroups, detected);
-
-            auto fill_effect = [&](const ComputeSummaries& do_this, auto& effect) {
-                bool has_any = false;
-                for (size_t i = 0; i < do_this.size(); ++i) {
-                    if (do_this[i]) {
-                        has_any = true;
-                        break;
-                    }
-                }
-
-                if (has_any) {
-                    effect.resize(differential_analysis::n_summaries);
-                    if (do_this[differential_analysis::MIN]) {
-                        fill_inner(ngroups, effect[differential_analysis::MIN]);
-                    }
-                    if (do_this[differential_analysis::MEAN]) {
-                        fill_inner(ngroups, effect[differential_analysis::MEAN]);
-                    }
-                    if (do_this[differential_analysis::MEDIAN]) {
-                        fill_inner(ngroups, effect[differential_analysis::MEDIAN]);
-                    }
-                    if (do_this[differential_analysis::MAX]) {
-                        fill_inner(ngroups, effect[differential_analysis::MAX]);
-                    }
-                    if (do_this[differential_analysis::MIN_RANK]) {
-                        fill_inner(ngroups, effect[differential_analysis::MIN_RANK]);
-                    }
-                }
-                return;
-            };
-
-            fill_effect(do_cohen, cohen);
-            fill_effect(do_auc, auc);
-            fill_effect(do_lfc, lfc);
-            fill_effect(do_delta_detected, delta_detected);
-            return;
-        }
-        /**
-         * @endcond
-         */
-
-        /**
-         * Summary statistics for Cohen's d.
-         * Elements of the outer vector correspond to the different summary statistics (see `differential_analysis::summary`);
-         * elements of the middle vector correspond to the different groups;
-         * and elements of the inner vector correspond to individual genes.
-         */
-        std::vector<std::vector<std::vector<Stat_> > > cohen;
-
-        /**
-         * Summary statistics for the AUC.
-         * Elements of the outer vector correspond to the different summary statistics (see `differential_analysis::summary`);
-         * elements of the middle vector correspond to the different groups;
-         * and elements of the inner vector correspond to individual genes.
-         */
-        std::vector<std::vector<std::vector<Stat_> > > auc;
-
-        /**
-         * Summary statistics for the log-fold change.
-         * Elements of the outer vector correspond to the different summary statistics (see `differential_analysis::summary`);
-         * elements of the middle vector correspond to the different groups;
-         * and elements of the inner vector correspond to individual genes.
-         */
-        std::vector<std::vector<std::vector<Stat_> > > lfc;
-
-        /**
-         * Summary statistics for the delta in the detected proportions.
-         * Elements of the outer vector correspond to the different summary statistics (see `differential_analysis::summary`);
-         * elements of the middle vector correspond to the different groups;
-         * and elements of the inner vector correspond to individual genes.
-         */
-        std::vector<std::vector<std::vector<Stat_> > > delta_detected;
-
-        /**
-         * Mean expression in each group.
-         * Elements of the outer vector corresponds to the different groups, and elements of the inner vector correspond to individual genes.
-         */
-        std::vector<std::vector<Stat_> > means;
-
-        /**
-         * Proportion of detected expression in each group.
-         * Elements of the outer vector corresponds to the different groups, and elements of the inner vector correspond to individual genes.
-         */
-        std::vector<std::vector<Stat_> > detected;
-    };
-
-    /**
-     * Score potential marker genes by computing summary statistics across pairwise comparisons between groups. 
-     *
-     * @tparam Stat_ Floating-point type to store the statistics.
-     * @tparam Data_ Matrix data type.
-     * @tparam Index_ Matrix index type.
-     * @tparam Group_ Integer type for the group assignments.
-     *
-     * @param p Pointer to a **tatami** matrix instance.
-     * @param[in] group Pointer to an array of length equal to the number of columns in `p`, containing the group assignments.
-     * These should be 0-based and consecutive.
-     *
-     * @return A `Results` object containing the summary statistics and the other per-group statistics.
-     * Whether particular statistics are computed depends on the configuration from `set_compute_cohen()` and related setters.
-     */
-    template<typename Stat_ = double, typename Value_, typename Index_, typename Group_>
-    Results<Stat_> run(const tatami::Matrix<Value_, Index_>* p, const Group_* group) const {
-        auto ngroups = count_ids(p->ncol(), group);
-        Results<Stat_> res(p->nrow(), ngroups, do_cohen, do_auc, do_lfc, do_delta_detected); 
-        run(
-            p, 
+    if (do_auc || matrix.prefer_rows()) {
+        internal::scan_matrix_by_row<false>(
+            matrix, 
+            ngroups,
             group,
-            vector_to_pointers(res.means),
-            vector_to_pointers(res.detected),
-            vector_to_pointers(res.cohen),
-            vector_to_pointers(res.auc),
-            vector_to_pointers(res.lfc),
-            vector_to_pointers(res.delta_detected)
-        );
-        return res;
-    }
-
-    /**
-     * Score potential marker genes by computing summary statistics across pairwise comparisons between groups in multiple blocks.
-     *
-     * @tparam Stat_ Floating-point type to store the statistics.
-     * @tparam Data_ Matrix data type.
-     * @tparam Index_ Matrix index type.
-     * @tparam Group_ Integer type for the group assignments.
-     * @tparam Block_ Integer type for the block assignments.
-     *
-     * @param p Pointer to a **tatami** matrix instance.
-     * @param[in] group Pointer to an array of length equal to the number of columns in `p`, containing the group assignments.
-     * These should be 0-based and consecutive.
-     * @param[in] block Pointer to an array of length equal to the number of columns in `p`, containing the blocking factor.
-     * Levels should be 0-based and consecutive.
-     * If `NULL`, this is ignored and the result is the same as calling `run()`.
-     *
-     * @return A `Results` object containing the summary statistics and the other per-group statistics.
-     * Whether particular statistics are computed depends on the configuration from `set_compute_cohen()` and related setters.
-     */
-    template<typename Stat_ = double, typename Value_, typename Index_, typename Group_, typename Block_>
-    Results<Stat_> run_blocked(const tatami::Matrix<Value_, Index_>* p, const Group_* group, const Block_* block) const {
-        auto ngroups = count_ids(p->ncol(), group);
-        Results<Stat_> res(p->nrow(), ngroups, do_cohen, do_auc, do_lfc, do_delta_detected); 
-        run_blocked(
-            p, 
-            group,
+            nblocks,
             block,
-            vector_to_pointers(res.means),
-            vector_to_pointers(res.detected),
-            vector_to_pointers(res.cohen),
-            vector_to_pointers(res.auc),
-            vector_to_pointers(res.lfc),
-            vector_to_pointers(res.delta_detected)
+            ncombos,
+            combinations.data(),
+            combo_means,
+            combo_vars,
+            combo_detected,
+            auc_ptr,
+            combo_sizes,
+            combo_weights, 
+            options.threshold,
+            options.num_threads
         );
-        return res;
+
+    } else {
+        internal::scan_matrix_by_column(
+            matrix,
+            ncombos,
+            combinations.data(),
+            combo_means,
+            combo_vars,
+            combo_detected,
+            combo_sizes,
+            options.num_threads
+        );
     }
-};
+ 
+    internal::process_simple_summary_effects(
+        matrix.nrow(),
+        ngroups,
+        nblocks,
+        ncombos,
+        combo_means,
+        combo_vars,
+        combo_detected,
+        output,
+        combo_weights,
+        options.threshold,
+        options.num_threads
+    );
+
+    if (do_auc) {
+        differential_analysis::summarize_comparisons(ngenes, ngroups, auc_ptr, output.auc, num_threads);
+        differential_analysis::compute_min_rank(ngenes, ngroups, auc_ptr, output.auc, num_threads);
+    }
+}
+
+/**
+ * Overload of `score_markers_pairwise()` that allocates memory for the output statistics.
+ *
+ * @tparam Stat_ Floating-point type to store the statistics.
+ * @tparam Rank_ Numeric type to store the minimum rank.
+ * @tparam Value_ Matrix data type.
+ * @tparam Index_ Matrix index type.
+ * @tparam Group_ Integer type for the group assignments.
+ *
+ * @param p Pointer to a **tatami** matrix instance.
+ * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
+ * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
+ * @param options Further options.
+ *
+ * @return Object containing the summary statistics and the other per-group statistics.
+ */
+template<typename Stat_ = double, typename Rank_ = int, typename Value_, typename Index_, typename Group_>
+ScoreMarkersSummaryResults<Stat_, Rank_> score_markers_summary(
+    const tatami::Matrix<Value_, Index_>& matrix,
+    const Group_* group,
+    const ScoreMarkersSummaryOptions& options)
+{
+    size_t ngroups = tatami_stats::total_groups(group, matrix.ncol());
+    ScoreMarkersSummaryResults<Stat_, Rank_> output;
+    auto buffers = internal::fill_summary_results(matrix.nrow(), ngroups, output, options);
+    score_markers_summary(matrix, group, options, buffers);
+    return output;
+}
+
+/**
+ * Overload of `score_markers_pairwise_blocked()` that allocates memory for the output statistics.
+ *
+ * @tparam Stat_ Floating-point type to store the statistics.
+ * @tparam Rank_ Numeric type to store the minimum rank.
+ * @tparam Value_ Matrix data type.
+ * @tparam Index_ Matrix index type.
+ * @tparam Group_ Integer type for the group assignments.
+ * @tparam Block_ Integer type for the block assignments. 
+ *
+ * @param matrix A **tatami** matrix instance.
+ * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
+ * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
+ * @param[in] block Pointer to an array of length equal to the number of columns in `matrix`, containing the blocking factor.
+ * Block identifiers should be 0-based and should contain all integers in \f$[0, B)\f$ where \f$B\f$ is the number of unique blocking levels.
+ * @param options Further options.
+ *
+ * @return Object containing the pairwise effects, plus the mean expression and detected proportion in each group.
+ */
+template<typename Stat_ = double, typename Rank_ = int, typename Value_, typename Index_, typename Group_, typename Block_>
+ScoreMarkersSummaryResults<Stat_, Rank_> score_markers_summary_blocked(
+    const tatami::Matrix<Value_, Index_>& matrix,
+    const Group_* group,
+    const Block_* block,
+    const ScoreMarkersSummaryOptions& options)
+{
+    size_t ngroups = tatami_stats::total_groups(group, matrix.ncol());
+    ScoreMarkersSummaryResults<Stat_, Rank_> output;
+    auto buffers = internal::fill_summary_results(matrix.nrow(), ngroups, output, options);
+    score_markers_summary_blocked(matrix, group, options, buffers);
+    return output;
+}
 
 }
 

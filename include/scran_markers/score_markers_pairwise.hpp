@@ -244,34 +244,58 @@ template<typename Stat_>
 ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(size_t ngenes, size_t ngroups, ScoreMarkersPairwiseResults<Stat_>& store, const ScoreMarkersPairwiseOptions& opt) {
     ScoreMarkersPairwiseBuffers<Stat_> output;
 
-    store.mean.reserve(ngroups);
-    store.detected.reserve(ngroups);
-    output.mean.reserve(ngroups);
-    output.detected.reserve(ngroups);
-    for (size_t g = 0; g < ngroups; ++g) {
-        store.mean.emplace_back(ngenes);
-        store.detected.emplace_back(ngenes);
-        output.mean.emplace_back(store.mean.back().data());
-        output.detected.emplace_back(store.detected.back().data());
-    }
-
-    size_t num_effect_sizes = ngroups * ngroups * ngenes; // everything's already a size_t.
+    internal::fill_average_results(ngenes, ngroups, store.mean, store.detected, output.mean, output.detected);
 
     if (opt.compute_cohens_d) {
-        store.cohens_d.resize(num_effect_sizes);
-        output.cohens_d = store.cohens_d.data();
+        output.cohens_d = internal::fill_summary_results(
+            ngenes,
+            ngroups,
+            store.cohens_d,
+            options.compute_min,
+            options.compute_mean,
+            options.compute_median,
+            options.compute_max,
+            options.compute_min_rank
+        );
     }
+
     if (opt.compute_auc) {
-        store.auc.resize(num_effect_sizes);
-        output.auc = store.auc.data();
+        output.auc = internal::fill_summary_results(
+            ngenes,
+            ngroups,
+            store.auc,
+            options.compute_min,
+            options.compute_mean,
+            options.compute_median,
+            options.compute_max,
+            options.compute_min_rank
+        );
     }
+
     if (opt.compute_delta_mean) {
-        store.delta_mean.resize(num_effect_sizes);
-        output.delta_mean = store.delta_mean.data();
+        output.delta_mean = internal::fill_summary_results(
+            ngenes,
+            ngroups,
+            store.delta_mean,
+            options.compute_min,
+            options.compute_mean,
+            options.compute_median,
+            options.compute_max,
+            options.compute_min_rank
+        );
     }
+
     if (opt.compute_delta_detected) {
-        store.delta_detected.resize(num_effect_sizes);
-        output.delta_detected = store.delta_detected.data();
+        output.delta_detected = internal::fill_summary_results(
+            ngenes,
+            ngroups,
+            store.delta_detected,
+            options.compute_min,
+            options.compute_detected,
+            options.compute_median,
+            options.compute_max,
+            options.compute_min_rank
+        );
     }
 
     return output;
