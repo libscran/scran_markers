@@ -17,7 +17,7 @@
 
 /**
  * @file score_markers_pairwise.hpp
- * @brief Compute pairwise effect sizes between groups of cells.
+ * @brief Score potential markers by pairwise effect sizes between groups of cells.
  */
 
 namespace scran_markers {
@@ -100,7 +100,7 @@ struct ScoreMarkersPairwiseBuffers {
      * The first dimension is the fastest changing, is of length equal to the number of groups, and represents the first group.
      * The second dimension is the next fastest changing, is also of length equal to the number of groups, and represents the second group.
      * The third dimension is the slowest changing, is of length equal to the number of genes, and represents the gene.
-     * Thus, an entry \f$(i, j, k)\f$ represents the effect size of gene $k$ for group $i$ against group $j$.
+     * Thus, the entry \f$(i, j, k)\f$ represents the effect size of gene \f$k\f$ upon comparing group \f$i\f$ against group \f$j\f$.
      *
      * Alternatively NULL, in which case the Cohen's D is not stored.
      */
@@ -289,7 +289,7 @@ ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(size_t ngenes, size_t n
  * For this interpretation, we assume that the input matrix contains non-negative expression values, where a value of zero corresponds to lack of detectable expression.
  *
  * Cohen's d is the standardized difference between two groups.
- * This is defined as the difference in the mean log-expression for each group scaled by the average standard deviation across the two groups.
+ * This is defined as the difference in the mean for each group scaled by the average standard deviation across the two groups.
  * (Technically, we should use the pooled variance; however, this introduces some unintuitive asymmetry depending on the variance of the larger group, so we take a simple average instead.)
  * A positive value indicates that the gene has increased expression in the first group compared to the second.
  * Cohen's d is analogous to the t-statistic in a two-sample t-test and avoids spuriously large effect sizes from comparisons between highly variable groups.
@@ -303,13 +303,13 @@ ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(size_t ngenes, size_t n
  * This may or may not be desirable as it improves robustness to outliers but reduces the information available to obtain a highly resolved ranking. 
  *
  * @section threshold With a minimum change threshold
- * Setting a minimum change threshold can be helpful as it prioritizes genes with large shifts in expression instead of those with low variances.
+ * Setting a minimum change threshold (see `ScoreMarkersPairwiseOptions::threshold`) can be helpful as it prioritizes genes with large shifts in expression instead of those with low variances.
  * Currently, only positive thresholds are supported - this focuses on genes that are upregulated in the first group compared to the second.
  * The effect size definitions are generalized when testing against a non-zero threshold.
  *
- * - Cohen's d is redefined as the standardized difference between the observed log-fold change and the specified threshold, analogous to the TREAT method from **limma**.
- *   Large positive values are only obtained when the observed difference is significantly greater than the threshold.
- *   For example, if we had a threshold of 2 and we obtained a Cohen's d of 3, this means that the observed difference was 3 standard deviations above 2.
+ * - Cohen's d is redefined as the standardized difference between the difference in means and the specified threshold, analogous to the TREAT method from **limma**.
+ *   Large positive values are only obtained when the observed difference in means is significantly greater than the threshold.
+ *   For example, if we had a threshold of 2 and we obtained a Cohen's d of 3, this means that the observed difference in means was 3 standard deviations greater than 2.
  *   Importantly, a negative Cohen's d cannot be intepreted as downregulation, as the difference may still be positive but less than the threshold.
  * - The AUC is generalized to the probability of obtaining a random observation in one group that is greater than a random observation plus the threshold in the other group.
  *   For example, if we had a threshold of 2 and we obtained an AUC of 0.8, this means that - 80% of the time - 

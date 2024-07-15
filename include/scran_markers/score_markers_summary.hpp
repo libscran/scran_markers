@@ -16,9 +16,8 @@
 #include <vector>
 
 /**
- * @file ScoreMarkers.hpp
- *
- * @brief Compute marker scores for each gene in each group of cells.
+ * @file score_markers_summary.hpp
+ * @brief Score potential markers by summaries of effect sizes between pairs of groups of cells.
  */
 
 namespace scran_markers {
@@ -189,25 +188,37 @@ struct ScoreMarkersSummaryResults {
 
     /**
      * Vector of length equal to the number of groups, containing the summaries of the Cohen's d for each group.
-     * This may be an empty vector if `ScoreMarkersPairwiseOptions::compute_cohens_d = false`.
+     * This may be an empty vector if `ScoreMarkersSummaryOptions::compute_cohens_d = false`.
+     *
+     * Individual vectors inside the `SummaryResults` may also be empty if specified by the relevant option,
+     * e.g., `ScoreMarkersSummaryOptions::compute_min = false` will cause `SummaryResults::min` to be empty.
      */
     std::vector<SummaryResults<Stat_, Rank_> > cohens_d;
 
     /**
      * Vector of length equal to the number of groups, containing the summaries of the AUC for each group.
-     * This may be an empty vector if `ScoreMarkersPairwiseOptions::compute_auc = false`.
+     * This may be an empty vector if `ScoreMarkersSummaryOptions::compute_auc = false`.
+     *
+     * Individual vectors inside the `SummaryResults` may also be empty if specified by the relevant option,
+     * e.g., `ScoreMarkersSummaryOptions::compute_min = false` will cause `SummaryResults::min` to be empty.
      */
     std::vector<SummaryResults<Stat_, Rank_> > auc;
 
     /**
      * Vector of length equal to the number of groups, containing the summaries of the delta-mean for each group.
-     * This may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_mean = false`.
+     * This may be an empty vector if `ScoreMarkersSummaryOptions::compute_delta_mean = false`.
+     *
+     * Individual vectors inside the `SummaryResults` may also be empty if specified by the relevant option,
+     * e.g., `ScoreMarkersSummaryOptions::compute_min = false` will cause `SummaryResults::min` to be empty.
      */
     std::vector<SummaryResults<Stat_, Rank_> > delta_mean;
 
     /**
      * Vector of length equal to the number of groups, containing the summaries of the delta-detected for each group.
-     * This may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_detected = false`.
+     * This may be an empty vector if `ScoreMarkersSummaryOptions::compute_delta_detected = false`.
+     *
+     * Individual vectors inside the `SummaryResults` may also be empty if specified by the relevant option,
+     * e.g., `ScoreMarkersSummaryOptions::compute_min = false` will cause `SummaryResults::min` to be empty.
      */
     std::vector<SummaryResults<Stat_, Rank_> > delta_detected;
 };
@@ -607,10 +618,9 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(size_t ngenes, siz
  * Users can then sort by any of these summaries to obtain a ranking of potential marker genes for each group.
  *
  * The choice of effect size and summary statistic determines the characteristics of the resulting marker set.
- * For the effect sizes: we compute Cohen's d, the area under the curve (AUC), the log-fold change and the delta-detected,
- * which are described in more detail in the documentation for `score_markers_pairwise()`.
- * For the summary statistics: we compute the minimum, mean, median, maximum and min-rank of the effect sizes across each group's pairwise comparisons,
- * which are described in `summarize_effects()`.
+ * For the effect sizes: we compute Cohen's d, the area under the curve (AUC), the delta-mean and the delta-detected (see `score_markers_pairwise()`).
+ * For the summary statistics: we compute the minimum, mean, median, maximum and min-rank of the effect sizes across each group's pairwise comparisons (see `summarize_effects()`).
+ * In fact, this behavior of this function is equivalent to - but more efficient than - calling `score_markers_pairwise()` followed by `summarize_effects()`.
  *
  * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.
@@ -828,7 +838,7 @@ void score_markers_summary_blocked(
  * @tparam Index_ Matrix index type.
  * @tparam Group_ Integer type for the group assignments.
  *
- * @param p Pointer to a **tatami** matrix instance.
+ * @param matrix A **tatami** matrix instance.
  * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
  * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
  * @param options Further options.

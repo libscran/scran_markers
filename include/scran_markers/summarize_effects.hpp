@@ -53,7 +53,7 @@ struct SummarizeEffectsOptions {
 };
 
 /**
- * Given `n` groups, each group is involved in `n - 1` pairwise comparisons and thus has `n - 1` effect sizes (e.g., as computed by `compute_pairwise_effects()`).
+ * Given `n` groups, each group is involved in `n - 1` pairwise comparisons and thus has `n - 1` effect sizes (e.g., as computed by `score_markers_pairwise()`).
  * For each group, we compute summary statistics - e.g., the minimum, median, mean - of the effect sizes across all of that group's comparisons.
  * Users can then sort by any of these summaries to obtain a ranking of potential marker genes for each group.
  * 
@@ -81,14 +81,14 @@ struct SummarizeEffectsOptions {
  *   Applying a threshold on the minimum rank is useful for obtaining a set of genes that, in combination, are guaranteed to distinguish \f$X\f$ from every other group.
  *
  * The exact definition of "large" and "small" depends on the choice of effect size. 
- * For signed effects like Cohen's d, log-fold change and delta-detected, the value must be positive to be considered "large", and negative to be considered "small".
+ * For signed effects like Cohen's d, delta-mean and delta-detected, the value must be positive to be considered "large", and negative to be considered "small".
  * For the AUC, a value greater than 0.5 is considered "large" and less than 0.5 is considered "small".
  *
- * The interpretation above is also contingent on the log-fold change threshold used (see `compute_pairwise_effects()` or `score_markers()` for details).
+ * The interpretation above is also contingent on the threshold used (see `score_markers_pairwise()` for details).
  * For positive thresholds, small effects cannot be unambiguously interpreted as downregulation, as the effect is already adjusted to account for the threshold.
  * As a result, only large effects can be interpreted as evidence for upregulation.
  *
- * NaN effect sizes are allowed, e.g., if two groups do not exist in the same block for a blocked analysis in `compute_pairwise_effects_blocked()`.
+ * NaN effect sizes are allowed, e.g., if two groups do not exist in the same block for a blocked analysis in `score_markers_pairwise_blocked()`.
  * This class will ignore NaN values when computing each summary.
  * If all effects are NaN for a particular group, the summary statistic will also be `NaN`.
  *

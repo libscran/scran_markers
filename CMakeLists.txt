@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 
 project(scran_markers
     VERSION 2.0.0
-    DESCRIPTION "Collection of k-nearest neighbors algorithms in C++"
+    DESCRIPTION "Marker detection for single-cell data"
     LANGUAGES CXX)
 
 include(GNUInstallDirs)
