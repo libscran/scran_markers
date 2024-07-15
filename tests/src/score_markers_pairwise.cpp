@@ -614,3 +614,24 @@ TEST(ScoreMarkersPairwiseScenarios, BlockConfounded) {
         }
     }
 }
+
+TEST(ScoreMarkersPairwiseScenarios, Disabled) {
+    int ngenes = 10, nsamples = 40;
+    tatami::DenseRowMatrix<double, int> mat(ngenes, nsamples, std::vector<double>(ngenes * nsamples));
+    int ngroups = 4;
+    std::vector<int> groupings = create_groupings(nsamples, ngroups);
+
+    scran_markers::ScoreMarkersPairwiseOptions opt;
+    opt.compute_cohens_d = false;
+    opt.compute_auc = false;
+    opt.compute_delta_detected = false;
+    opt.compute_delta_mean = false;
+
+    auto empty = scran_markers::score_markers_pairwise(mat, groupings.data(), opt);
+    EXPECT_EQ(empty.mean.size(), ngroups);
+    EXPECT_EQ(empty.detected.size(), ngroups);
+    EXPECT_TRUE(empty.cohens_d.empty());
+    EXPECT_TRUE(empty.auc.empty());
+    EXPECT_TRUE(empty.delta_mean.empty());
+    EXPECT_TRUE(empty.delta_detected.empty());
+}
