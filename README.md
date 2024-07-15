@@ -27,7 +27,7 @@ const tatami::Matrix<double, int>& matrix = some_data_source();
 std::vector<int> groupings = some_groupings();
 
 scran_markers::ScoreMarkersSummaryOptions opt;
-auto res = scran::score_markers_summary(matrix, groupings.data(), opt);
+auto res = scran_markers::score_markers_summary(matrix, groupings.data(), opt);
 
 res.mean[0]; // mean of each gene in the first group.
 res.detected[0]; // detected proportion of each gene in the first group.
@@ -52,7 +52,7 @@ This performs the comparisons within each level of the blocking factor so as to 
 // Array containing integer assignments to blocks 0, 1, 2, etc.
 std::vector<int> blocks = some_blocks();
 
-auto block_res = scran::score_markers_summary_blocked(
+auto block_res = scran_markers::score_markers_summary_blocked(
     matrix,
     groupings.data(), 
     blocks.data(),
@@ -65,7 +65,7 @@ If more detail is necessary, we can obtain effect sizes from all pairwise compar
 ```cpp
 scran_markers::ScoreMarkersPairwiseOptions popt;
 
-auto pair_res = scran::score_markers_pairwise(
+auto pair_res = scran_markers::score_markers_pairwise(
     matrix,
     groupings.data(),
     popt
@@ -134,7 +134,7 @@ cmake --build . --target install
 
 By default, this will use `FetchContent` to fetch all external dependencies.
 If you want to install them manually, use `-DSCRAN_MARKERS_FETCH_EXTERN=OFF`.
-See the commit hashes in [`extern/CMakeLists.txt`](extern/CMakeLists.txt) to find compatible versions of each dependency.
+See the tags in [`extern/CMakeLists.txt`](extern/CMakeLists.txt) to find compatible versions of each dependency.
 
 ### Manual
 
