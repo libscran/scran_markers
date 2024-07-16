@@ -104,7 +104,7 @@ struct SummarizeEffectsOptions {
  * The first dimension is the fastest changing, is of length equal to the number of groups, and represents the first group.
  * The second dimension is the next fastest changing, is also of length equal to the number of groups, and represents the second group.
  * The third dimension is the slowest changing, is of length equal to the number of genes, and represents the gene.
- * Thus, an entry \f$(i, j, k)\f$ represents the effect size of gene $k$ for group $i$ against group $j$.
+ * Thus, an entry \f$(i, j, k)\f$ represents the effect size of gene \f$k\f$ for group \f$i\f$ against group \f$j\f$.
  * @param[out] summaries Vector of length equal to the number of groups.
  * Each entry corresponds to a group and is used to store the summary statistics for that group.
  * Each pointer in any given `SummaryBuffers` should either point to an array of length equal to the number of genes, 
@@ -130,7 +130,7 @@ void summarize_effects(Index_ ngenes, size_t ngroups, const Stat_* effects, cons
  * The first dimension is the fastest changing, is of length equal to the number of groups, and represents the first group.
  * The second dimension is the next fastest changing, is also of length equal to the number of groups, and represents the second group.
  * The third dimension is the slowest changing, is of length equal to the number of genes, and represents the gene.
- * Thus, an entry \f$(i, j, k)\f$ represents the effect size of gene $k$ for group $i$ against group $j$.
+ * Thus, an entry \f$(i, j, k)\f$ represents the effect size of gene \f$k\f$ for group \f$i\f$ against group \f$j\f$.
  * @param options Further options.
  *
  * @return A vector of length equal to the number of groups.
