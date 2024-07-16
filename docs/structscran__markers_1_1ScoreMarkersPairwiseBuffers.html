@@ -12,6 +12,13 @@
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  extensions: ["tex2jax.js"],
+  jax: ["input/TeX","output/HTML-CSS"],
+});
+</script>
+<script type="text/javascript" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
@@ -125,7 +132,7 @@ template&lt;<a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuff
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Pointer to an array of length equal to <picture><source srcset="form_4_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$NG^2$" src="form_4.png"/></picture>, where <picture><source srcset="form_1_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$N$" src="form_1.png"/></picture> is the number of genes and <picture><source srcset="form_5_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$G$" src="form_5.png"/></picture> is the number of groups. This is a 3-dimensional array to be filled with the AUC for the comparison between each pair of groups for each gene; see <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code> for more details. Alternatively NULL, in which case the AUC is not stored. </p>
+<p>Pointer to an array of length equal to \(NG^2\), where \(N\) is the number of genes and \(G\) is the number of groups. This is a 3-dimensional array to be filled with the AUC for the comparison between each pair of groups for each gene; see <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code> for more details. Alternatively NULL, in which case the AUC is not stored. </p>
 
 </div>
 </div>
@@ -142,8 +149,8 @@ template&lt;<a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuff
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Pointer to an array of length equal to <picture><source srcset="form_4_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$NG^2$" src="form_4.png"/></picture>, where <picture><source srcset="form_1_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$N$" src="form_1.png"/></picture> is the number of genes and <picture><source srcset="form_5_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$G$" src="form_5.png"/></picture> is the number of groups. This is a 3-dimensional array to be filled with the Cohen's D for the comparison between each pair of groups for each gene.</p>
-<p>The first dimension is the fastest changing, is of length equal to the number of groups, and represents the first group. The second dimension is the next fastest changing, is also of length equal to the number of groups, and represents the second group. The third dimension is the slowest changing, is of length equal to the number of genes, and represents the gene. Thus, the entry <picture><source srcset="form_6_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$(i, j, k)$" src="form_6.png"/></picture> represents the effect size of gene <picture><source srcset="form_7_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$k$" src="form_7.png"/></picture> upon comparing group <picture><source srcset="form_8_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$i$" src="form_8.png"/></picture> against group <picture><source srcset="form_9_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$j$" src="form_9.png"/></picture>.</p>
+<p>Pointer to an array of length equal to \(NG^2\), where \(N\) is the number of genes and \(G\) is the number of groups. This is a 3-dimensional array to be filled with the Cohen's D for the comparison between each pair of groups for each gene.</p>
+<p>The first dimension is the fastest changing, is of length equal to the number of groups, and represents the first group. The second dimension is the next fastest changing, is also of length equal to the number of groups, and represents the second group. The third dimension is the slowest changing, is of length equal to the number of genes, and represents the gene. Thus, the entry \((i, j, k)\) represents the effect size of gene \(k\) upon comparing group \(i\) against group \(j\).</p>
 <p>Alternatively NULL, in which case the Cohen's D is not stored. </p>
 
 </div>
@@ -161,7 +168,7 @@ template&lt;<a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuff
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Pointer to an array of length equal to <picture><source srcset="form_4_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$NG^2$" src="form_4.png"/></picture>, where <picture><source srcset="form_1_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$N$" src="form_1.png"/></picture> is the number of genes and <picture><source srcset="form_5_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$G$" src="form_5.png"/></picture> is the number of groups. This is a 3-dimensional array to be filled with the difference in the detected proportions for the comparison between each pair of groups for each gene; see <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code> for more details. Alternatively NULL, in which case the difference in detected proportions is not stored. </p>
+<p>Pointer to an array of length equal to \(NG^2\), where \(N\) is the number of genes and \(G\) is the number of groups. This is a 3-dimensional array to be filled with the difference in the detected proportions for the comparison between each pair of groups for each gene; see <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code> for more details. Alternatively NULL, in which case the difference in detected proportions is not stored. </p>
 
 </div>
 </div>
@@ -178,7 +185,7 @@ template&lt;<a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuff
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Pointer to an array of length equal to <picture><source srcset="form_4_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$NG^2$" src="form_4.png"/></picture>, where <picture><source srcset="form_1_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$N$" src="form_1.png"/></picture> is the number of genes and <picture><source srcset="form_5_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$G$" src="form_5.png"/></picture> is the number of groups. This is a 3-dimensional array to be filled with the difference in means for the comparison between each pair of groups for each gene; see <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code> for more details. Alternatively NULL, in which case the difference in means is not stored. </p>
+<p>Pointer to an array of length equal to \(NG^2\), where \(N\) is the number of genes and \(G\) is the number of groups. This is a 3-dimensional array to be filled with the difference in means for the comparison between each pair of groups for each gene; see <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code> for more details. Alternatively NULL, in which case the difference in means is not stored. </p>
 
 </div>
 </div>
