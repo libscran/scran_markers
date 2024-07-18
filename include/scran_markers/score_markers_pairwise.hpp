@@ -68,7 +68,7 @@ struct ScoreMarkersPairwiseOptions {
 
     /**
      * Parameters for the variable block weights.
-     * Only used when `Options::block_weight_policy = scran_blocks::WeightPolicy::VARIABLE`.
+     * Only used when `ScoreMarkersPairwiseOptions::block_weight_policy = scran_blocks::WeightPolicy::VARIABLE`.
      */
     scran_blocks::VariableWeightParameters variable_block_weight_parameters;
 };

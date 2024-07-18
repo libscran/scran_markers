@@ -104,7 +104,7 @@ struct ScoreMarkersSummaryOptions {
 
     /**
      * Parameters for the variable block weights. 
-     * Only used when the block weight policy is set to `scran_blocks::WeightPolicy::VARIABLE`.
+     * Only used when `ScoreMarkersSummaryOptions::block_weight_policy = scran_blocks::WeightPolicy::VARIABLE`.
      */
     scran_blocks::VariableWeightParameters variable_block_weight_parameters;
 };
