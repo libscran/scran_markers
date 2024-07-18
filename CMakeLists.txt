@@ -24,7 +24,7 @@ if(SCRAN_MARKERS_FETCH_EXTERN)
 else()
     find_package(tatami_tatami 3.0.0 CONFIG REQUIRED)
     find_package(tatami_tatami_stats 1.0.0 CONFIG REQUIRED)
-    find_package(libscran_scran_blocks 1.0.0 CONFIG REQUIRED)
+    find_package(libscran_scran_blocks 0.1.0 CONFIG REQUIRED)
 endif()
 
 target_link_libraries(scran_markers INTERFACE tatami::tatami tatami::tatami_stats libscran::scran_blocks)
