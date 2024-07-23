@@ -329,7 +329,7 @@ void scan_matrix_by_column(
         }
 
         if (matrix.is_sparse()) {
-            std::vector<Index_> ibuffer(NC);
+            std::vector<Index_> ibuffer(length);
             auto ext = tatami::consecutive_extractor<true>(&matrix, false, static_cast<Index_>(0), NC, start, length);
             std::vector<tatami_stats::variances::RunningSparse<Stat_, Value_, Index_> > runners;
             runners.reserve(ncombos);
