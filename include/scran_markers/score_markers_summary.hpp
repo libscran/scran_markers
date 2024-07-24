@@ -613,14 +613,16 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(size_t ngenes, siz
 /**
  * Score each gene as a candidate marker for each group of cells.
  * Markers are identified by differential expression analyses between pairs of groups of cells (e.g., clusters, cell types).
- * Given `n` groups, each group is involved in `n - 1` pairwise comparisons and thus has `n - 1` effect sizes.
- * For each group, we compute summary statistics - e.g., median, mean - of the effect sizes across all of that group's comparisons.
- * Users can then sort by any of these summaries to obtain a ranking of potential marker genes for each group.
+ * Given \f$N\f$ groups, each group is involved in \f$N - 1\f$ pairwise comparisons and thus has \f$N - 1\f$ effect sizes for each gene.
+ * We summarize each group's effect sizes into a small set of desriptive statistics like the mininum, median or mean.
+ * Users can then sort genes by any of these summaries to obtain a ranking of potential markers for the group.
  *
- * The choice of effect size and summary statistic determines the characteristics of the resulting marker set.
- * For the effect sizes: we compute Cohen's d, the area under the curve (AUC), the delta-mean and the delta-detected (see `score_markers_pairwise()`).
- * For the summary statistics: we compute the minimum, mean, median, maximum and min-rank of the effect sizes across each group's pairwise comparisons (see `summarize_effects()`).
- * In fact, this behavior of this function is equivalent to - but more efficient than - calling `score_markers_pairwise()` followed by `summarize_effects()`.
+ * The choice of effect size and summary statistic determines the characteristics of the marker ranking.
+ * The effect sizes include Cohen's d, the area under the curve (AUC), the delta-mean and the delta-detected (see `score_markers_pairwise()`).
+ * The summary statistics include the minimum, mean, median, maximum and min-rank of the effect sizes across each group's pairwise comparisons (see `summarize_effects()`).
+ * For example, ranking by the delta-detected with the minimum summary will promote markers that are silent in every other group.
+ *
+ * This behavior of this function is equivalent to - but more efficient than - calling `score_markers_pairwise()` followed by `summarize_effects()` on each array of effect sizes.
  *
  * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.

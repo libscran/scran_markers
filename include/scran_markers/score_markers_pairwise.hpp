@@ -94,7 +94,7 @@ struct ScoreMarkersPairwiseBuffers {
     std::vector<Stat_*> detected;
 
     /**
-     * Pointer to an array of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
+     * Pointer to an array of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the Cohen's D for the comparison between each pair of groups for each gene.
      *
      * The first dimension is the fastest changing, is of length equal to the number of groups, and represents the first group.
@@ -107,7 +107,7 @@ struct ScoreMarkersPairwiseBuffers {
     Stat_* cohens_d = NULL;
 
     /**
-     * Pointer to an array of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
+     * Pointer to an array of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the AUC for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for more details.
      * Alternatively NULL, in which case the AUC is not stored.
@@ -115,7 +115,7 @@ struct ScoreMarkersPairwiseBuffers {
     Stat_* auc = NULL;
 
     /**
-     * Pointer to an array of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
+     * Pointer to an array of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the difference in means for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for more details.
      * Alternatively NULL, in which case the difference in means is not stored.
@@ -123,7 +123,7 @@ struct ScoreMarkersPairwiseBuffers {
     Stat_* delta_mean = NULL;
 
     /**
-     * Pointer to an array of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
+     * Pointer to an array of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the difference in the detected proportions for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for more details.
      * Alternatively NULL, in which case the difference in detected proportions is not stored.
@@ -150,7 +150,7 @@ struct ScoreMarkersPairwiseResults {
     std::vector<std::vector<Stat_> > detected;
 
     /**
-     * Vector of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
+     * Vector of length equal to \f$GN^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the Cohen's D for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for details on the layout.
      * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_cohens_d = false`.
@@ -158,7 +158,7 @@ struct ScoreMarkersPairwiseResults {
     std::vector<Stat_> cohens_d;
 
     /**
-     * Vector of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
+     * Vector of length equal to \f$GN^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the AUC for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::auc` for details on the layout.
      * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_auc = false`.
@@ -166,7 +166,7 @@ struct ScoreMarkersPairwiseResults {
     std::vector<Stat_> auc;
 
     /**
-     * Vector of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
+     * Vector of length equal to \f$GN^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the delta-mean for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for details on the layout.
      * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_mean = false`.
@@ -174,7 +174,7 @@ struct ScoreMarkersPairwiseResults {
     std::vector<Stat_> delta_mean;
 
     /**
-     * Vector of length equal to \f$NG^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
+     * Vector of length equal to \f$GN^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the delta-detected for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for details on the layout.
      * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_detected = false`.

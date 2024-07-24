@@ -53,10 +53,10 @@ struct SummarizeEffectsOptions {
 };
 
 /**
- * Given `n` groups, each group is involved in `n - 1` pairwise comparisons and thus has `n - 1` effect sizes (e.g., as computed by `score_markers_pairwise()`).
- * For each group, we compute summary statistics - e.g., the minimum, median, mean - of the effect sizes across all of that group's comparisons.
- * Users can then sort by any of these summaries to obtain a ranking of potential marker genes for each group.
- * 
+ * Given \f$N\f$ groups, each group is involved in \f$N - 1\f$ pairwise comparisons and thus has \f$N - 1\f$ effect sizes (e.g., as computed by `score_markers_pairwise()`).
+ * We summarize each group's effect sizes into a small set of desriptive statistics like the mininum, median or mean.
+ * Users can then sort genes by any of these summaries to obtain a ranking of potential markers for the group.
+ *
  * The choice of summary statistic dictates the interpretation of the ranking.
  * Given a group \f$X\f$:
  * 
