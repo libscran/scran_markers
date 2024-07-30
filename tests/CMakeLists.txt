@@ -49,7 +49,7 @@ endmacro()
 create_test(libtest)
 
 find_package(OpenMP)
-if (USE_OPENMP)
+if (OpenMP_FOUND)
     create_test(omptest)
     target_link_libraries(omptest OpenMP::OpenMP_CXX)
 endif()
