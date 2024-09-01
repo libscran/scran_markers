@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['parallelize_0',['parallelize',['https://tatami-inc.github.io/tatami/namespacetatami.html#a41e252422f9959a123ba390a941ae76f',1,'tatami']]],
+  ['parallelize_0',['parallelize',['https://tatami-inc.github.io/tatami/namespacetatami.html#a5a08e0387bc00e8045a0364d6e35d120',1,'tatami']]],
   ['parallelize_2ehpp_1',['parallelize.hpp',['https://tatami-inc.github.io/tatami/parallelize_8hpp.html',1,'']]],
   ['pointer_2',['pointer',['https://tatami-inc.github.io/tatami/structtatami_1_1SomeNumericArray_1_1Iterator.html#a613940ff1968b36ce461efb2cb6b7d25',1,'tatami::SomeNumericArray::Iterator']]],
   ['pointers_3',['pointers',['https://tatami-inc.github.io/tatami/structtatami_1_1CompressedSparseContents.html#ad9410e8d3b32bc97086bebf2322c0ef8',1,'tatami::CompressedSparseContents']]],
