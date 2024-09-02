@@ -63,10 +63,11 @@ void compute_pairwise_auc(AucWorkspace<Value_, Group_, Output_>& work, const std
             ++equal[current.second]; // contribution of the current (tied) observation.
 
             for (size_t l = 1; l < ngroups; ++l) { // starting from 1 as zero has no work for the g < l condition anyway.
-                if (equal[l]) {
+                auto num_eq = equal[l];
+                if (num_eq) {
                     auto outptr = outputs[l];
                     for (size_t g = 0; g < l; ++g) {
-                        outptr[g] += equal[l] * (less_than[g] + 0.5 * equal[g]);
+                        outptr[g] += num_eq * (less_than[g] + 0.5 * equal[g]);
                     }
                 }
             }
@@ -93,10 +94,11 @@ void compute_pairwise_auc(AucWorkspace<Value_, Group_, Output_>& work, const std
 
     // Values == 0. 
     for (size_t l = 1; l < ngroups; ++l) { // starting from 1, see above.
-        if (num_zeros[l]) {
+        auto num_z = num_zeros[l];
+        if (num_z) {
             auto outptr = outputs[l];
             for (size_t g = 0; g < l; ++g) {
-                outptr[g] += num_zeros[l] * (less_than[g] + 0.5 * num_zeros[g]);
+                outptr[g] += num_z * (less_than[g] + 0.5 * num_zeros[g]);
             }
         }
     }
@@ -220,10 +222,11 @@ void compute_pairwise_auc(AucWorkspace<Value_, Group_, Output_>& work, const std
         }
 
         for (size_t l = 0; l < ngroups; ++l) {
-            if (num_zeros[l]) {
+            auto num_z = num_zeros[l];
+            if (num_z) {
                 auto outptr = outputs[l];
                 for (size_t g = 0; g < ngroups; ++g) {
-                    outptr[g] += less_than[g] * num_zeros[l];
+                    outptr[g] += less_than[g] * num_z;
                 }
             }
         }
@@ -238,13 +241,15 @@ void compute_pairwise_auc(AucWorkspace<Value_, Group_, Output_>& work, const std
 
         if (tied) {
             for (size_t l = 0; l < ngroups; ++l) {
-                auto outptr = outputs[l];
-                if (num_zeros[l]) {
+                auto num_z = num_zeros[l];
+                if (num_z) {
+                    auto outptr = outputs[l];
                     for (size_t g = 0; g < ngroups; ++g) {
-                        outptr[g] += 0.5 * equal[g] * num_zeros[l];
+                        outptr[g] += 0.5 * equal[g] * num_z;
                     }
                 }
             }
+
             for (size_t l = 0; l < ngroups; ++l) {
                 less_than[l] += equal[l];
                 equal[l] = 0;
@@ -254,10 +259,11 @@ void compute_pairwise_auc(AucWorkspace<Value_, Group_, Output_>& work, const std
         // Or to each other, if the threshold is zero.
         if (threshold == 0) {
             for (size_t l = 0; l < ngroups; ++l) {
-                if (num_zeros[l]) {
+                auto num_z = num_zeros[l];
+                if (num_z) {
                     auto outptr = outputs[l];
                     for (size_t g = 0; g < ngroups; ++g) {
-                        outptr[g] += num_zeros[l] * 0.5 * num_zeros[g];
+                        outptr[g] += num_z * 0.5 * num_zeros[g];
                     }
                 }
             }

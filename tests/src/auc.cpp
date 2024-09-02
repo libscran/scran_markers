@@ -146,7 +146,8 @@ TEST_F(AucTest, ThresholdSelf) {
     add_to_store(group, input.paired, num_zeros, totals); 
     add_to_store(group, input.paired, num_zeros, totals); 
 
-    for (double threshold = 0.5; threshold <= 2; ++threshold) { 
+    std::vector<double> thresholds { 0, 0.5, 1, 1.5, 2 }; // don't loop with += 0.5, as this doesn't give exact math to test ties.
+    for (auto threshold : thresholds) {
         scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, threshold, true);
         EXPECT_FLOAT_EQ(output[2], slow_reference(group, group, threshold));
         EXPECT_FLOAT_EQ(output[1], output[2]);
@@ -163,7 +164,7 @@ TEST_F(AucTest, ThresholdNoZero) {
     // Use 0.5 increments so that we get some juicy ties after adding the threshold.
     std::vector<double> group1 { 0.5, -0.5, 3, 2, -1.5 };
     std::vector<double> group2 { -0.5, 1.5, 1.5, 1.5, 2.5, -0.5, -0.5 };
-    std::vector<double> group3 { -0.5, 6, 2, -1.5, 0.5, 0.15, 1, 2, 5 };
+    std::vector<double> group3 { -0.5, 6, 2, -1.5, 0.5, 1.5, 1, 2, 5 };
 
     std::vector<double> output(9);
     scran_markers::internal::AucWorkspace<double, int, double> input(3, output.data());
@@ -173,7 +174,8 @@ TEST_F(AucTest, ThresholdNoZero) {
     add_to_store(group2, input.paired, num_zeros, totals); 
     add_to_store(group3, input.paired, num_zeros, totals); 
 
-    for (double threshold = 0; threshold <= 2; threshold += 0.5) {
+    std::vector<double> thresholds { 0, 0.5, 1, 1.5, 2 }; // don't loop with += 0.5, as this doesn't give exact math to test ties.
+    for (auto threshold : thresholds) {
         scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, threshold, true);
 
         EXPECT_FLOAT_EQ(output[0 + 1], slow_reference(group1, group2, threshold)); 
@@ -188,7 +190,7 @@ TEST_F(AucTest, ThresholdNoZero) {
 TEST_F(AucTest, ThresholdZeros) {
     std::vector<double> group1 { 0, 0.5, -0.5, 3, 2, -1.5, 0 };
     std::vector<double> group2 { -0.5, 0, 1.5, 1.5, 0, 1.5, 2.5, 0, -0.5, -0.5 };
-    std::vector<double> group3 { -0.5, 6, 2, 0, -1.5, 0.5, 0.15, 1, 2, 0, 5 };
+    std::vector<double> group3 { -0.5, 6, 2, 0, -1.5, 0.5, 1.5, 1, 2, 0, 5 };
 
     std::vector<double> output(9);
     scran_markers::internal::AucWorkspace<double, int, double> input(3, output.data());
@@ -198,7 +200,8 @@ TEST_F(AucTest, ThresholdZeros) {
     add_to_store(group2, input.paired, num_zeros, totals); 
     add_to_store(group3, input.paired, num_zeros, totals); 
 
-    for (double threshold = 0; threshold <= 0; threshold += 0.5) {
+    std::vector<double> thresholds { 0, 0.5, 1, 1.5, 2 }; // don't loop with += 0.5, as this doesn't give exact math to test ties.
+    for (auto threshold : thresholds) {
         scran_markers::internal::compute_pairwise_auc(input, num_zeros, totals, threshold, true);
 
         EXPECT_FLOAT_EQ(output[0 + 1], slow_reference(group1, group2, threshold)); 
