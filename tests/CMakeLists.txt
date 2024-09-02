@@ -8,48 +8,32 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(scran_tests)
 
+add_executable(
+    libtest 
+    src/auc.cpp
+    src/cohens_d.cpp
+    src/simple_diff.cpp
+    src/summarize_comparisons.cpp
+    src/summarize_effects.cpp
+    src/score_markers_pairwise.cpp
+    src/score_markers_summary.cpp
+    src/create_combinations.cpp
+    src/average_group_stats.cpp
+)
+
+target_link_libraries(
+    libtest
+    scran_markers
+    scran_tests
+)
+
+target_compile_options(libtest PRIVATE -Wall -Werror -Wpedantic -Wextra)
+
 option(CODE_COVERAGE "Enable coverage testing" OFF)
-set(DO_CODE_COVERAGE OFF)
 if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    set(DO_CODE_COVERAGE ON)
+    target_compile_options(libtest PRIVATE -O0 -g --coverage)
+    target_link_options(libtest PRIVATE --coverage)
 endif()
 
 include(GoogleTest)
-
-macro(create_test name) 
-    add_executable(
-        ${name} 
-        src/auc.cpp
-        src/cohens_d.cpp
-        src/simple_diff.cpp
-        src/summarize_comparisons.cpp
-        src/summarize_effects.cpp
-        src/score_markers_pairwise.cpp
-        src/score_markers_summary.cpp
-        src/create_combinations.cpp
-        src/average_group_stats.cpp
-    )
-
-    target_link_libraries(
-        ${name}
-        scran_markers
-        scran_tests
-    )
-
-    target_compile_options(${name} PRIVATE -Wall -Werror -Wpedantic -Wextra)
-
-    if(DO_CODE_COVERAGE)
-        target_compile_options(${name} PRIVATE -O0 -g --coverage)
-        target_link_options(${name} PRIVATE --coverage)
-    endif()
-
-    gtest_discover_tests(${name})
-endmacro()
-
-create_test(libtest)
-
-find_package(OpenMP)
-if (OpenMP_FOUND)
-    create_test(omptest)
-    target_link_libraries(omptest OpenMP::OpenMP_CXX)
-endif()
+gtest_discover_tests(libtest)
