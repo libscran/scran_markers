@@ -96,12 +96,14 @@ struct ScoreMarkersPairwiseBuffers {
 
     /**
      * Pointer to an array of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
-     * This is a 3-dimensional array to be filled with the Cohen's D for the comparison between each pair of groups for each gene.
+     * This is a 3-dimensional \f$G \times N \times N\f$ array to be filled with the Cohen's D for the comparison between each pair of groups for each gene.
      *
-     * The first dimension is the fastest changing, is of length equal to the number of groups, and represents the first group.
-     * The second dimension is the next fastest changing, is also of length equal to the number of groups, and represents the second group.
-     * The third dimension is the slowest changing, is of length equal to the number of genes, and represents the gene.
-     * Thus, the entry \f$(i, j, k)\f$ represents the effect size of gene \f$k\f$ upon comparing group \f$i\f$ against group \f$j\f$.
+     * The first dimension is the slowest changing, is of length equal to the number of genes, and represents the gene.
+     * The second dimension is the second-fastest changing, is of length equal to the number of groups, and represents the first group.
+     * The third dimension is the fastest changing, is also of length equal to the number of groups, and represents the second group.
+     *
+     * Thus, the entry \f$(i, j, k)\f$ (i.e., `effects[i * N * N + j * N + k]`) represents the effect size of gene \f$i\f$ upon comparing group \f$j\f$ against group \f$k\f$.
+     * Positive values represent upregulation in group \f$j\f$ compared to \f$k\f$.
      *
      * Alternatively NULL, in which case the Cohen's D is not stored.
      */
@@ -111,6 +113,7 @@ struct ScoreMarkersPairwiseBuffers {
      * Pointer to an array of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the AUC for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for more details.
+     * (Unlike Cohen's d, all values are positive; so here, values above 0.5 represent upregulation in group \f$j\f$ compared to \f$k\f$.)
      * Alternatively NULL, in which case the AUC is not stored.
      */
     Stat_* auc = NULL;
