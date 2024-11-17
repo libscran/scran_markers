@@ -132,7 +132,7 @@ template&lt;<a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuff
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Pointer to an array of length equal to \(GN^2\), where \(G\) is the number of genes and \(N\) is the number of groups. This is a 3-dimensional array to be filled with the AUC for the comparison between each pair of groups for each gene; see <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code> for more details. Alternatively NULL, in which case the AUC is not stored. </p>
+<p>Pointer to an array of length equal to \(GN^2\), where \(G\) is the number of genes and \(N\) is the number of groups. This is a 3-dimensional array to be filled with the AUC for the comparison between each pair of groups for each gene; see <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code> for more details. (Unlike Cohen's d, all values are positive; so here, values above 0.5 represent upregulation in group \(j\) compared to \(k\).) Alternatively NULL, in which case the AUC is not stored. </p>
 
 </div>
 </div>
@@ -149,8 +149,9 @@ template&lt;<a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuff
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Pointer to an array of length equal to \(GN^2\), where \(G\) is the number of genes and \(N\) is the number of groups. This is a 3-dimensional array to be filled with the Cohen's D for the comparison between each pair of groups for each gene.</p>
-<p>The first dimension is the fastest changing, is of length equal to the number of groups, and represents the first group. The second dimension is the next fastest changing, is also of length equal to the number of groups, and represents the second group. The third dimension is the slowest changing, is of length equal to the number of genes, and represents the gene. Thus, the entry \((i, j, k)\) represents the effect size of gene \(k\) upon comparing group \(i\) against group \(j\).</p>
+<p>Pointer to an array of length equal to \(GN^2\), where \(G\) is the number of genes and \(N\) is the number of groups. This is a 3-dimensional \(G \times N \times N\) array to be filled with the Cohen's D for the comparison between each pair of groups for each gene.</p>
+<p>The first dimension is the slowest changing, is of length equal to the number of genes, and represents the gene. The second dimension is the second-fastest changing, is of length equal to the number of groups, and represents the first group. The third dimension is the fastest changing, is also of length equal to the number of groups, and represents the second group.</p>
+<p>Thus, the entry \((i, j, k)\) (i.e., <code>effects[i * N * N + j * N + k]</code>) represents the effect size of gene \(i\) upon comparing group \(j\) against group \(k\). Positive values represent upregulation in group \(j\) compared to \(k\).</p>
 <p>Alternatively NULL, in which case the Cohen's D is not stored. </p>
 
 </div>
