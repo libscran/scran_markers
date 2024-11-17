@@ -66,12 +66,13 @@ void compute_pairwise_cohens_d_internal(
     if (total_weight != 0) {
         total_weight = 0; // need to calculate it more dynamically if there are NaN variances.
 
-        size_t offset1 = g1, offset2 = g2; // no need to cast, everything's already a size_t.
-        for (size_t b = 0; b < nblocks; ++b, offset1 += ngroups, offset2 += ngroups) {
+        for (size_t b = 0; b < nblocks; ++b) {
             auto weight = winfo.first[b];
             if (weight) {
-                auto left_var = vars[offset1 /* == b * ngroups + g1 */];
-                auto right_var = vars[offset2 /* == b * ngroups + g2 */];
+                size_t offset1 = b * ngroups + g1; // no need to cast, everything's already a size_t.
+                size_t offset2 = b * ngroups + g2; // no need to cast, everything's already a size_t.
+                auto left_var = vars[offset1];
+                auto right_var = vars[offset2];
                 Stat_ denom = cohen_denominator(left_var, right_var);
 
                 if (!std::isnan(denom)) {
@@ -157,13 +158,11 @@ void compute_pairwise_cohens_d(
     Stat_ threshold,
     Stat_* output)
 {
-    size_t offset1_raw = ngroups, offset2_raw = 1;
-    for (size_t g1 = 1; g1 < ngroups; ++g1, offset1_raw += ngroups, ++offset2_raw) {
-        auto offset1 = offset1_raw, offset2 = offset2_raw;
-        for (size_t g2 = 0; g2 < g1; ++g2, ++offset1, offset2 += ngroups) {
+    for (size_t g1 = 1; g1 < ngroups; ++g1) {
+        for (size_t g2 = 0; g2 < g1; ++g2) {
             auto tmp = compute_pairwise_cohens_d_two_sided(g1, g2, means, vars, ngroups, nblocks, preweights, threshold);
-            output[offset1 /* == g1 * ngroups + g2 */] = tmp.first;
-            output[offset2 /* == g2 * ngroups + g1 */] = tmp.second;
+            output[g1 * ngroups + g2] = tmp.first;
+            output[g2 * ngroups + g1] = tmp.second;
         }
     }
 }

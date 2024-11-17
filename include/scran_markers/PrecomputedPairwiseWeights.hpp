@@ -18,21 +18,17 @@ public:
         my_ngroups(ngroups),
         my_nblocks(nblocks)
     {
-        size_t in_offset = 0;
-        for (size_t b = 0; b < nblocks; ++b, in_offset += ngroups) {
-            size_t out_offset1_raw = ngroups, out_offset2_raw = 1;
-
-            for (size_t g1 = 1; g1 < ngroups; ++g1, out_offset1_raw += ngroups, ++out_offset2_raw) {
-                auto w1 = combo_weights[in_offset + g1];
-                size_t out_offset1 = out_offset1_raw, out_offset2 = out_offset2_raw;
-
-                for (size_t g2 = 0; g2 < g1; ++g2, ++out_offset1, out_offset2 += ngroups) {
-                    Weight_ combined = w1 * combo_weights[in_offset + g2];
+        for (size_t b = 0; b < nblocks; ++b) {
+            for (size_t g1 = 1; g1 < ngroups; ++g1) {
+                auto w1 = combo_weights[b * ngroups + g1 /* already size_t's */];
+                for (size_t g2 = 0; g2 < g1; ++g2) {
+                    Weight_ combined = w1 * combo_weights[b * ngroups + g2 /* already size_t's */];
 
                     // Storing it as a 3D array where the blocks are the fastest changing, 
                     // and then the two groups are the next fastest changing.
-                    my_by_block[out_offset1 /* (g1 * ngroups + g2) */ * nblocks + b] = combined;
-                    my_by_block[out_offset2 /* (g2 * ngroups + g1) */ * nblocks + b] = combined;
+                    size_t out_offset1 = g1 * ngroups + g2;
+                    my_by_block[out_offset1 * nblocks + b] = combined;
+                    my_by_block[(g2 * ngroups + g1) * nblocks + b] = combined;
 
                     my_total[out_offset1] += combined;
                 }
@@ -40,11 +36,9 @@ public:
         }
 
         // Filling the other side, for completeness.
-        size_t out_offset1_raw = ngroups, out_offset2_raw = 1;
-        for (size_t g1 = 1; g1 < ngroups; ++g1, out_offset1_raw += ngroups, ++out_offset2_raw) {
-            size_t out_offset1 = out_offset1_raw, out_offset2 = out_offset2_raw;
-            for (size_t g2 = 0; g2 < g1; ++g2, ++out_offset1, out_offset2 += ngroups) {
-                my_total[out_offset2] = my_total[out_offset1];
+        for (size_t g1 = 1; g1 < ngroups; ++g1) {
+            for (size_t g2 = 0; g2 < g1; ++g2) {
+                my_total[g2 * ngroups + g1] = my_total[g1 * ngroups + g2];
             }
         }
     }

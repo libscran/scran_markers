@@ -217,11 +217,11 @@ void process_simple_pairwise_effects(
         const auto* tmp_detected = combo_detected.data() + in_offset;
 
         size_t squared = ngroups * ngroups;
-        size_t out_offset = start * squared;
-        for (size_t gene = start, end = start + length; gene < end; ++gene, out_offset += squared) {
+        for (size_t gene = start, end = start + length; gene < end; ++gene) {
             average_group_stats(gene, ngroups, nblocks, tmp_means, tmp_detected, combo_weights.data(), total_weights_ptr, output.mean, output.detected);
 
             // Computing the effect sizes.
+            size_t out_offset = gene * squared;
             if (output.cohens_d != NULL) {
                 internal::compute_pairwise_cohens_d(tmp_means, tmp_variances, ngroups, nblocks, preweights, threshold, output.cohens_d + out_offset);
             }

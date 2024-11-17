@@ -57,30 +57,29 @@ void initialize_auc_workspace(
     work.block_scale.reserve(nblocks);
     work.full_weight.resize(ngroups2);
     for (size_t b = 0; b < nblocks; ++b) {
-        size_t in_offset = b * ngroups;
-        work.block_scale.emplace_back(ngroups * ngroups);
+        work.block_scale.emplace_back(ngroups * ngroups /* already size_t's */);
         auto& cur_scale = work.block_scale[b];
         auto& cur_totals = work.block_totals[b];
 
-        size_t pair_offset1_raw = ngroups, pair_offset2_raw = 1;
-        for (size_t g1 = 1; g1 < ngroups; ++g1, pair_offset1_raw += ngroups, ++pair_offset2_raw) {
-            auto w1 = combo_weight[in_offset + g1];
+        for (size_t g1 = 1; g1 < ngroups; ++g1) {
+            auto w1 = combo_weight[b * ngroups + g1 /* already size_t's */];
             Stat_ denom1 = cur_totals[g1];
-            auto pair_offset1 = pair_offset1_raw, pair_offset2 = pair_offset2_raw;
 
-            for (size_t g2 = 0; g2 < g1; ++g2, ++pair_offset1, pair_offset2 += ngroups) {
+            for (size_t g2 = 0; g2 < g1; ++g2) {
                 Stat_ block_denom = denom1 * static_cast<Stat_>(cur_totals[g2]);
                 if (block_denom == 0) {
                     continue;
                 }
 
-                Stat_ block_weight = w1 * combo_weight[in_offset + g2];
+                Stat_ block_weight = w1 * combo_weight[b * ngroups + g2 /* already size_t's */];
                 Stat_ block_scaling = block_denom / block_weight;
 
-                cur_scale[pair_offset1 /* = g1 * ngroups + g2 */] = block_scaling;
+                size_t pair_offset1 = g1 * ngroups + g2; // already size_t's.
+                cur_scale[pair_offset1] = block_scaling;
                 work.full_weight[pair_offset1] += block_weight;
 
-                cur_scale[pair_offset2 /* = g2 * ngroups + g1 */] = block_scaling;
+                size_t pair_offset2 = g2 * ngroups + g1; // already size_t's.
+                cur_scale[pair_offset2] = block_scaling;
                 work.full_weight[pair_offset2] += block_weight;
             }
         }

@@ -349,9 +349,8 @@ public:
             // We thus transfer the cached vector to the full_set.
             my_actions[other] = CacheAction::SKIP;
             auto curcache = my_cached.begin()->second;
-            size_t offset = other;
-            for (size_t i = 0; i < my_ngenes; ++i, offset += my_ngroups) {
-                full_effects[offset /* = other + ngroups * i */] = curcache[i];
+            for (size_t i = 0; i < my_ngenes; ++i) {
+                full_effects[other + my_ngroups * i /* already size_t's */] = curcache[i];
             }
 
             my_unused_pool.push_back(curcache);
