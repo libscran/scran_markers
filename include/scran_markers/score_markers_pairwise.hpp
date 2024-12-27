@@ -104,6 +104,8 @@ struct ScoreMarkersPairwiseBuffers {
      *
      * Thus, the entry \f$(i, j, k)\f$ (i.e., `effects[i * N * N + j * N + k]`) represents the effect size of gene \f$i\f$ upon comparing group \f$j\f$ against group \f$k\f$.
      * Positive values represent upregulation in group \f$j\f$ compared to \f$k\f$.
+     * Note that the comparison of each group to itself is always assigned an effect size of zero, regardless of the `threshold` used in `score_markers_pairwise()`;
+     * this is only done to avoid exposing uninitialized memory, and the value should be ignored in downstream steps.
      *
      * Alternatively NULL, in which case the Cohen's D is not stored.
      */
@@ -113,7 +115,12 @@ struct ScoreMarkersPairwiseBuffers {
      * Pointer to an array of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the AUC for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for more details.
-     * (Unlike Cohen's d, all values are positive; so here, values above 0.5 represent upregulation in group \f$j\f$ compared to \f$k\f$.)
+     *
+     * Unlike Cohen's D, all AUC values will lie in \f$[0, 1]\f$.
+     * Values above 0.5 represent upregulation in group \f$j\f$ compared to \f$k\f$.
+     * The exception to this logic is the comparison of each group to itself, which is always assigned an effect size of zero instead of 0.5;
+     * this is only done to avoid exposing uninitialized memory, and the value should be ignored in downstream steps.
+     *
      * Alternatively NULL, in which case the AUC is not stored.
      */
     Stat_* auc = NULL;

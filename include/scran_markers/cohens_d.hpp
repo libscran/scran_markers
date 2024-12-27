@@ -158,12 +158,13 @@ void compute_pairwise_cohens_d(
     Stat_ threshold,
     Stat_* output)
 {
-    for (size_t g1 = 1; g1 < ngroups; ++g1) {
+    for (size_t g1 = 0; g1 < ngroups; ++g1) {
         for (size_t g2 = 0; g2 < g1; ++g2) {
             auto tmp = compute_pairwise_cohens_d_two_sided(g1, g2, means, vars, ngroups, nblocks, preweights, threshold);
             output[g1 * ngroups + g2] = tmp.first;
             output[g2 * ngroups + g1] = tmp.second;
         }
+        output[g1 * ngroups + g1] = 0; // zero the diagonals for consistency.
     }
 }
 
