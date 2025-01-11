@@ -51,3 +51,7 @@ decorate_test(libtest)
 add_executable(dirtytest "${LIST_FILES}")
 decorate_test(dirtytest)
 target_compile_definitions(dirtytest PRIVATE "SCRAN_MARKERS_TEST_INIT=scran_tests::initial_value()")
+
+add_executable(cuspartest "${LIST_FILES}")
+decorate_test(cuspartest)
+target_compile_definitions(cuspartest PRIVATE "SUBPAR_CUSTOM_PARALLELIZE_RANGE=::subpar::test_parallelize_range")

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 
 project(scran_markers
-    VERSION 0.1.3
+    VERSION 0.1.4
     DESCRIPTION "Marker detection for single-cell data"
     LANGUAGES CXX)
 

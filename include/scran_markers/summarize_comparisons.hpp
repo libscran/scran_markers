@@ -198,15 +198,18 @@ void compute_min_rank_internal(Index_ use, const std::vector<std::pair<Stat_, In
 template<typename Stat_, typename Index_, typename Rank_>
 void compute_min_rank_for_group(Index_ ngenes, size_t ngroups, size_t group, const Stat_* effects, Rank_* output, int threads) {
     std::vector<std::vector<Rank_> > stores(threads - 1);
+    std::fill_n(output, ngenes, ngenes + 1);
 
     tatami::parallelize([&](size_t t, size_t start, size_t length) {
         Rank_* curoutput;
         if (t == 0) {
             curoutput = output;
-            std::fill_n(curoutput, ngenes, ngenes + 1);
         } else {
-            stores[t - 1].resize(ngenes, ngenes + 1);
-            curoutput = stores[t - 1].data();
+            auto& curstore = stores[t - 1];
+            if (curstore.empty()) {
+                curstore.resize(ngenes, ngenes + 1);
+            }
+            curoutput = curstore.data();
         }
         std::vector<std::pair<Stat_, Index_> > buffer(ngenes);
 
