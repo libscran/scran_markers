@@ -35,7 +35,11 @@ void initialize_auc_workspace(
     const std::vector<Weight_>& combo_weight) 
 {
     size_t ngroups2 = ngroups * ngroups;
-    work.common_buffer.resize(ngroups2);
+    work.common_buffer.resize(ngroups2
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
 
     work.block_workspaces.reserve(nblocks);
     work.block_num_zeros.reserve(nblocks);
@@ -43,8 +47,16 @@ void initialize_auc_workspace(
     for (size_t b = 0; b < nblocks; ++b) {
         // All workspaces just re-use the same buffer for the AUCs, so make sure to run compute_pairwise_auc() for only one block at a time.
         work.block_workspaces.emplace_back(ngroups, work.common_buffer.data()); 
-        work.block_num_zeros.emplace_back(ngroups);
-        work.block_totals.emplace_back(ngroups);
+        work.block_num_zeros.emplace_back(ngroups
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
+        work.block_totals.emplace_back(ngroups
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
     }
 
     auto lsIt = combo_size.begin();

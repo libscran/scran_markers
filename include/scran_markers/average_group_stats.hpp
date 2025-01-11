@@ -75,8 +75,16 @@ void fill_average_results(
     mean_ptrs.reserve(ngroups);
     detected_ptrs.reserve(ngroups);
     for (size_t g = 0; g < ngroups; ++g) {
-        mean_res.emplace_back(ngenes);
-        detected_res.emplace_back(ngenes);
+        mean_res.emplace_back(ngenes
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
+        detected_res.emplace_back(ngenes
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
         mean_ptrs.emplace_back(mean_res.back().data());
         detected_ptrs.emplace_back(detected_res.back().data());
     }

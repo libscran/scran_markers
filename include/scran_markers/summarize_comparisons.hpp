@@ -269,23 +269,43 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
     SummaryBuffers<Stat_, Rank_> ptr;
 
     if (compute_min) {
-        out.min.resize(ngenes);
+        out.min.resize(ngenes
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
         ptr.min = out.min.data();
     }
     if (compute_mean) {
-        out.mean.resize(ngenes);
+        out.mean.resize(ngenes
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
         ptr.mean = out.mean.data();
     }
     if (compute_median) {
-        out.median.resize(ngenes);
+        out.median.resize(ngenes
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
         ptr.median = out.median.data();
     }
     if (compute_max) {
-        out.max.resize(ngenes);
+        out.max.resize(ngenes
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
         ptr.max = out.max.data();
     }
     if (compute_min_rank) {
-        out.min_rank.resize(ngenes);
+        out.min_rank.resize(ngenes
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
         ptr.min_rank = out.min_rank.data();
     }
 

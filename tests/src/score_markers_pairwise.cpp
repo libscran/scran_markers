@@ -1,9 +1,7 @@
-#include <gtest/gtest.h>
-
+#include "scran_tests/scran_tests.hpp"
 #include "tatami/tatami.hpp"
 #include "tatami_stats/tatami_stats.hpp"
 
-#include "scran_tests/scran_tests.hpp"
 #include "scran_markers/score_markers_pairwise.hpp"
 
 #include "utils.h"
@@ -634,63 +632,4 @@ TEST(ScoreMarkersPairwiseScenarios, Disabled) {
     EXPECT_TRUE(empty.auc.empty());
     EXPECT_TRUE(empty.delta_mean.empty());
     EXPECT_TRUE(empty.delta_detected.empty());
-}
-
-TEST(ScoreMarkersPairwiseScenarios, DirtyBuffers) {
-    // Check that we correctly overwrite existing values in supplied buffers.
-    size_t nrows = 201, ncols = 123;
-    tatami::DenseRowMatrix<double, int> mat(
-        nrows,
-        ncols,
-        scran_tests::simulate_vector(
-            nrows * ncols,
-            []{
-                scran_tests::SimulationParameters sparam;
-                sparam.seed = 6969696969;
-                return sparam;
-            }()
-        )
-    );
-    size_t ngroups = 4;
-    std::vector<int> groupings = create_groupings(ncols, ngroups);
-
-    scran_markers::ScoreMarkersPairwiseOptions opt;
-    auto ref = scran_markers::score_markers_pairwise(mat, groupings.data(), opt);
-
-    // Setting up buffers with a non-zero default method.
-    scran_markers::ScoreMarkersPairwiseResults<double> store;
-    scran_markers::ScoreMarkersPairwiseBuffers<double> buffers;
-
-    store.mean.reserve(ngroups);
-    store.detected.reserve(ngroups);
-    buffers.mean.reserve(ngroups);
-    buffers.detected.reserve(ngroups);
-    for (size_t g = 0; g < ngroups; ++g) {
-        store.mean.emplace_back(nrows, -1);
-        store.detected.emplace_back(nrows, -1);
-        buffers.mean.emplace_back(store.mean.back().data());
-        buffers.detected.emplace_back(store.detected.back().data());
-    }
-
-    size_t num_effect_sizes = nrows * ngroups * ngroups; // already size_t's, no need to cast.
-    store.cohens_d.resize(num_effect_sizes, -1);
-    buffers.cohens_d = store.cohens_d.data();
-    store.auc.resize(num_effect_sizes, -1);
-    buffers.auc = store.auc.data();
-    store.delta_mean.resize(num_effect_sizes, -1);
-    buffers.delta_mean = store.delta_mean.data();
-    store.delta_detected.resize(num_effect_sizes, -1);
-    buffers.delta_detected = store.delta_detected.data();
-
-    scran_markers::score_markers_pairwise(mat, groupings.data(), opt, buffers);
-
-    for (size_t g = 0; g < ngroups; ++g) {
-        EXPECT_EQ(ref.mean[g], store.mean[g]);
-        EXPECT_EQ(ref.detected[g], store.detected[g]);
-    }
-
-    EXPECT_EQ(ref.auc, store.auc);
-    EXPECT_EQ(ref.cohens_d, store.cohens_d);
-    EXPECT_EQ(ref.delta_mean, store.delta_mean);
-    EXPECT_EQ(ref.delta_detected, store.delta_detected);
 }

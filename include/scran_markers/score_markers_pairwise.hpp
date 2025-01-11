@@ -260,19 +260,35 @@ ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(size_t ngenes, size_t n
     size_t num_effect_sizes = ngenes * ngroups * ngroups; // already size_t's, no need to cast.
 
     if (opt.compute_cohens_d) {
-        store.cohens_d.resize(num_effect_sizes);
+        store.cohens_d.resize(num_effect_sizes
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
         output.cohens_d = store.cohens_d.data();
     }
     if (opt.compute_auc) {
-        store.auc.resize(num_effect_sizes);
+        store.auc.resize(num_effect_sizes
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
         output.auc = store.auc.data();
     }
     if (opt.compute_delta_mean) {
-        store.delta_mean.resize(num_effect_sizes);
+        store.delta_mean.resize(num_effect_sizes
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
         output.delta_mean = store.delta_mean.data();
     }
     if (opt.compute_delta_detected) {
-        store.delta_detected.resize(num_effect_sizes);
+        store.delta_detected.resize(num_effect_sizes
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
         output.delta_detected = store.delta_detected.data();
     }
 

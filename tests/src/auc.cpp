@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#include "scran_tests/scran_tests.hpp"
 
 #include <vector>
 #include <algorithm>
@@ -57,7 +57,11 @@ TEST_F(AucTest, Self) {
     std::vector<double> group1 { 0, -0.1, 1, 2.2, 3.5, 5 }; 
 
     {
-        std::vector<double> output(4);
+        std::vector<double> output(4
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
         scran_markers::internal::AucWorkspace<double, int, double> input(2, output.data());
 
         std::vector<int> num_zeros, totals;
@@ -73,7 +77,11 @@ TEST_F(AucTest, Self) {
 
     // Trying again with 3 groups.
     {
-        std::vector<double> output(9);
+        std::vector<double> output(9
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
         scran_markers::internal::AucWorkspace<double, int, double> input(3, output.data());
 
         std::vector<int> num_zeros, totals;
@@ -97,7 +105,11 @@ TEST_F(AucTest, NoZeros) {
     std::vector<double> group2 { 1, 5, 3.4, 5, -0.1, 5, -0.2, -5 };
     std::vector<double> group3 { -0.12, 4, -0.1, 5, 2, -0.1, 3, 5, 6.2, 1.2, 1.11 };
 
-    std::vector<double> output(9);
+    std::vector<double> output(9
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
     scran_markers::internal::AucWorkspace<double, int, double> input(3, output.data());
 
     std::vector<int> num_zeros, totals;
@@ -121,7 +133,11 @@ TEST_F(AucTest, Zeros) {
     std::vector<double> group2 { 0, 1, 5, 0, 5, 0, 5, -0.2, -5 };
     std::vector<double> group3 { -0.12, 4, 0, 5, 2, 0, 3, 5, 0, 1.2, 1.11 };
 
-    std::vector<double> output(9);
+    std::vector<double> output(9
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
     scran_markers::internal::AucWorkspace<double, int, double> input(3, output.data());
 
     std::vector<int> num_zeros, totals;
@@ -139,7 +155,11 @@ TEST_F(AucTest, Zeros) {
 TEST_F(AucTest, ThresholdSelf) {
     std::vector<double> group { -1, 0, 1, 4, 3, 2, 5, 6, 7, 9 };
 
-    std::vector<double> output(4);
+    std::vector<double> output(4
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
     scran_markers::internal::AucWorkspace<double, int, double> input(2, output.data());
 
     std::vector<int> num_zeros, totals;
@@ -192,7 +212,11 @@ TEST_F(AucTest, ThresholdZeros) {
     std::vector<double> group2 { -0.5, 0, 1.5, 1.5, 0, 1.5, 2.5, 0, -0.5, -0.5 };
     std::vector<double> group3 { -0.5, 6, 2, 0, -1.5, 0.5, 1.5, 1, 2, 0, 5 };
 
-    std::vector<double> output(9);
+    std::vector<double> output(9
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
     scran_markers::internal::AucWorkspace<double, int, double> input(3, output.data());
 
     std::vector<int> num_zeros, totals;

@@ -1,15 +1,18 @@
-#include <gtest/gtest.h>
-
 #include "scran_tests/scran_tests.hpp"
-#include "scran_markers/summarize_comparisons.hpp"
 
 #include <numeric>
 #include <random>
 
+#include "scran_markers/summarize_comparisons.hpp"
+
 class SummarizeComparisonsTest : public ::testing::TestWithParam<std::tuple<int, int> > {
 protected:
     static void create_outputs(int ngenes, int ngroups, std::vector<double>& output, std::vector<scran_markers::SummaryBuffers<double, int> >& ptrs) {
-        output.resize(ngroups * 4 * ngenes);
+        output.resize(ngroups * 4 * ngenes
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
 
         auto optr = output.data();
         ptrs.resize(ngroups);

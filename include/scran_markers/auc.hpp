@@ -10,7 +10,19 @@ namespace internal {
 
 template<typename Value_, typename Group_, typename Output_>
 struct AucWorkspace {
-    AucWorkspace(size_t ngroups, Output_* buffer) : less_than(ngroups), equal(ngroups), outputs(ngroups) {
+    AucWorkspace(size_t ngroups, Output_* buffer) : 
+        less_than(ngroups
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        ),
+        equal(ngroups
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        ),
+        outputs(ngroups)
+    {
         output_start = buffer;
         for (size_t i = 0; i < ngroups; ++i) {
             outputs[i] = buffer;

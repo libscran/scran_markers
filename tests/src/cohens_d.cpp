@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#include "scran_tests/scran_tests.hpp"
 
 #include "scran_markers/cohens_d.hpp"
 
@@ -27,7 +27,11 @@ TEST(CohensD, Unblocked) {
     std::vector<int> group_sizes{ 10, 5, 12, 34 }; // don't really matter.
 
     size_t ngroups = means.size();
-    std::vector<double> output(ngroups * ngroups);
+    std::vector<double> output(ngroups * ngroups
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
     scran_markers::internal::PrecomputedPairwiseWeights preweights(group_sizes.size(), 1, group_sizes.data());
     scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, 1, preweights, 0.0, output.data());
 
@@ -44,7 +48,11 @@ TEST(CohensD, Thresholded) {
     std::vector<int> group_sizes{ 10, 5, 12, 34 }; // don't really matter.
 
     size_t ngroups = means.size();
-    std::vector<double> output(ngroups * ngroups);
+    std::vector<double> output(ngroups * ngroups
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
     scran_markers::internal::PrecomputedPairwiseWeights preweights(group_sizes.size(), 1, group_sizes.data());
     scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, 1, preweights, 1.0, output.data());
 
@@ -64,7 +72,11 @@ TEST(CohensD, MissingValues) {
     std::vector<int> group_sizes{ 0, 5, 1, 1, 5 }; 
 
     size_t ngroups = means.size();
-    std::vector<double> output(means.size() * means.size());
+    std::vector<double> output(means.size() * means.size()
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
     scran_markers::internal::PrecomputedPairwiseWeights preweights(ngroups, 1, group_sizes.data());
     scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, 1, preweights, 0.0, output.data());
 
@@ -97,7 +109,11 @@ TEST(CohensD, Blocked) {
     std::vector<double> variances{1.5, 2.3, 0.5, 1.2, 0.1, 1.2, 0.4, 0.5 };
     std::vector<int> combo_sizes{ 10, 5, 12, 34, 15, 2, 3, 6 }; 
 
-    std::vector<double> output(ngroups * ngroups);
+    std::vector<double> output(ngroups * ngroups
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
     scran_markers::internal::PrecomputedPairwiseWeights preweights(ngroups, nblocks, combo_sizes.data());
     scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, nblocks, preweights, 0.0, output.data());
 
@@ -126,7 +142,11 @@ TEST(CohensD, BlockedMissing) {
     std::vector<double> variances{nan, nan, nan, nan, 0.1, 1.2, 0.4, 0.5 };
     std::vector<int> combo_sizes{ 0, 1, 0, 0, 15, 2, 3, 6 }; 
 
-    std::vector<double> output(ngroups * ngroups);
+    std::vector<double> output(ngroups * ngroups
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
     scran_markers::internal::PrecomputedPairwiseWeights preweights(ngroups, nblocks, combo_sizes.data());
     scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, nblocks, preweights, 0.0, output.data());
 

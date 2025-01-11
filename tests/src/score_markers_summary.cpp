@@ -1,8 +1,6 @@
-#include <gtest/gtest.h>
-
+#include "scran_tests/scran_tests.hpp"
 #include "tatami/tatami.hpp"
 #include "tatami_stats/tatami_stats.hpp"
-#include "scran_tests/scran_tests.hpp"
 
 #include "scran_markers/score_markers_summary.hpp"
 #include "scran_markers/score_markers_pairwise.hpp"

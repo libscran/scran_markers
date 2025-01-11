@@ -1,10 +1,9 @@
-#include <gtest/gtest.h>
-
 #include "scran_tests/scran_tests.hpp"
-#include "scran_markers/summarize_effects.hpp"
 
 #include <numeric>
 #include <random>
+
+#include "scran_markers/summarize_effects.hpp"
 
 TEST(SummarizeEffects, Basic) {
     size_t ngenes = 111, ngroups = 3;

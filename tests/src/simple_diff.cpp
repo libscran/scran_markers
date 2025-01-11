@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#include "scran_tests/scran_tests.hpp"
 
 #include <cmath>
 #include <vector>
@@ -8,7 +8,11 @@ TEST(SimpleDiff, Unblocked) {
     std::vector<double> means{0.1, 0.2, 0.3, 0.4};
     std::vector<int> group_sizes{ 10, 5, 12, 34 }; // don't really matter.
 
-    std::vector<double> output(means.size() * means.size());
+    std::vector<double> output(means.size() * means.size()
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
     scran_markers::internal::PrecomputedPairwiseWeights preweights(group_sizes.size(), 1, group_sizes.data());
     scran_markers::internal::compute_pairwise_simple_diff(means.data(), group_sizes.size(), 1, preweights, output.data());
 
@@ -24,7 +28,11 @@ TEST(SimpleDiff, ZeroSize) {
     std::vector<double> means{ nan, 0.2, 0.3, 0.4, 0.1 };
     std::vector<int> group_sizes{ 0, 5, 1, 1, 5 }; 
 
-    std::vector<double> output(means.size() * means.size());
+    std::vector<double> output(means.size() * means.size()
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
     scran_markers::internal::PrecomputedPairwiseWeights preweights(group_sizes.size(), 1, group_sizes.data());
     scran_markers::internal::compute_pairwise_simple_diff(means.data(), group_sizes.size(), 1, preweights, output.data());
 
@@ -50,7 +58,11 @@ TEST(SimpleDiff, Blocked) {
     std::vector<double> means{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8 };
     std::vector<int> combo_sizes{ 10, 5, 12, 34, 15, 2, 3, 6 }; 
 
-    std::vector<double> output(ngroups * ngroups);
+    std::vector<double> output(ngroups * ngroups
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
     scran_markers::internal::PrecomputedPairwiseWeights preweights(ngroups, nblocks, combo_sizes.data());
     scran_markers::internal::compute_pairwise_simple_diff(means.data(), ngroups, nblocks, preweights, output.data());
 
@@ -78,7 +90,11 @@ TEST(SimpleDiff, BlockedMissing) {
     std::vector<double> means{ 0.0, nan, nan, nan, 0.2, 0.4, 0.6, 0.8 };
     std::vector<int> combo_sizes{ 0, 1, 0, 0, 34, 23, 6, 55 }; // exactly one group in the first block with non-zero size.
 
-    std::vector<double> output(ngroups * ngroups);
+    std::vector<double> output(ngroups * ngroups
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
     scran_markers::internal::PrecomputedPairwiseWeights preweights(ngroups, nblocks, combo_sizes.data());
     scran_markers::internal::compute_pairwise_simple_diff(means.data(), ngroups, nblocks, preweights, output.data());
 
