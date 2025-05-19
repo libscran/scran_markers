@@ -75,11 +75,11 @@ protected:
         output.mean = tatami_stats::grouped_sums::by_row(&mat, group, tatami_stats::grouped_sums::Options());
         auto all_variances = tatami_stats::grouped_variances::by_row(&mat, group, tatami_stats::grouped_variances::Options());
 
-        auto nonzero = tatami::make_DelayedUnaryIsometricOperation(
+        auto nonzero = tatami::DelayedUnaryIsometricOperation<double, double, int>(
             tatami::wrap_shared_ptr(&mat), 
-            tatami::DelayedUnaryIsometricCompareScalar<tatami::CompareOperation::NOT_EQUAL, double>(0)
+            std::make_shared<tatami::DelayedUnaryIsometricCompareScalarHelper<tatami::CompareOperation::NOT_EQUAL, double, double, int, int> >(0)
         );
-        output.detected = tatami_stats::grouped_sums::by_row(nonzero.get(), group, tatami_stats::grouped_sums::Options());
+        output.detected = tatami_stats::grouped_sums::by_row(&nonzero, group, tatami_stats::grouped_sums::Options());
 
         for (size_t g = 0; g < ngroups; ++g) {
             double current = group_sizes[g];
