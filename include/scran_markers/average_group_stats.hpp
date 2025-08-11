@@ -25,7 +25,7 @@ std::vector<Weight_> compute_total_weight_per_group(std::size_t ngroups, std::si
 
 template<typename Index_, typename Stat_, typename Weight_>
 void average_group_stats(
-    Index_ gene, 
+    Index_ gene,
     std::size_t ngroups,
     std::size_t nblocks,
     const Stat_* tmp_means,

@@ -63,7 +63,7 @@ void compute_pairwise_auc(AucWorkspace<Value_, Group_, Output_>& work, const std
     auto& outputs = work.outputs;
     auto ngroups = num_zeros.size();
 
-    auto num_input = input.size(); 
+    auto num_input = input.size();
     typedef decltype(num_input) Position;
 
     auto inner_loop = [&](Position& pos) -> void {
@@ -160,7 +160,7 @@ void compute_pairwise_auc(AucWorkspace<Value_, Group_, Output_>& work, const std
     auto& outputs = work.outputs;
     auto ngroups = num_zeros.size();
 
-    auto num_input = input.size(); 
+    auto num_input = input.size();
     typedef decltype(num_input) Position;
 
     auto inner_loop = [&](Position& pos, Position& comp) -> void {

@@ -427,7 +427,7 @@ public:
 
 template<typename Index_, typename Stat_, typename Rank_>
 void process_simple_summary_effects(
-    Index_ ngenes, 
+    Index_ ngenes,
     std::size_t ngroups,
     std::size_t nblocks,
     std::size_t ncombos,
