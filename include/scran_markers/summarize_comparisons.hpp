@@ -103,24 +103,18 @@ struct SummaryResults {
  */
 namespace internal {
 
-template<typename Stat_, typename Rank_>
-void summarize_comparisons(size_t ngroups, const Stat_* effects, size_t group, size_t gene, const SummaryBuffers<Stat_, Rank_>& output, std::vector<Stat_>& buffer) {
-    auto ebegin = buffer.data();
-    auto elast = ebegin;	
-
+template<typename Stat_, typename Index_, typename Rank_>
+void summarize_comparisons(std::size_t ngroups, std::const Stat_* effects, std::size_t group, Index_ gene, const SummaryBuffers<Stat_, Rank_>& output, std::vector<Stat_>& buffer) {
     // Ignoring the self comparison and pruning out NaNs.
-    {
-        auto eptr = effects;
-        for (size_t r = 0; r < ngroups; ++r, ++eptr) {
-            if (r == group || std::isnan(*eptr)) {
-                continue;
-            }
-            *elast = *eptr;
-            ++elast;
+    std::size_t ncomps = 0;
+    for (decltype(ngroups) r = 0; r < ngroups; ++r) {
+        if (r == group || std::isnan(*eptr)) {
+            continue;
         }
+        buffer[ncomps] = effects[r];
+        ++ncomps;
     }
 
-    size_t ncomps = elast - ebegin;
     if (ncomps <= 1) {
         Stat_ val = (ncomps == 0 ? std::numeric_limits<Stat_>::quiet_NaN() : *ebegin);
         if (output.min) {
