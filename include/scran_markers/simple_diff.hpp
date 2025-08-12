@@ -6,6 +6,8 @@
 
 #include "PrecomputedPairwiseWeights.hpp"
 
+#include "sanisizer/sanisizer.hpp"
+
 namespace scran_markers {
 
 namespace internal {

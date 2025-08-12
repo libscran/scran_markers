@@ -16,8 +16,7 @@ std::vector<Weight_> compute_total_weight_per_group(std::size_t ngroups, std::si
     auto output = sanisizer::create<std::vector<Weight_> >(ngroups);
     for (decltype(nblocks) b = 0; b < nblocks; ++b) {
         for (decltype(ngroups) g = 0; g < ngroups; ++g) {
-            output[g] += *combo_weights;
-            ++combo_weights;
+            output[g] += combo_weights[sanisizer::nd_offset<std::size_t>(g, ngroups, b)];
         }
     }
     return output;
