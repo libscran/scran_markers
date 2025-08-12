@@ -458,25 +458,25 @@ TEST(ScoreMarkersSummaryScenarios, BlockConfounded) {
         EXPECT_TRUE(std::isnan(comres.cohens_d[0].max[g]));
         EXPECT_TRUE(std::isnan(comres.cohens_d[0].mean[g]));
         EXPECT_TRUE(std::isnan(comres.cohens_d[0].median[g]));
-        EXPECT_EQ(comres.cohens_d[0].min_rank[g], nrows + 1);
+        EXPECT_EQ(comres.cohens_d[0].min_rank[g], nrows);
 
         EXPECT_TRUE(std::isnan(comres.auc[0].min[g]));
         EXPECT_TRUE(std::isnan(comres.auc[0].max[g]));
         EXPECT_TRUE(std::isnan(comres.auc[0].mean[g]));
         EXPECT_TRUE(std::isnan(comres.auc[0].median[g]));
-        EXPECT_EQ(comres.auc[0].min_rank[g], nrows + 1);
+        EXPECT_EQ(comres.auc[0].min_rank[g], nrows);
 
         EXPECT_TRUE(std::isnan(comres.delta_mean[0].min[g]));
         EXPECT_TRUE(std::isnan(comres.delta_mean[0].max[g]));
         EXPECT_TRUE(std::isnan(comres.delta_mean[0].mean[g]));
         EXPECT_TRUE(std::isnan(comres.delta_mean[0].median[g]));
-        EXPECT_EQ(comres.delta_mean[0].min_rank[g], nrows + 1);
+        EXPECT_EQ(comres.delta_mean[0].min_rank[g], nrows);
 
         EXPECT_TRUE(std::isnan(comres.delta_detected[0].min[g]));
         EXPECT_TRUE(std::isnan(comres.delta_detected[0].max[g]));
         EXPECT_TRUE(std::isnan(comres.delta_detected[0].mean[g]));
         EXPECT_TRUE(std::isnan(comres.delta_detected[0].median[g]));
-        EXPECT_EQ(comres.delta_detected[0].min_rank[g], nrows + 1);
+        EXPECT_EQ(comres.delta_detected[0].min_rank[g], nrows);
     }
 
     // Expect all but the first group to give the same results.
@@ -572,4 +572,13 @@ TEST(ScoreMarkersSummaryScenarios, Disabled) {
         EXPECT_EQ(empty.delta_mean.size(), ngroups);
         EXPECT_EQ(empty.delta_detected.size(), ngroups);
     }
+}
+
+TEST(ScoreMarkersSummary, CapCacheSize) {
+    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 1), 0);
+    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 0), 0);
+    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 10), 45);
+    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 11), 55);
+    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 21), 100);
+    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 20), 100);
 }
