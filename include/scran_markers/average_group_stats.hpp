@@ -22,9 +22,9 @@ std::vector<Weight_> compute_total_weight_per_group(std::size_t ngroups, std::si
     return output;
 }
 
-template<typename Index_, typename Stat_, typename Weight_>
+template<typename Gene_, typename Stat_, typename Weight_>
 void average_group_stats(
-    Index_ gene,
+    Gene_ gene,
     std::size_t ngroups,
     std::size_t nblocks,
     const Stat_* tmp_means,
@@ -63,9 +63,9 @@ void average_group_stats(
     }
 }
 
-template<typename Index_, typename Stat_>
+template<typename Gene_, typename Stat_>
 void fill_average_results(
-    Index_ ngenes,
+    Gene_ ngenes,
     std::size_t ngroups,
     std::vector<std::vector<Stat_> >& mean_res, 
     std::vector<std::vector<Stat_> >& detected_res, 

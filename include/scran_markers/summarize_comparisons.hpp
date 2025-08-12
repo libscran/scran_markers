@@ -105,8 +105,8 @@ struct SummaryResults {
  */
 namespace internal {
 
-template<typename Stat_, typename Index_, typename Rank_>
-void summarize_comparisons(std::size_t ngroups, const Stat_* effects, std::size_t group, Index_ gene, const SummaryBuffers<Stat_, Rank_>& output, std::vector<Stat_>& buffer) {
+template<typename Stat_, typename Gene_, typename Rank_>
+void summarize_comparisons(std::size_t ngroups, const Stat_* effects, std::size_t group, Gene_ gene, const SummaryBuffers<Stat_, Rank_>& output, std::vector<Stat_>& buffer) {
     // Ignoring the self comparison and pruning out NaNs.
     std::size_t ncomps = 0;
     for (decltype(ngroups) r = 0; r < ngroups; ++r) {
@@ -149,11 +149,11 @@ void summarize_comparisons(std::size_t ngroups, const Stat_* effects, std::size_
     }
 }
 
-template<typename Index_, typename Stat_, typename Rank_>
-void summarize_comparisons(Index_ ngenes, std::size_t ngroups, const Stat_* effects, const std::vector<SummaryBuffers<Stat_, Rank_> >& output, int threads) {
-    tatami::parallelize([&](int, Index_ start, Index_ length) -> void {
+template<typename Gene_, typename Stat_, typename Rank_>
+void summarize_comparisons(Gene_ ngenes, std::size_t ngroups, const Stat_* effects, const std::vector<SummaryBuffers<Stat_, Rank_> >& output, int threads) {
+    tatami::parallelize([&](int, Gene_ start, Gene_ length) -> void {
         auto buffer = sanisizer::create<std::vector<Stat_> >(ngroups);
-        for (Index_ gene = start, end = start + length; gene < end; ++gene) {
+        for (Gene_ gene = start, end = start + length; gene < end; ++gene) {
             for (decltype(ngroups) l = 0; l < ngroups; ++l) {
                 auto current_effects = effects + sanisizer::nd_offset<std::size_t>(0, ngroups, l, ngroups, gene);
                 summarize_comparisons(ngroups, current_effects, l, gene, output[l], buffer);
@@ -162,10 +162,10 @@ void summarize_comparisons(Index_ ngenes, std::size_t ngroups, const Stat_* effe
     }, ngenes, threads);
 }
 
-template<typename Stat_, typename Index_>
-Index_ fill_and_sort_rank_buffer(const Stat_* effects, std::size_t stride, std::vector<std::pair<Stat_, Index_> >& buffer) {
-    Index_ counter = 0;
-    for (Index_ i = 0, end = buffer.size(); i < end; ++i) {
+template<typename Stat_, typename Gene_>
+Gene_ fill_and_sort_rank_buffer(const Stat_* effects, std::size_t stride, std::vector<std::pair<Stat_, Gene_> >& buffer) {
+    Gene_ counter = 0;
+    for (Gene_ i = 0, end = buffer.size(); i < end; ++i) {
         auto cureffect = effects[sanisizer::product_unsafe<std::size_t>(i, stride)];
         if (!std::isnan(cureffect)) {
             auto& current = buffer[counter];
@@ -178,7 +178,7 @@ Index_ fill_and_sort_rank_buffer(const Stat_* effects, std::size_t stride, std::
     std::sort(
         buffer.begin(),
         buffer.begin() + counter,
-        [&](const std::pair<Stat_, Index_>& left, const std::pair<Stat_, Index_>& right) -> bool {
+        [&](const std::pair<Stat_, Gene_>& left, const std::pair<Stat_, Gene_>& right) -> bool {
             // Sort by decreasing first element, then break ties by increasing second element. 
             if (left.first == right.first) {
                 return left.second < right.second;
@@ -191,10 +191,10 @@ Index_ fill_and_sort_rank_buffer(const Stat_* effects, std::size_t stride, std::
     return counter;
 }
 
-template<typename Stat_, typename Index_, typename Rank_>
-void compute_min_rank_internal(Index_ use, const std::vector<std::pair<Stat_, Index_> >& buffer, Rank_* output) {
+template<typename Stat_, typename Gene_, typename Rank_>
+void compute_min_rank_internal(Gene_ use, const std::vector<std::pair<Stat_, Gene_> >& buffer, Rank_* output) {
     Rank_ counter = 1;
-    for (Index_ i = 0; i < use; ++i) {
+    for (Gene_ i = 0; i < use; ++i) {
         auto& current = output[buffer[i].second];
         if (counter < current) {
             current = counter;
@@ -203,8 +203,8 @@ void compute_min_rank_internal(Index_ use, const std::vector<std::pair<Stat_, In
     }
 }
 
-template<typename Stat_, typename Index_, typename Rank_>
-void compute_min_rank_for_group(Index_ ngenes, std::size_t ngroups, std::size_t group, const Stat_* effects, Rank_* output, int threads) {
+template<typename Stat_, typename Gene_, typename Rank_>
+void compute_min_rank_for_group(Gene_ ngenes, std::size_t ngroups, std::size_t group, const Stat_* effects, Rank_* output, int threads) {
     std::vector<std::vector<Rank_> > stores(threads - 1);
     std::fill_n(output, ngenes, ngenes); // using the maximum possible rank (i.e., 'ngenes') as the default.
 
@@ -220,7 +220,7 @@ void compute_min_rank_for_group(Index_ ngenes, std::size_t ngroups, std::size_t 
             curoutput = curstore.data();
         }
 
-        auto buffer = tatami::create_container_of_Index_size<std::vector<std::pair<Stat_, Index_> > >(ngenes);
+        auto buffer = sanisizer::create<std::vector<std::pair<Stat_, Gene_> > >(ngenes);
         for (auto g = start, end = start + length; g < end; ++g) {
             if (g == group) {
                 continue;
@@ -241,12 +241,12 @@ void compute_min_rank_for_group(Index_ ngenes, std::size_t ngroups, std::size_t 
     }
 }
 
-template<typename Stat_, typename Index_, typename Rank_>
-void compute_min_rank_pairwise(Index_ ngenes, std::size_t ngroups, const Stat_* effects, const std::vector<SummaryBuffers<Stat_, Rank_> >& output, int threads) {
+template<typename Stat_, typename Gene_, typename Rank_>
+void compute_min_rank_pairwise(Gene_ ngenes, std::size_t ngroups, const Stat_* effects, const std::vector<SummaryBuffers<Stat_, Rank_> >& output, int threads) {
     const auto ngroups2 = sanisizer::product_unsafe<std::size_t>(ngroups, ngroups);
 
     tatami::parallelize([&](int, std::size_t start, std::size_t length) -> void {
-        auto buffer = tatami::create_container_of_Index_size<std::vector<std::pair<Stat_, Index_> > >(ngenes);
+        auto buffer = sanisizer::create<std::vector<std::pair<Stat_, Gene_> > >(ngenes);
         for (auto g = start, end = start + length; g < end; ++g) { 
             auto target = output[g].min_rank;
             if (target == NULL) {
@@ -267,9 +267,9 @@ void compute_min_rank_pairwise(Index_ ngenes, std::size_t ngroups, const Stat_* 
     }, ngroups, threads);
 }
 
-template<typename Index_, typename Stat_, typename Rank_>
+template<typename Gene_, typename Stat_, typename Rank_>
 SummaryBuffers<Stat_, Rank_> fill_summary_results(
-    Index_ ngenes,
+    Gene_ ngenes,
     SummaryResults<Stat_, Rank_>& out, 
     bool compute_min,
     bool compute_mean,
@@ -278,9 +278,10 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
     bool compute_min_rank) 
 {
     SummaryBuffers<Stat_, Rank_> ptr;
+    auto out_len = sanisizer::cast<typename std::vector<Stat_>::size_type>(ngenes);
 
     if (compute_min) {
-        tatami::resize_container_to_Index_size(out.min, ngenes
+        out.min.resize(out_len
 #ifdef SCRAN_MARKERS_TEST_INIT
             , SCRAN_MARKERS_TEST_INIT
 #endif
@@ -288,7 +289,7 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
         ptr.min = out.min.data();
     }
     if (compute_mean) {
-        tatami::resize_container_to_Index_size(out.mean, ngenes
+        out.mean.resize(out_len
 #ifdef SCRAN_MARKERS_TEST_INIT
             , SCRAN_MARKERS_TEST_INIT
 #endif
@@ -296,7 +297,7 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
         ptr.mean = out.mean.data();
     }
     if (compute_median) {
-        tatami::resize_container_to_Index_size(out.median, ngenes
+        out.median.resize(out_len
 #ifdef SCRAN_MARKERS_TEST_INIT
             , SCRAN_MARKERS_TEST_INIT
 #endif
@@ -304,7 +305,7 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
         ptr.median = out.median.data();
     }
     if (compute_max) {
-        tatami::resize_container_to_Index_size(out.max, ngenes
+        out.max.resize(out_len
 #ifdef SCRAN_MARKERS_TEST_INIT
             , SCRAN_MARKERS_TEST_INIT
 #endif
@@ -312,7 +313,7 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
         ptr.max = out.max.data();
     }
     if (compute_min_rank) {
-        tatami::resize_container_to_Index_size(out.min_rank, ngenes
+        out.min_rank.resize(out_len
 #ifdef SCRAN_MARKERS_TEST_INIT
             , SCRAN_MARKERS_TEST_INIT
 #endif
@@ -323,9 +324,9 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
     return ptr;
 }
 
-template<typename Index_, typename Stat_, typename Rank_>
+template<typename Gene_, typename Stat_, typename Rank_>
 std::vector<SummaryBuffers<Stat_, Rank_> > fill_summary_results(
-    Index_ ngenes,
+    Gene_ ngenes,
     std::size_t ngroups,
     std::vector<SummaryResults<Stat_, Rank_> >& outputs, 
     bool compute_min,
