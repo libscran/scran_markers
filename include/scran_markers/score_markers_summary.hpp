@@ -234,7 +234,9 @@ enum class CacheAction : unsigned char { SKIP, COMPUTE, CACHE };
 
 // Safely cap the cache size at the maximum possible number of comparisons (i.e., ngroups * (ngroups - 1) / 2).
 inline std::size_t cap_cache_size(std::size_t cache_size, std::size_t ngroups) {
-    if (ngroups % 2 == 0) {
+    if (ngroups < 2) {
+        return 0;
+    } else if (ngroups % 2 == 0) {
         auto denom = ngroups / 2;
         auto ratio = cache_size / denom;
         if (ratio <= ngroups - 1) {
@@ -372,7 +374,7 @@ public:
             my_actions[other] = CacheAction::SKIP;
             auto curcache = my_cached.begin()->second;
             for (decltype(my_ngenes) i = 0; i < my_ngenes; ++i) {
-                full_effects[sanisizer::nd_offset<std::size_t>(i, my_ngroups, other)] = curcache[i];
+                full_effects[sanisizer::nd_offset<std::size_t>(other, my_ngroups, i)] = curcache[i];
             }
 
             my_unused_pool.push_back(curcache);

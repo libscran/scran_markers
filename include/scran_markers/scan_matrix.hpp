@@ -35,7 +35,7 @@ void initialize_auc_workspace(
     const std::vector<Index_>& combo_size,
     const std::vector<Weight_>& combo_weight) 
 {
-    auto ngroups2 = sanisizer::product<typename std::vector<Stat_>::size_type>(ngroups, ngroups);
+    const auto ngroups2 = sanisizer::product<typename std::vector<Stat_>::size_type>(ngroups, ngroups);
     work.common_buffer.resize(ngroups2
 #ifdef SCRAN_MARKERS_TEST_INIT
         , SCRAN_MARKERS_TEST_INIT
@@ -182,7 +182,6 @@ void scan_matrix_by_row(
         auto vbuffer = tatami::create_container_of_Index_size<std::vector<Value_> >(NC);
 
         // A vast array of AUC-related bits and pieces.
-        auto effect_shift = ngroups * ngroups;
         AucScanWorkspace<Value_, Group_, Index_, Stat_> auc_work;
         if (auc) {
             initialize_auc_workspace(auc_work, ngroups, nblocks, combo_size, combo_weights);
@@ -247,7 +246,7 @@ void scan_matrix_by_row(
                         }
                     }
 
-                    auto auc_ptr = auc + sanisizer::product_unsafe<std::size_t>(r, effect_shift);
+                    auto auc_ptr = auc + sanisizer::product_unsafe<std::size_t>(r, ngroups, ngroups);
                     process_auc_for_rows(auc_work, ngroups, nblocks, threshold, auc_ptr);
                 }
             }
@@ -308,7 +307,7 @@ void scan_matrix_by_row(
                         }
                     }
 
-                    auto auc_ptr = auc + sanisizer::product_unsafe<std::size_t>(r, effect_shift);
+                    auto auc_ptr = auc + sanisizer::product_unsafe<std::size_t>(r, ngroups, ngroups);
                     process_auc_for_rows(auc_work, ngroups, nblocks, threshold, auc_ptr);
                 }
             }
@@ -395,7 +394,7 @@ void scan_matrix_by_column(
 
         // Moving it all into the output buffers at the end.
         for (Index_ r = 0; r < length; ++r) {
-            auto offset = sanisizer::product_unsafe<std::size_t>(r, ncombos);
+            auto offset = sanisizer::product_unsafe<std::size_t>(start + r, ncombos);
             auto mean_ptr = combo_means.data() + offset;
             auto var_ptr = combo_vars.data() + offset;
             auto det_ptr = combo_detected.data() + offset;
