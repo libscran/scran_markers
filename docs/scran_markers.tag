@@ -571,15 +571,15 @@
       <type>void</type>
       <name>summarize_effects</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>a3f3bfc2fc474fe7644d9cfd1bdfc3a49</anchor>
-      <arglist>(Index_ ngenes, size_t ngroups, const Stat_ *effects, const std::vector&lt; SummaryBuffers&lt; Stat_, Rank_ &gt; &gt; &amp;summaries, const SummarizeEffectsOptions &amp;options)</arglist>
+      <anchor>a2a695132f3b280be336a1468b234f8b2</anchor>
+      <arglist>(Gene_ ngenes, std::size_t ngroups, const Stat_ *effects, const std::vector&lt; SummaryBuffers&lt; Stat_, Rank_ &gt; &gt; &amp;summaries, const SummarizeEffectsOptions &amp;options)</arglist>
     </member>
     <member kind="function">
       <type>std::vector&lt; SummaryResults&lt; Stat_, Rank_ &gt; &gt;</type>
       <name>summarize_effects</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>aa3b57e8b73929237385a903236ae66a9</anchor>
-      <arglist>(Index_ ngenes, size_t ngroups, const Stat_ *effects, const SummarizeEffectsOptions &amp;options)</arglist>
+      <anchor>a23e676487add3fc22adb886f42a49260</anchor>
+      <arglist>(Gene_ ngenes, std::size_t ngroups, const Stat_ *effects, const SummarizeEffectsOptions &amp;options)</arglist>
     </member>
     <member kind="function">
       <type>void</type>
