@@ -460,7 +460,7 @@ void process_simple_summary_effects(
     }
 
     PrecomputedPairwiseWeights<Stat_> preweights(ngroups, nblocks, combo_weights.data());
-    EffectsCacher<Stat_> cache(ngenes, ngroups, cache_size);
+    EffectsCacher<Index_, Stat_> cache(ngenes, ngroups, cache_size);
     std::vector<Stat_> full_effects(sanisizer::product<typename std::vector<Stat_>::size_type>(ngroups, ngenes));
     auto effect_buffers = sanisizer::create<std::vector<std::vector<Stat_> > >(num_threads);
     for (auto& ef : effect_buffers) {
@@ -690,7 +690,7 @@ void score_markers_summary(
     std::vector<Stat_> tmp_auc;
     Stat_* auc_ptr = NULL;
     if (do_auc) {
-        tmp_auc.resize(sanisizer::product<decltype(tmp_auc.size()>(ngroups, ngroups, ngenes));
+        tmp_auc.resize(sanisizer::product<decltype(tmp_auc.size())>(ngroups, ngroups, ngenes));
         auc_ptr = tmp_auc.data();
     } 
 

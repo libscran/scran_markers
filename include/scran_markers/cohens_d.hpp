@@ -162,10 +162,10 @@ void compute_pairwise_cohens_d(
     for (decltype(ngroups) g1 = 0; g1 < ngroups; ++g1) {
         for (decltype(g1) g2 = 0; g2 < g1; ++g2) {
             auto tmp = compute_pairwise_cohens_d_two_sided(g1, g2, means, vars, ngroups, nblocks, preweights, threshold);
-            output[sanisizer::nd_offset(g2, ngroups, g1)] = tmp.first;
-            output[sanisizer::nd_offset(g1, ngroups, g2)] = tmp.second;
+            output[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1)] = tmp.first;
+            output[sanisizer::nd_offset<std::size_t>(g1, ngroups, g2)] = tmp.second;
         }
-        output[sanisizer::nd_offset(g1, ngroups, g1)] = 0; // zero the diagonals for consistency.
+        output[sanisizer::nd_offset<std::size_t>(g1, ngroups, g1)] = 0; // zero the diagonals for consistency.
     }
 }
 

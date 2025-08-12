@@ -35,7 +35,7 @@ void initialize_auc_workspace(
     const std::vector<Index_>& combo_size,
     const std::vector<Weight_>& combo_weight) 
 {
-    auto ngroups2 = sanisizer::product<typedef std::vector<Stat_>::size_type>(ngroups, ngroups);
+    auto ngroups2 = sanisizer::product<typename std::vector<Stat_>::size_type>(ngroups, ngroups);
     work.common_buffer.resize(ngroups2
 #ifdef SCRAN_MARKERS_TEST_INIT
         , SCRAN_MARKERS_TEST_INIT
@@ -43,7 +43,6 @@ void initialize_auc_workspace(
     );
 
     work.block_workspaces.reserve(nblocks);
-    auto bwngroups = sanisizer::cast<decltype(work.block_workspaces.front().size()>(ngroups);
     work.block_num_zeros.reserve(nblocks);
     auto nzngroups = sanisizer::cast<decltype(work.block_num_zeros.front().size())>(ngroups);
     work.block_totals.reserve(nblocks);
@@ -51,7 +50,7 @@ void initialize_auc_workspace(
 
     for (decltype(nblocks) b = 0; b < nblocks; ++b) {
         // All workspaces just re-use the same buffer for the AUCs, so make sure to run compute_pairwise_auc() for only one block at a time.
-        work.block_workspaces.emplace_back(bwngroups, work.common_buffer.data()); 
+        work.block_workspaces.emplace_back(ngroups, work.common_buffer.data()); 
         work.block_num_zeros.emplace_back(nzngroups
 #ifdef SCRAN_MARKERS_TEST_INIT
             , SCRAN_MARKERS_TEST_INIT
@@ -257,6 +256,11 @@ void scan_matrix_by_row(
             auto ext = tatami::consecutive_extractor<false>(matrix, true, start, length);
 
             for (Index_ r = start, end = start + length; r < end; ++r) {
+                auto offset = sanisizer::product_unsafe<std::size_t>(r, ncombos);
+                auto mean_ptr = combo_means.data() + offset;
+                auto var_ptr = combo_vars.data() + offset;
+                auto det_ptr = combo_detected.data() + offset;
+
                 auto ptr = ext->fetch(vbuffer.data());
                 tatami_stats::grouped_variances::direct(
                     ptr,
@@ -280,7 +284,7 @@ void scan_matrix_by_row(
                 }
                 det_ptr += ncombos;
 
-                if (auc_ptr) {
+                if (auc) {
                     for (auto& z : auc_work.block_num_zeros) {
                         std::fill(z.begin(), z.end(), 0);
                     }
@@ -304,8 +308,8 @@ void scan_matrix_by_row(
                         }
                     }
 
+                    auto auc_ptr = auc + sanisizer::product_unsafe<std::size_t>(r, effect_shift);
                     process_auc_for_rows(auc_work, ngroups, nblocks, threshold, auc_ptr);
-                    auc_ptr += effect_shift;
                 }
             }
         }
@@ -333,7 +337,7 @@ void scan_matrix_by_column(
             tmp_means.reserve(ncombos);
             tmp_vars.reserve(ncombos);
             tmp_dets.reserve(ncombos);
-            auto len = tatami::cast_Index_to_container_size<typename std::vector<Stat_>::size_type>(length);
+            auto len = tatami::cast_Index_to_container_size<std::vector<Stat_> >(length);
             for (decltype(ncombos) co = 0; co < ncombos; ++co) {
                 tmp_means.emplace_back(len);
                 tmp_vars.emplace_back(len);

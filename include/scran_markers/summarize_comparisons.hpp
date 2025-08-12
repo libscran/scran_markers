@@ -104,11 +104,11 @@ struct SummaryResults {
 namespace internal {
 
 template<typename Stat_, typename Index_, typename Rank_>
-void summarize_comparisons(std::size_t ngroups, std::const Stat_* effects, std::size_t group, Index_ gene, const SummaryBuffers<Stat_, Rank_>& output, std::vector<Stat_>& buffer) {
+void summarize_comparisons(std::size_t ngroups, const Stat_* effects, std::size_t group, Index_ gene, const SummaryBuffers<Stat_, Rank_>& output, std::vector<Stat_>& buffer) {
     // Ignoring the self comparison and pruning out NaNs.
     std::size_t ncomps = 0;
     for (decltype(ngroups) r = 0; r < ngroups; ++r) {
-        if (r == group || std::isnan(*eptr)) {
+        if (r == group || std::isnan(effects[r])) {
             continue;
         }
         buffer[ncomps] = effects[r];
@@ -116,7 +116,7 @@ void summarize_comparisons(std::size_t ngroups, std::const Stat_* effects, std::
     }
 
     if (ncomps <= 1) {
-        Stat_ val = (ncomps == 0 ? std::numeric_limits<Stat_>::quiet_NaN() : *ebegin);
+        Stat_ val = (ncomps == 0 ? std::numeric_limits<Stat_>::quiet_NaN() : buffer[0]);
         if (output.min) {
             output.min[gene] = val;
         }
@@ -131,11 +131,12 @@ void summarize_comparisons(std::size_t ngroups, std::const Stat_* effects, std::
         }
 
     } else {
+        auto ebegin = buffer.data(), elast = ebegin + ncomps;
         if (output.min) {
             output.min[gene] = *std::min_element(ebegin, elast);
         }
         if (output.mean) {
-            output.mean[gene] = std::accumulate(ebegin, elast, 0.0) / ncomps; 
+            output.mean[gene] = std::accumulate(ebegin, elast, static_cast<Stat_>(0)) / ncomps; 
         }
         if (output.max) {
             output.max[gene] = *std::max_element(ebegin, elast);

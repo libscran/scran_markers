@@ -33,7 +33,7 @@ public:
                     my_by_block[sanisizer::nd_offset<std::size_t>(b, nblocks, out_offset1)] = combined;
                     my_by_block[sanisizer::nd_offset<std::size_t>(b, nblocks, g1, ngroups, g2)] = combined;
 
-                    my_total[offset1] += combined;
+                    my_total[out_offset1] += combined;
                 }
             }
         }
