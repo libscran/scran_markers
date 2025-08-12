@@ -194,7 +194,7 @@ void scan_matrix_by_row(
 
         if (matrix.is_sparse()) {
             std::vector<Index_> ibuffer(NC);
-            auto ext = tatami::consecutive_extractor<true>(&matrix, true, start, length);
+            auto ext = tatami::consecutive_extractor<true>(matrix, true, start, length);
             std::vector<Index_> tmp_index(ncombos);
 
             for (size_t r = start, end = start + length; r < end; ++r) {
@@ -255,7 +255,7 @@ void scan_matrix_by_row(
             }
 
         } else {
-            auto ext = tatami::consecutive_extractor<false>(&matrix, true, start, length);
+            auto ext = tatami::consecutive_extractor<false>(matrix, true, start, length);
 
             for (size_t r = start, end = start + length; r < end; ++r) {
                 auto ptr = ext->fetch(vbuffer.data());
@@ -341,7 +341,7 @@ void scan_matrix_by_column(
 
         if (matrix.is_sparse()) {
             std::vector<Index_> ibuffer(length);
-            auto ext = tatami::consecutive_extractor<true>(&matrix, false, static_cast<Index_>(0), NC, start, length);
+            auto ext = tatami::consecutive_extractor<true>(matrix, false, static_cast<Index_>(0), NC, start, length);
             std::vector<tatami_stats::variances::RunningSparse<Stat_, Value_, Index_> > runners;
             runners.reserve(ncombos);
             for (size_t co = 0; co < ncombos; ++co) {
@@ -364,7 +364,7 @@ void scan_matrix_by_column(
             }
 
         } else {
-            auto ext = tatami::consecutive_extractor<false>(&matrix, false, static_cast<Index_>(0), NC, start, length);
+            auto ext = tatami::consecutive_extractor<false>(matrix, false, static_cast<Index_>(0), NC, start, length);
             std::vector<tatami_stats::variances::RunningDense<Stat_, Value_, Index_> > runners;
             runners.reserve(ncombos);
             for (size_t co = 0; co < ncombos; ++co) {
