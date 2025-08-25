@@ -1,13 +1,6 @@
 #ifndef SCRAN_SCORE_MARKERS_HPP
 #define SCRAN_SCORE_MARKERS_HPP
 
-#include "scan_matrix.hpp"
-#include "cohens_d.hpp"
-#include "simple_diff.hpp"
-#include "summarize_comparisons.hpp"
-#include "average_group_stats.hpp"
-#include "create_combinations.hpp"
-
 #include "scran_blocks/scran_blocks.hpp"
 #include "tatami/tatami.hpp"
 #include "sanisizer/sanisizer.hpp"
@@ -15,6 +8,14 @@
 #include <array>
 #include <map>
 #include <vector>
+
+#include "scan_matrix.hpp"
+#include "cohens_d.hpp"
+#include "simple_diff.hpp"
+#include "summarize_comparisons.hpp"
+#include "average_group_stats.hpp"
+#include "create_combinations.hpp"
+#include "utils.hpp"
 
 /**
  * @file score_markers_summary.hpp
@@ -233,20 +234,20 @@ namespace internal {
 enum class CacheAction : unsigned char { SKIP, COMPUTE, CACHE };
 
 // Safely cap the cache size at the maximum possible number of comparisons (i.e., ngroups * (ngroups - 1) / 2).
-inline std::size_t cap_cache_size(std::size_t cache_size, std::size_t ngroups) {
+inline std::size_t cap_cache_size(const std::size_t cache_size, const std::size_t ngroups) {
     if (ngroups < 2) {
         return 0;
     } else if (ngroups % 2 == 0) {
-        auto denom = ngroups / 2;
-        auto ratio = cache_size / denom;
+        const auto denom = ngroups / 2;
+        const auto ratio = cache_size / denom;
         if (ratio <= ngroups - 1) {
             return cache_size;
         } else {
             return denom * (ngroups - 1);
         }
     } else {
-        auto denom = (ngroups - 1) / 2;
-        auto ratio = cache_size / denom;
+        const auto denom = (ngroups - 1) / 2;
+        const auto ratio = cache_size / denom;
         if (ratio <= ngroups) {
             return cache_size;
         } else {
@@ -279,18 +280,17 @@ inline std::size_t cap_cache_size(std::size_t cache_size, std::size_t ngroups) {
 template<typename Index_, typename Stat_>
 class EffectsCacher {
 public:
-    EffectsCacher(Index_ ngenes, std::size_t ngroups, std::size_t cache_size) :
+    EffectsCacher(const Index_ ngenes, const std::size_t ngroups, const std::size_t cache_size) :
         my_ngenes(ngenes),
         my_ngroups(ngroups),
         my_cache_size(cap_cache_size(cache_size, ngroups)),
-        my_actions(sanisizer::cast<decltype(my_actions.size())>(ngroups)),
-        my_common_cache(sanisizer::product<decltype(my_common_cache.size())>(ngenes, my_cache_size)),
-        my_staging_cache(sanisizer::cast<decltype(my_staging_cache.size())>(ngroups))
+        my_actions(sanisizer::cast<decltype(I(my_actions.size()))>(ngroups)),
+        my_common_cache(sanisizer::product<decltype(I(my_common_cache.size()))>(ngenes, my_cache_size)),
+        my_staging_cache(sanisizer::cast<decltype(I(my_staging_cache.size()))>(ngroups))
     {
         my_unused_pool.reserve(my_cache_size);
-        auto ptr = my_common_cache.data();
-        for (decltype(my_cache_size) c = 0; c < my_cache_size; ++c, ptr += ngenes) {
-            my_unused_pool.push_back(ptr);
+        for (decltype(I(my_cache_size)) c = 0; c < my_cache_size; ++c) {
+            my_unused_pool.push_back(my_common_cache.data() + sanisizer::product_unsafe<std::size_t>(c, ngenes));
         }
     }
 
@@ -326,12 +326,12 @@ public:
     }
 
 public:
-    void fill_effects_from_cache(std::size_t group, std::vector<double>& full_effects) {
+    void fill_effects_from_cache(const std::size_t group, std::vector<double>& full_effects) {
         // During calculation of effects, the current group (i.e., 'group') is
         // the first group in the comparison and 'other' is the second group.
         // However, remember that we want to cache the reverse effects, so in
         // the cached entry, 'group' is second and 'other' is first.
-        for (decltype(my_ngroups) other = 0; other < my_ngroups; ++other) {
+        for (decltype(I(my_ngroups)) other = 0; other < my_ngroups; ++other) {
             if (other == group) {
                 my_actions[other] = CacheAction::SKIP;
                 continue;
@@ -372,8 +372,8 @@ public:
             // contains the effect sizes for the desired comparison (i.e., 'group - other').
             // We thus transfer the cached vector to the full_set.
             my_actions[other] = CacheAction::SKIP;
-            auto curcache = my_cached.begin()->second;
-            for (decltype(my_ngenes) i = 0; i < my_ngenes; ++i) {
+            const auto curcache = my_cached.begin()->second;
+            for (decltype(I(my_ngenes)) i = 0; i < my_ngenes; ++i) {
                 full_effects[sanisizer::nd_offset<std::size_t>(other, my_ngroups, i)] = curcache[i];
             }
 
@@ -384,14 +384,14 @@ public:
         // Refining our choice of cacheable entries by doing a dummy run and
         // seeing whether eviction actually happens. If it doesn't, we won't
         // bother caching, because that would be a waste of memory accesses.
-        for (decltype(my_ngroups) other = 0; other < my_ngroups; ++other) {
+        for (decltype(I(my_ngroups)) other = 0; other < my_ngroups; ++other) {
             if (my_actions[other] != CacheAction::CACHE) {
                 continue;
             }
 
-            std::pair<std::size_t, std::size_t> key(other, group);
+            const std::pair<std::size_t, std::size_t> key(other, group);
             if (my_cached.size() < my_cache_size) {
-                auto ptr = my_unused_pool.back();
+                const auto ptr = my_unused_pool.back();
                 my_cached[key] = ptr;
                 my_staging_cache[other] = ptr;
                 my_unused_pool.pop_back();
@@ -404,7 +404,7 @@ public:
             auto it = my_cached.end();
             --it;
             if ((it->first).first > other) {
-                auto ptr = it->second;
+                const auto ptr = it->second;
                 my_cached[key] = ptr;
                 my_staging_cache[other] = ptr;
                 my_cached.erase(it);
@@ -429,33 +429,33 @@ public:
 
 template<typename Index_, typename Stat_, typename Rank_>
 void process_simple_summary_effects(
-    Index_ ngenes,
-    std::size_t ngroups,
-    std::size_t nblocks,
-    std::size_t ncombos,
+    const Index_ ngenes,
+    const std::size_t ngroups,
+    const std::size_t nblocks,
+    const std::size_t ncombos,
     const std::vector<Stat_>& combo_means,
     const std::vector<Stat_>& combo_vars,
     const std::vector<Stat_>& combo_detected,
     const ScoreMarkersSummaryBuffers<Stat_, Rank_>& output,
     const std::vector<Stat_>& combo_weights,
-    double threshold,
-    std::size_t cache_size,
-    int num_threads)
+    const double threshold,
+    const std::size_t cache_size,
+    const int num_threads)
 {
     // First, computing the pooled averages to get that out of the way.
     {
         std::vector<Stat_> total_weights_per_group;
-        const Stat_* total_weights_ptr = combo_weights.data();
+        auto total_weights_ptr = combo_weights.data();
         if (nblocks > 1) {
             total_weights_per_group = compute_total_weight_per_group(ngroups, nblocks, combo_weights.data());
             total_weights_ptr = total_weights_per_group.data();
         }
 
-        tatami::parallelize([&](int, Index_ start, Index_ length) -> void {
+        tatami::parallelize([&](const int, const Index_ start, const Index_ length) -> void {
             for (Index_ gene = start, end = start + length; gene < end; ++gene) {
-                auto in_offset = sanisizer::product_unsafe<std::size_t>(gene, ncombos);
-                const auto* tmp_means = combo_means.data() + in_offset;
-                const auto* tmp_detected = combo_detected.data() + in_offset;
+                const auto in_offset = sanisizer::product_unsafe<std::size_t>(gene, ncombos);
+                const auto tmp_means = combo_means.data() + in_offset;
+                const auto tmp_detected = combo_detected.data() + in_offset;
                 average_group_stats(gene, ngroups, nblocks, tmp_means, tmp_detected, combo_weights.data(), total_weights_ptr, output.mean, output.detected);
             }
         }, ngenes, num_threads);
@@ -471,19 +471,19 @@ void process_simple_summary_effects(
 
     if (output.cohens_d.size()) {
         cache.clear();
-        for (decltype(ngroups) group = 0; group < ngroups; ++group) {
+        for (decltype(I(ngroups)) group = 0; group < ngroups; ++group) {
             cache.fill_effects_from_cache(group, full_effects);
 
-            tatami::parallelize([&](int t, Index_ start, Index_ length) -> void {
+            tatami::parallelize([&](const int t, const Index_ start, const Index_ length) -> void {
                 auto& effect_buffer = effect_buffers[t];
 
                 for (Index_ gene = start, end = start + length; gene < end; ++gene) {
-                    auto in_offset = sanisizer::product_unsafe<std::size_t>(gene, ncombos);
-                    auto my_means = combo_means.data() + in_offset;
-                    auto my_variances = combo_vars.data() + in_offset;
-                    auto store_ptr = full_effects.data() + sanisizer::product_unsafe<std::size_t>(gene, ngroups);
+                    const auto in_offset = sanisizer::product_unsafe<std::size_t>(gene, ncombos);
+                    const auto my_means = combo_means.data() + in_offset;
+                    const auto my_variances = combo_vars.data() + in_offset;
+                    const auto store_ptr = full_effects.data() + sanisizer::product_unsafe<std::size_t>(gene, ngroups);
 
-                    for (decltype(ngroups) other = 0; other < ngroups; ++other) {
+                    for (decltype(I(ngroups)) other = 0; other < ngroups; ++other) {
                         auto cache_action = cache.get_action(other);
                         if (cache_action == internal::CacheAction::COMPUTE) {
                             store_ptr[other] = compute_pairwise_cohens_d_one_sided(group, other, my_means, my_variances, ngroups, nblocks, preweights, threshold);
@@ -497,7 +497,7 @@ void process_simple_summary_effects(
                 }
             }, ngenes, num_threads);
 
-            auto mr = output.cohens_d[group].min_rank;
+            const auto mr = output.cohens_d[group].min_rank;
             if (mr) {
                 compute_min_rank_for_group(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
             }
@@ -506,20 +506,20 @@ void process_simple_summary_effects(
 
     if (output.delta_mean.size()) {
         cache.clear();
-        for (decltype(ngroups) group = 0; group < ngroups; ++group) {
+        for (decltype(I(ngroups)) group = 0; group < ngroups; ++group) {
             cache.fill_effects_from_cache(group, full_effects);
 
-            tatami::parallelize([&](int t, Index_ start, Index_ length) -> void {
+            tatami::parallelize([&](const int t, const Index_ start, const Index_ length) -> void {
                 auto& effect_buffer = effect_buffers[t];
 
                 for (Index_ gene = start, end = start + length; gene < end; ++gene) {
-                    auto my_means = combo_means.data() + sanisizer::product_unsafe<std::size_t>(gene, ncombos);
-                    auto store_ptr = full_effects.data() + sanisizer::product_unsafe<std::size_t>(gene, ngroups);
+                    const auto my_means = combo_means.data() + sanisizer::product_unsafe<std::size_t>(gene, ncombos);
+                    const auto store_ptr = full_effects.data() + sanisizer::product_unsafe<std::size_t>(gene, ngroups);
 
-                    for (decltype(ngroups) other = 0; other < ngroups; ++other) {
-                        auto cache_action = cache.get_action(other);
+                    for (decltype(I(ngroups)) other = 0; other < ngroups; ++other) {
+                        const auto cache_action = cache.get_action(other);
                         if (cache_action != internal::CacheAction::SKIP) {
-                            auto val = compute_pairwise_simple_diff(group, other, my_means, ngroups, nblocks, preweights);
+                            const auto val = compute_pairwise_simple_diff(group, other, my_means, ngroups, nblocks, preweights);
                             store_ptr[other] = val;
                             if (cache_action == CacheAction::CACHE) {
                                 cache.get_cache_location(other)[gene] = -val;
@@ -530,7 +530,7 @@ void process_simple_summary_effects(
                 }
             }, ngenes, num_threads);
 
-            auto mr = output.delta_mean[group].min_rank;
+            const auto mr = output.delta_mean[group].min_rank;
             if (mr) {
                 compute_min_rank_for_group(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
             }
@@ -539,20 +539,20 @@ void process_simple_summary_effects(
 
     if (output.delta_detected.size()) {
         cache.clear();
-        for (decltype(ngroups) group = 0; group < ngroups; ++group) {
+        for (decltype(I(ngroups)) group = 0; group < ngroups; ++group) {
             cache.fill_effects_from_cache(group, full_effects);
 
-            tatami::parallelize([&](int t, Index_ start, Index_ length) -> void {
+            tatami::parallelize([&](const int t, const Index_ start, const Index_ length) -> void {
                 auto& effect_buffer = effect_buffers[t];
 
                 for (Index_ gene = start, end = start + length; gene < end; ++gene) {
-                    auto my_detected = combo_detected.data() + sanisizer::product_unsafe<std::size_t>(gene, ncombos);
-                    auto store_ptr = full_effects.data() + sanisizer::product_unsafe<std::size_t>(gene, ngroups);
+                    const auto my_detected = combo_detected.data() + sanisizer::product_unsafe<std::size_t>(gene, ncombos);
+                    const auto store_ptr = full_effects.data() + sanisizer::product_unsafe<std::size_t>(gene, ngroups);
 
-                    for (decltype(ngroups) other = 0; other < ngroups; ++other) {
-                        auto cache_action = cache.get_action(other);
+                    for (decltype(I(ngroups)) other = 0; other < ngroups; ++other) {
+                        const auto cache_action = cache.get_action(other);
                         if (cache_action != CacheAction::SKIP) {
-                            auto val = compute_pairwise_simple_diff(group, other, my_detected, ngroups, nblocks, preweights);
+                            const auto val = compute_pairwise_simple_diff(group, other, my_detected, ngroups, nblocks, preweights);
                             store_ptr[other] = val;
                             if (cache_action == CacheAction::CACHE) {
                                 cache.get_cache_location(other)[gene] = -val;
@@ -563,7 +563,7 @@ void process_simple_summary_effects(
                 }
             }, ngenes, num_threads);
 
-            auto mr = output.delta_detected[group].min_rank;
+            const auto mr = output.delta_detected[group].min_rank;
             if (mr) {
                 compute_min_rank_for_group(ngenes, ngroups, group, full_effects.data(), mr, num_threads);
             }
@@ -572,7 +572,12 @@ void process_simple_summary_effects(
 }
 
 template<typename Index_, typename Stat_, typename Rank_>
-ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(Index_ ngenes, std::size_t ngroups, ScoreMarkersSummaryResults<Stat_, Rank_>& store, const ScoreMarkersSummaryOptions& options) {
+ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(
+    const Index_ ngenes,
+    const std::size_t ngroups,
+    ScoreMarkersSummaryResults<Stat_, Rank_>& store,
+    const ScoreMarkersSummaryOptions& options)
+{
     ScoreMarkersSummaryBuffers<Stat_, Rank_> output;
 
     internal::fill_average_results(ngenes, ngroups, store.mean, store.detected, output.mean, output.detected);
@@ -672,27 +677,27 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(Index_ ngenes, std
 template<typename Value_, typename Index_, typename Group_, typename Stat_, typename Rank_>
 void score_markers_summary(
     const tatami::Matrix<Value_, Index_>& matrix, 
-    const Group_* group, 
+    const Group_* const group, 
     const ScoreMarkersSummaryOptions& options,
     const ScoreMarkersSummaryBuffers<Stat_, Rank_>& output) 
 {
-    auto NC = matrix.ncol();
-    auto group_sizes = tatami_stats::tabulate_groups(group, NC); 
-    auto ngenes = matrix.nrow();
-    auto ngroups = group_sizes.size();
+    const auto NC = matrix.ncol();
+    const auto group_sizes = tatami_stats::tabulate_groups(group, NC); 
+    const auto ngenes = matrix.nrow();
+    const auto ngroups = group_sizes.size();
 
     // In most cases this doesn't really matter, but we do it for consistency with the 1-block case,
     // and to account for variable weighting where non-zero block sizes get zero weight.
-    auto group_weights = scran_blocks::compute_weights<Stat_>(group_sizes, options.block_weight_policy, options.variable_block_weight_parameters);
+    const auto group_weights = scran_blocks::compute_weights<Stat_>(group_sizes, options.block_weight_policy, options.variable_block_weight_parameters);
 
-    auto payload_size = sanisizer::product<typename std::vector<Stat_>::size_type>(ngenes, ngroups);
+    const auto payload_size = sanisizer::product<typename std::vector<Stat_>::size_type>(ngenes, ngroups);
     std::vector<Stat_> group_means(payload_size), group_vars(payload_size), group_detected(payload_size);
 
-    bool do_auc = !output.auc.empty();
+    const bool do_auc = !output.auc.empty();
     std::vector<Stat_> tmp_auc;
     Stat_* auc_ptr = NULL;
     if (do_auc) {
-        tmp_auc.resize(sanisizer::product<decltype(tmp_auc.size())>(ngroups, ngroups, ngenes));
+        tmp_auc.resize(sanisizer::product<decltype(I(tmp_auc.size()))>(ngroups, ngroups, ngenes));
         auc_ptr = tmp_auc.data();
     } 
 
@@ -779,29 +784,29 @@ void score_markers_summary(
 template<typename Value_, typename Index_, typename Group_, typename Block_, typename Stat_, typename Rank_>
 void score_markers_summary_blocked(
     const tatami::Matrix<Value_, Index_>& matrix, 
-    const Group_* group, 
-    const Block_* block,
+    const Group_* const group, 
+    const Block_* const block,
     const ScoreMarkersSummaryOptions& options,
     const ScoreMarkersSummaryBuffers<Stat_, Rank_>& output) 
 {
-    auto NC = matrix.ncol();
-    auto ngenes = matrix.nrow();
-    auto ngroups = output.mean.size();
-    auto nblocks = tatami_stats::total_groups(block, NC); 
+    const auto NC = matrix.ncol();
+    const auto ngenes = matrix.nrow();
+    const auto ngroups = output.mean.size();
+    const auto nblocks = tatami_stats::total_groups(block, NC); 
 
-    auto combinations = internal::create_combinations(ngroups, group, block, NC);
-    auto combo_sizes = internal::tabulate_combinations<Index_>(ngroups, nblocks, combinations);
-    auto ncombos = combo_sizes.size();
-    auto combo_weights = scran_blocks::compute_weights<Stat_>(combo_sizes, options.block_weight_policy, options.variable_block_weight_parameters);
+    const auto combinations = internal::create_combinations(ngroups, group, block, NC);
+    const auto combo_sizes = internal::tabulate_combinations<Index_>(ngroups, nblocks, combinations);
+    const auto ncombos = combo_sizes.size();
+    const auto combo_weights = scran_blocks::compute_weights<Stat_>(combo_sizes, options.block_weight_policy, options.variable_block_weight_parameters);
 
-    auto payload_size = sanisizer::product<typename std::vector<Stat_>::size_type>(ngenes, ncombos);
+    const auto payload_size = sanisizer::product<typename std::vector<Stat_>::size_type>(ngenes, ncombos);
     std::vector<Stat_> combo_means(payload_size), combo_vars(payload_size), combo_detected(payload_size);
 
-    bool do_auc = !output.auc.empty();
+    const bool do_auc = !output.auc.empty();
     std::vector<Stat_> tmp_auc;
     Stat_* auc_ptr = NULL;
     if (do_auc) {
-        tmp_auc.resize(sanisizer::product<decltype(tmp_auc.size())>(ngroups, ngroups, ngenes));
+        tmp_auc.resize(sanisizer::product<decltype(I(tmp_auc.size()))>(ngroups, ngroups, ngenes));
         auc_ptr = tmp_auc.data();
     } 
 
@@ -877,12 +882,12 @@ void score_markers_summary_blocked(
 template<typename Stat_ = double, typename Rank_ = int, typename Value_, typename Index_, typename Group_>
 ScoreMarkersSummaryResults<Stat_, Rank_> score_markers_summary(
     const tatami::Matrix<Value_, Index_>& matrix,
-    const Group_* group,
+    const Group_* const group,
     const ScoreMarkersSummaryOptions& options)
 {
-    auto ngroups = tatami_stats::total_groups(group, matrix.ncol());
+    const auto ngroups = tatami_stats::total_groups(group, matrix.ncol());
     ScoreMarkersSummaryResults<Stat_, Rank_> output;
-    auto buffers = internal::fill_summary_results(matrix.nrow(), ngroups, output, options);
+    const auto buffers = internal::fill_summary_results(matrix.nrow(), ngroups, output, options);
     score_markers_summary(matrix, group, options, buffers);
     return output;
 }
@@ -909,13 +914,13 @@ ScoreMarkersSummaryResults<Stat_, Rank_> score_markers_summary(
 template<typename Stat_ = double, typename Rank_ = int, typename Value_, typename Index_, typename Group_, typename Block_>
 ScoreMarkersSummaryResults<Stat_, Rank_> score_markers_summary_blocked(
     const tatami::Matrix<Value_, Index_>& matrix,
-    const Group_* group,
-    const Block_* block,
+    const Group_* const group,
+    const Block_* const block,
     const ScoreMarkersSummaryOptions& options)
 {
-    auto ngroups = tatami_stats::total_groups(group, matrix.ncol());
+    const auto ngroups = tatami_stats::total_groups(group, matrix.ncol());
     ScoreMarkersSummaryResults<Stat_, Rank_> output;
-    auto buffers = internal::fill_summary_results(matrix.nrow(), ngroups, output, options);
+    const auto buffers = internal::fill_summary_results(matrix.nrow(), ngroups, output, options);
     score_markers_summary_blocked(matrix, group, block, options, buffers);
     return output;
 }

@@ -1,10 +1,11 @@
 #ifndef SCRAN_MARKERS_SUMMARIZE_EFFECTS_HPP
 #define SCRAN_MARKERS_SUMMARIZE_EFFECTS_HPP
 
-#include "summarize_comparisons.hpp"
-
 #include <vector>
 #include <cstddef>
+
+#include "summarize_comparisons.hpp"
+#include "utils.hpp"
 
 /**
  * @file summarize_effects.hpp
@@ -111,7 +112,13 @@ struct SummarizeEffectsOptions {
  * @param options Further options.
  */
 template<typename Gene_, typename Stat_, typename Rank_>
-void summarize_effects(Gene_ ngenes, std::size_t ngroups, const Stat_* effects, const std::vector<SummaryBuffers<Stat_, Rank_> >& summaries, const SummarizeEffectsOptions& options) {
+void summarize_effects(
+    const Gene_ ngenes,
+    const std::size_t ngroups,
+    const Stat_* const effects,
+    const std::vector<SummaryBuffers<Stat_, Rank_> >& summaries,
+    const SummarizeEffectsOptions& options)
+{
     internal::compute_min_rank_pairwise(ngenes, ngroups, effects, summaries, options.num_threads);
     internal::summarize_comparisons(ngenes, ngroups, effects, summaries, options.num_threads); 
 }
@@ -133,9 +140,14 @@ void summarize_effects(Gene_ ngenes, std::size_t ngroups, const Stat_* effects, 
  * Each `SummaryResults` corresponds to a group and contains the summary statistics (depending on `options`) for that group.
  */
 template<typename Stat_ = double, typename Rank_ = int, typename Gene_>
-std::vector<SummaryResults<Stat_, Rank_> > summarize_effects(Gene_ ngenes, std::size_t ngroups, const Stat_* effects, const SummarizeEffectsOptions& options) {
+std::vector<SummaryResults<Stat_, Rank_> > summarize_effects(
+    const Gene_ ngenes,
+    const std::size_t ngroups,
+    const Stat_* const effects,
+    const SummarizeEffectsOptions& options)
+{
     std::vector<SummaryResults<Stat_, Rank_> > output;
-    auto ptrs = internal::fill_summary_results(
+    const auto ptrs = internal::fill_summary_results(
         ngenes,
         ngroups,
         output,
