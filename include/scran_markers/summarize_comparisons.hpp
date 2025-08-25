@@ -221,7 +221,8 @@ void compute_min_rank_internal(const Gene_ use, const std::vector<std::pair<Stat
 template<typename Stat_, typename Gene_, typename Rank_>
 void compute_min_rank_for_group(const Gene_ ngenes, const std::size_t ngroups, const std::size_t group, const Stat_* const effects, Rank_* const output, const int threads) {
     std::vector<std::vector<Rank_> > stores(threads - 1);
-    std::fill_n(output, ngenes, ngenes); // using the maximum possible rank (i.e., 'ngenes') as the default.
+    const auto maxrank_placeholder = ngenes; // using the maximum possible rank (i.e., 'ngenes') as the default.
+    std::fill_n(output, ngenes, maxrank_placeholder);
 
     tatami::parallelize([&](const int t, const std::size_t start, const std::size_t length) -> void {
         Rank_* curoutput;
@@ -230,7 +231,7 @@ void compute_min_rank_for_group(const Gene_ ngenes, const std::size_t ngroups, c
         } else {
             auto& curstore = stores[t - 1];
             if (curstore.empty()) {
-                curstore.resize(ngenes, ngenes + 1);
+                sanisizer::resize(curstore, ngenes, maxrank_placeholder);
             }
             curoutput = curstore.data();
         }
@@ -356,7 +357,7 @@ std::vector<SummaryBuffers<Stat_, Rank_> > fill_summary_results(
     const bool compute_max,
     const bool compute_min_rank) 
 {
-    outputs.resize(sanisizer::cast<decltype(I(outputs.size()))>(ngroups));
+    sanisizer::resize(outputs, ngroups);
     std::vector<SummaryBuffers<Stat_, Rank_> > ptrs;
     ptrs.reserve(ngroups);
     for (decltype(I(ngroups)) g = 0; g < ngroups; ++g) {

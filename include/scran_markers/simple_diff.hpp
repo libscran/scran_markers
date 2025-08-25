@@ -56,7 +56,7 @@ void compute_pairwise_simple_diff(
             output[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1)] = d;
             output[sanisizer::nd_offset<std::size_t>(g1, ngroups, g2)] = -d;
         }
-        output[g1 * ngroups + g1] = 0; // zero the diagonals for consistency.
+        output[sanisizer::nd_offset<std::size_t>(g1, ngroups, g1)] = 0; // zero the diagonals for consistency.
     }
 }
 

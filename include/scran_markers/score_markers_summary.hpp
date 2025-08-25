@@ -466,7 +466,7 @@ void process_simple_summary_effects(
     std::vector<Stat_> full_effects(sanisizer::product<typename std::vector<Stat_>::size_type>(ngroups, ngenes));
     auto effect_buffers = sanisizer::create<std::vector<std::vector<Stat_> > >(num_threads);
     for (auto& ef : effect_buffers) {
-        ef.resize(ngroups);
+        sanisizer::resize(ef, ngroups);
     }
 
     if (output.cohens_d.size()) {

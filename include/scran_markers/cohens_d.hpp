@@ -45,7 +45,7 @@ Stat_ cohen_denominator(const Stat_ left_var, const Stat_ right_var) {
     } else if (std::isnan(right_var)) {
         return std::sqrt(left_var);
     } else {
-        return std::sqrt((left_var + right_var)/2);
+        return std::sqrt(left_var + (right_var - left_var)/2); // reduce risk of overflow.
     }
 }
 
