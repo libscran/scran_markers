@@ -424,7 +424,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00466" name="l00466"></a><span class="lineno">  466</span>    std::vector&lt;Stat_&gt; full_effects(sanisizer::product&lt;<span class="keyword">typename</span> std::vector&lt;Stat_&gt;::size_type&gt;(ngroups, ngenes));</div>
 <div class="line"><a id="l00467" name="l00467"></a><span class="lineno">  467</span>    <span class="keyword">auto</span> effect_buffers = sanisizer::create&lt;std::vector&lt;std::vector&lt;Stat_&gt; &gt; &gt;(num_threads);</div>
 <div class="line"><a id="l00468" name="l00468"></a><span class="lineno">  468</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; ef : effect_buffers) {</div>
-<div class="line"><a id="l00469" name="l00469"></a><span class="lineno">  469</span>        ef.resize(ngroups);</div>
+<div class="line"><a id="l00469" name="l00469"></a><span class="lineno">  469</span>        sanisizer::resize(ef, ngroups);</div>
 <div class="line"><a id="l00470" name="l00470"></a><span class="lineno">  470</span>    }</div>
 <div class="line"><a id="l00471" name="l00471"></a><span class="lineno">  471</span> </div>
 <div class="line"><a id="l00472" name="l00472"></a><span class="lineno">  472</span>    <span class="keywordflow">if</span> (output.cohens_d.size()) {</div>
