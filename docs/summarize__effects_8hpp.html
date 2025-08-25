@@ -107,16 +107,17 @@ $(function(){ initResizable(false); });
 
 <p>Summarize the effect sizes from pairwise comparisons.  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &quot;<a class="el" href="summarize__comparisons_8hpp_source.html">summarize_comparisons.hpp</a>&quot;</code><br />
-<code>#include &lt;vector&gt;</code><br />
+<div class="textblock"><code>#include &lt;vector&gt;</code><br />
 <code>#include &lt;cstddef&gt;</code><br />
+<code>#include &quot;<a class="el" href="summarize__comparisons_8hpp_source.html">summarize_comparisons.hpp</a>&quot;</code><br />
+<code>#include &quot;utils.hpp&quot;</code><br />
 </div>
 <p><a href="summarize__effects_8hpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structscran__markers_1_1SummarizeEffectsOptions.html">scran_markers::SummarizeEffectsOptions</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Options for <code><a class="el" href="namespacescran__markers.html#a2a695132f3b280be336a1468b234f8b2">summarize_effects()</a></code>.  <a href="structscran__markers_1_1SummarizeEffectsOptions.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Options for <code><a class="el" href="namespacescran__markers.html#aefddf4357cc7de227c5242b3861d5a27">summarize_effects()</a></code>.  <a href="structscran__markers_1_1SummarizeEffectsOptions.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
@@ -127,12 +128,12 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a2a695132f3b280be336a1468b234f8b2" id="r_a2a695132f3b280be336a1468b234f8b2"><td class="memTemplParams" colspan="2">template&lt;typename Gene_ , typename Stat_ , typename Rank_ &gt; </td></tr>
-<tr class="memitem:a2a695132f3b280be336a1468b234f8b2"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html#a2a695132f3b280be336a1468b234f8b2">scran_markers::summarize_effects</a> (Gene_ ngenes, std::size_t ngroups, const Stat_ *effects, const std::vector&lt; <a class="el" href="structscran__markers_1_1SummaryBuffers.html">SummaryBuffers</a>&lt; Stat_, Rank_ &gt; &gt; &amp;summaries, const <a class="el" href="structscran__markers_1_1SummarizeEffectsOptions.html">SummarizeEffectsOptions</a> &amp;options)</td></tr>
-<tr class="separator:a2a695132f3b280be336a1468b234f8b2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a23e676487add3fc22adb886f42a49260" id="r_a23e676487add3fc22adb886f42a49260"><td class="memTemplParams" colspan="2">template&lt;typename Stat_  = double, typename Rank_  = int, typename Gene_ &gt; </td></tr>
-<tr class="memitem:a23e676487add3fc22adb886f42a49260"><td class="memTemplItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structscran__markers_1_1SummaryResults.html">SummaryResults</a>&lt; Stat_, Rank_ &gt; &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html#a23e676487add3fc22adb886f42a49260">scran_markers::summarize_effects</a> (Gene_ ngenes, std::size_t ngroups, const Stat_ *effects, const <a class="el" href="structscran__markers_1_1SummarizeEffectsOptions.html">SummarizeEffectsOptions</a> &amp;options)</td></tr>
-<tr class="separator:a23e676487add3fc22adb886f42a49260"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aefddf4357cc7de227c5242b3861d5a27" id="r_aefddf4357cc7de227c5242b3861d5a27"><td class="memTemplParams" colspan="2">template&lt;typename Gene_ , typename Stat_ , typename Rank_ &gt; </td></tr>
+<tr class="memitem:aefddf4357cc7de227c5242b3861d5a27"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html#aefddf4357cc7de227c5242b3861d5a27">scran_markers::summarize_effects</a> (const Gene_ ngenes, const std::size_t ngroups, const Stat_ *const effects, const std::vector&lt; <a class="el" href="structscran__markers_1_1SummaryBuffers.html">SummaryBuffers</a>&lt; Stat_, Rank_ &gt; &gt; &amp;summaries, const <a class="el" href="structscran__markers_1_1SummarizeEffectsOptions.html">SummarizeEffectsOptions</a> &amp;options)</td></tr>
+<tr class="separator:aefddf4357cc7de227c5242b3861d5a27"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5ae49bdf2cb9840a8dddf919de36107f" id="r_a5ae49bdf2cb9840a8dddf919de36107f"><td class="memTemplParams" colspan="2">template&lt;typename Stat_  = double, typename Rank_  = int, typename Gene_ &gt; </td></tr>
+<tr class="memitem:a5ae49bdf2cb9840a8dddf919de36107f"><td class="memTemplItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structscran__markers_1_1SummaryResults.html">SummaryResults</a>&lt; Stat_, Rank_ &gt; &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html#a5ae49bdf2cb9840a8dddf919de36107f">scran_markers::summarize_effects</a> (const Gene_ ngenes, const std::size_t ngroups, const Stat_ *const effects, const <a class="el" href="structscran__markers_1_1SummarizeEffectsOptions.html">SummarizeEffectsOptions</a> &amp;options)</td></tr>
+<tr class="separator:a5ae49bdf2cb9840a8dddf919de36107f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Summarize the effect sizes from pairwise comparisons. </p>

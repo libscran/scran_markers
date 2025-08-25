@@ -107,31 +107,32 @@ $(function(){ initResizable(false); });
 
 <p>Score potential markers by pairwise effect sizes between groups of cells.  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &quot;cohens_d.hpp&quot;</code><br />
-<code>#include &quot;simple_diff.hpp&quot;</code><br />
-<code>#include &quot;scan_matrix.hpp&quot;</code><br />
-<code>#include &quot;average_group_stats.hpp&quot;</code><br />
-<code>#include &quot;PrecomputedPairwiseWeights.hpp&quot;</code><br />
-<code>#include &quot;create_combinations.hpp&quot;</code><br />
-<code>#include &lt;vector&gt;</code><br />
+<div class="textblock"><code>#include &lt;vector&gt;</code><br />
 <code>#include &lt;cstddef&gt;</code><br />
 <code>#include &quot;<a class="elRef" href="https://libscran.github.io/scran_blocks/scran__blocks_8hpp.html">scran_blocks/scran_blocks.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="elRef" href="https://tatami-inc.github.io/tatami/tatami_8hpp.html">tatami/tatami.hpp</a>&quot;</code><br />
 <code>#include &quot;tatami_stats/tatami_stats.hpp&quot;</code><br />
 <code>#include &quot;sanisizer/sanisizer.hpp&quot;</code><br />
+<code>#include &quot;scan_matrix.hpp&quot;</code><br />
+<code>#include &quot;average_group_stats.hpp&quot;</code><br />
+<code>#include &quot;PrecomputedPairwiseWeights.hpp&quot;</code><br />
+<code>#include &quot;create_combinations.hpp&quot;</code><br />
+<code>#include &quot;cohens_d.hpp&quot;</code><br />
+<code>#include &quot;simple_diff.hpp&quot;</code><br />
+<code>#include &quot;utils.hpp&quot;</code><br />
 </div>
 <p><a href="score__markers__pairwise_8hpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">scran_markers::ScoreMarkersPairwiseOptions</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Options for <code><a class="el" href="namespacescran__markers.html#a948a5ee108d7c1d07b9fec36553426e3">score_markers_pairwise()</a></code> and friends.  <a href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Options for <code><a class="el" href="namespacescran__markers.html#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code> and friends.  <a href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html">scran_markers::ScoreMarkersPairwiseBuffers&lt; Stat_ &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Buffers for <code><a class="el" href="namespacescran__markers.html#a948a5ee108d7c1d07b9fec36553426e3">score_markers_pairwise()</a></code> and friends.  <a href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Buffers for <code><a class="el" href="namespacescran__markers.html#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code> and friends.  <a href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseResults.html">scran_markers::ScoreMarkersPairwiseResults&lt; Stat_ &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Results for <code><a class="el" href="namespacescran__markers.html#a948a5ee108d7c1d07b9fec36553426e3">score_markers_pairwise()</a></code> and friends.  <a href="structscran__markers_1_1ScoreMarkersPairwiseResults.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Results for <code><a class="el" href="namespacescran__markers.html#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code> and friends.  <a href="structscran__markers_1_1ScoreMarkersPairwiseResults.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
@@ -142,18 +143,18 @@ Namespaces</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a948a5ee108d7c1d07b9fec36553426e3" id="r_a948a5ee108d7c1d07b9fec36553426e3"><td class="memTemplParams" colspan="2">template&lt;typename Value_ , typename Index_ , typename Group_ , typename Stat_ &gt; </td></tr>
-<tr class="memitem:a948a5ee108d7c1d07b9fec36553426e3"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html#a948a5ee108d7c1d07b9fec36553426e3">scran_markers::score_markers_pairwise</a> (const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *group, const <a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">ScoreMarkersPairwiseOptions</a> &amp;options, const <a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html">ScoreMarkersPairwiseBuffers</a>&lt; Stat_ &gt; &amp;output)</td></tr>
-<tr class="separator:a948a5ee108d7c1d07b9fec36553426e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a996c8a196ffe2f391028c9d33636e746" id="r_a996c8a196ffe2f391028c9d33636e746"><td class="memTemplParams" colspan="2">template&lt;typename Value_ , typename Index_ , typename Group_ , typename Block_ , typename Stat_ &gt; </td></tr>
-<tr class="memitem:a996c8a196ffe2f391028c9d33636e746"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html#a996c8a196ffe2f391028c9d33636e746">scran_markers::score_markers_pairwise_blocked</a> (const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *group, const Block_ *block, const <a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">ScoreMarkersPairwiseOptions</a> &amp;options, const <a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html">ScoreMarkersPairwiseBuffers</a>&lt; Stat_ &gt; &amp;output)</td></tr>
-<tr class="separator:a996c8a196ffe2f391028c9d33636e746"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2cbb54ae39a763ed86efa2f0a98f4482" id="r_a2cbb54ae39a763ed86efa2f0a98f4482"><td class="memTemplParams" colspan="2">template&lt;typename Stat_  = double, typename Value_ , typename Index_ , typename Group_ &gt; </td></tr>
-<tr class="memitem:a2cbb54ae39a763ed86efa2f0a98f4482"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseResults.html">ScoreMarkersPairwiseResults</a>&lt; Stat_ &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html#a2cbb54ae39a763ed86efa2f0a98f4482">scran_markers::score_markers_pairwise</a> (const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *group, const <a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">ScoreMarkersPairwiseOptions</a> &amp;options)</td></tr>
-<tr class="separator:a2cbb54ae39a763ed86efa2f0a98f4482"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a08af688c64648170bc4e821a116c3eb8" id="r_a08af688c64648170bc4e821a116c3eb8"><td class="memTemplParams" colspan="2">template&lt;typename Stat_  = double, typename Value_ , typename Index_ , typename Group_ , typename Block_ &gt; </td></tr>
-<tr class="memitem:a08af688c64648170bc4e821a116c3eb8"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseResults.html">ScoreMarkersPairwiseResults</a>&lt; Stat_ &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html#a08af688c64648170bc4e821a116c3eb8">scran_markers::score_markers_pairwise_blocked</a> (const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *group, const Block_ *block, const <a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">ScoreMarkersPairwiseOptions</a> &amp;options)</td></tr>
-<tr class="separator:a08af688c64648170bc4e821a116c3eb8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6c63a08774d6f2105b68b656f8a3da94" id="r_a6c63a08774d6f2105b68b656f8a3da94"><td class="memTemplParams" colspan="2">template&lt;typename Value_ , typename Index_ , typename Group_ , typename Stat_ &gt; </td></tr>
+<tr class="memitem:a6c63a08774d6f2105b68b656f8a3da94"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html#a6c63a08774d6f2105b68b656f8a3da94">scran_markers::score_markers_pairwise</a> (const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const <a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">ScoreMarkersPairwiseOptions</a> &amp;options, const <a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html">ScoreMarkersPairwiseBuffers</a>&lt; Stat_ &gt; &amp;output)</td></tr>
+<tr class="separator:a6c63a08774d6f2105b68b656f8a3da94"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9c5a2571c6f34d150a9b155ebd396a25" id="r_a9c5a2571c6f34d150a9b155ebd396a25"><td class="memTemplParams" colspan="2">template&lt;typename Value_ , typename Index_ , typename Group_ , typename Block_ , typename Stat_ &gt; </td></tr>
+<tr class="memitem:a9c5a2571c6f34d150a9b155ebd396a25"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html#a9c5a2571c6f34d150a9b155ebd396a25">scran_markers::score_markers_pairwise_blocked</a> (const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, const <a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">ScoreMarkersPairwiseOptions</a> &amp;options, const <a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html">ScoreMarkersPairwiseBuffers</a>&lt; Stat_ &gt; &amp;output)</td></tr>
+<tr class="separator:a9c5a2571c6f34d150a9b155ebd396a25"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa0e6a1d4dc2f4bad9e80ebe68eb08ce1" id="r_aa0e6a1d4dc2f4bad9e80ebe68eb08ce1"><td class="memTemplParams" colspan="2">template&lt;typename Stat_  = double, typename Value_ , typename Index_ , typename Group_ &gt; </td></tr>
+<tr class="memitem:aa0e6a1d4dc2f4bad9e80ebe68eb08ce1"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseResults.html">ScoreMarkersPairwiseResults</a>&lt; Stat_ &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html#aa0e6a1d4dc2f4bad9e80ebe68eb08ce1">scran_markers::score_markers_pairwise</a> (const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const <a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">ScoreMarkersPairwiseOptions</a> &amp;options)</td></tr>
+<tr class="separator:aa0e6a1d4dc2f4bad9e80ebe68eb08ce1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab07e111b7e98525a9230937bb5ff61f8" id="r_ab07e111b7e98525a9230937bb5ff61f8"><td class="memTemplParams" colspan="2">template&lt;typename Stat_  = double, typename Value_ , typename Index_ , typename Group_ , typename Block_ &gt; </td></tr>
+<tr class="memitem:ab07e111b7e98525a9230937bb5ff61f8"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseResults.html">ScoreMarkersPairwiseResults</a>&lt; Stat_ &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html#ab07e111b7e98525a9230937bb5ff61f8">scran_markers::score_markers_pairwise_blocked</a> (const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, const <a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">ScoreMarkersPairwiseOptions</a> &amp;options)</td></tr>
+<tr class="separator:ab07e111b7e98525a9230937bb5ff61f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Score potential markers by pairwise effect sizes between groups of cells. </p>

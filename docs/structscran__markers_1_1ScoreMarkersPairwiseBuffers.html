@@ -104,7 +104,7 @@ $(function(){ initResizable(false); });
 </div><!--header-->
 <div class="contents">
 
-<p>Buffers for <code><a class="el" href="namespacescran__markers.html#a948a5ee108d7c1d07b9fec36553426e3">score_markers_pairwise()</a></code> and friends.  
+<p>Buffers for <code><a class="el" href="namespacescran__markers.html#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code> and friends.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="score__markers__pairwise_8hpp_source.html">score_markers_pairwise.hpp</a>&gt;</code></p>
@@ -126,7 +126,7 @@ Public Attributes</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename Stat_&gt;<br />
-struct scran_markers::ScoreMarkersPairwiseBuffers&lt; Stat_ &gt;</div><p>Buffers for <code><a class="el" href="namespacescran__markers.html#a948a5ee108d7c1d07b9fec36553426e3">score_markers_pairwise()</a></code> and friends. </p>
+struct scran_markers::ScoreMarkersPairwiseBuffers&lt; Stat_ &gt;</div><p>Buffers for <code><a class="el" href="namespacescran__markers.html#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code> and friends. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">Stat_</td><td>Floating-point type for the output statistics. </td></tr>
@@ -168,7 +168,7 @@ template&lt;typename Stat_ &gt; </div>
 </div><div class="memdoc">
 <p>Pointer to an array of length equal to \(GN^2\), where \(G\) is the number of genes and \(N\) is the number of groups. This is a 3-dimensional \(G \times N \times N\) array to be filled with the Cohen's D for the comparison between each pair of groups for each gene.</p>
 <p>The first dimension is the slowest changing, is of length equal to the number of genes, and represents the gene. The second dimension is the second-fastest changing, is of length equal to the number of groups, and represents the first group. The third dimension is the fastest changing, is also of length equal to the number of groups, and represents the second group.</p>
-<p>Thus, the entry \((i, j, k)\) (i.e., <code>effects[i * N * N + j * N + k]</code>) represents the effect size of gene \(i\) upon comparing group \(j\) against group \(k\). Positive values represent upregulation in group \(j\) compared to \(k\). Note that the comparison of each group to itself is always assigned an effect size of zero, regardless of the <code>threshold</code> used in <code><a class="el" href="namespacescran__markers.html#a948a5ee108d7c1d07b9fec36553426e3">score_markers_pairwise()</a></code>; this is only done to avoid exposing uninitialized memory, and the value should be ignored in downstream steps.</p>
+<p>Thus, the entry \((i, j, k)\) (i.e., <code>effects[i * N * N + j * N + k]</code>) represents the effect size of gene \(i\) upon comparing group \(j\) against group \(k\). Positive values represent upregulation in group \(j\) compared to \(k\). Note that the comparison of each group to itself is always assigned an effect size of zero, regardless of the <code>threshold</code> used in <code><a class="el" href="namespacescran__markers.html#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code>; this is only done to avoid exposing uninitialized memory, and the value should be ignored in downstream steps.</p>
 <p>Alternatively NULL, in which case the Cohen's D is not stored. </p>
 
 </div>
