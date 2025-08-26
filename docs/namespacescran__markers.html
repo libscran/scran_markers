@@ -197,16 +197,16 @@ template&lt;typename Stat_  = double, typename Value_ , typename Index_ , typena
 <p>Overload of <code><a class="el" href="#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code> that allocates memory for the output statistics.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
-    <tr><td class="paramname">Stat_</td><td>Floating-point type to store the statistics. </td></tr>
+    <tr><td class="paramname">Stat_</td><td>Floating-point type of the statistics. </td></tr>
     <tr><td class="paramname">Value_</td><td>Matrix data type. </td></tr>
     <tr><td class="paramname">Index_</td><td>Matrix index type. </td></tr>
-    <tr><td class="paramname">Group_</td><td>Integer type for the group assignments.</td></tr>
+    <tr><td class="paramname">Group_</td><td>Integer type of the group assignments.</td></tr>
   </table>
   </dd>
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A <b>tatami</b> matrix instance. </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A matrix of expression values, typically normalized and log-transformed. Rows should contain genes while columns should contain cells. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">group</td><td>Pointer to an array of length equal to the number of columns in <code>matrix</code>, containing the group assignments. Group identifiers should be 0-based and should contain all integers in \([0, N)\) where \(N\) is the number of unique groups. </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">options</td><td>Further options.</td></tr>
   </table>
@@ -246,35 +246,35 @@ template&lt;typename Value_ , typename Index_ , typename Group_ , typename Stat_
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Compute the effect sizes for the pairwise comparisons between groups. This can be used to identify marker genes based on a specific comparison between two groups of interest. Alternatively, the pairwise effects can be passed to <code><a class="el" href="#aefddf4357cc7de227c5242b3861d5a27">summarize_effects()</a></code> to obtain summaries for each group (though it would be more efficient to use `score_markers_summary() to do so).</p>
+<p>Score potential marker genes based on the effect sizes for the pairwise comparisons between groups. For each group, the strongest markers are those genes with the largest effect sizes (i.e., upregulated) when compared to all other groups. The pairwise effect sizes computed by this function can be used to identify markers to distinguish two specific groups, or the effect sizes for multiple comparisons involving a group can be passed to <code><a class="el" href="#aefddf4357cc7de227c5242b3861d5a27">summarize_effects()</a></code> to obtain a single ranking for that group.</p>
 <h1><a class="anchor" id="effect-sizes"></a>
-Choice of effect sizes</h1>
-<p>The delta-mean is the difference in the mean expression between groups. This is fairly straightforward to interpret, where a positive delta-mean corresponds to increased expression in the first group compared to the second. The delta-mean can also be treated as the log-fold change if the input matrix contains log-transformed normalized expression values.</p>
+Choice of effect size</h1>
+<p>The delta-mean is the difference in the mean expression between groups. This is fairly straightforward to interpret - a positive delta-mean corresponds to increased expression in the first group compared to the second. The delta-mean can also be treated as the log-fold change if the input matrix contains log-transformed normalized expression values.</p>
 <p>The delta-detected is the difference in the proportion of cells with detected expression between groups. This lies between 1 and -1, with the extremes occurring when a gene is silent in one group and detected in all cells of the other group. For this interpretation, we assume that the input matrix contains non-negative expression values, where a value of zero corresponds to lack of detectable expression.</p>
 <p>Cohen's d is the standardized difference between two groups. This is defined as the difference in the mean for each group scaled by the average standard deviation across the two groups. (Technically, we should use the pooled variance; however, this introduces some unintuitive asymmetry depending on the variance of the larger group, so we take a simple average instead.) A positive value indicates that the gene has increased expression in the first group compared to the second. Cohen's d is analogous to the t-statistic in a two-sample t-test and avoids spuriously large effect sizes from comparisons between highly variable groups. We can also interpret Cohen's d as the number of standard deviations between the two group means.</p>
-<p>The area under the curve (AUC) can be interpreted as the probability that a randomly chosen observation in one group is greater than a randomly chosen observation in the other group. Values greater than 0.5 indicate that a gene is upregulated in the first group. The AUC is closely related to the U-statistic used in the Wilcoxon rank sum test. The key difference between the AUC and Cohen's d is that the former is less sensitive to the variance within each group, e.g., if two distributions exhibit no overlap, the AUC is the same regardless of the variance of each distribution. This may or may not be desirable as it improves robustness to outliers but reduces the information available to obtain a highly resolved ranking.</p>
+<p>The area under the curve (AUC) is the probability that a randomly chosen observation in one group is greater than a randomly chosen observation in the other group. Values greater than 0.5 indicate that a gene is upregulated in the first group. The AUC is closely related to the U-statistic used in the Wilcoxon rank sum test. The key difference between the AUC and Cohen's d is that the former is less sensitive to the variance within each group, e.g., if two distributions exhibit no overlap, the AUC is the same regardless of the variance of each distribution. This may or may not be desirable as it improves robustness to outliers but reduces the information available to obtain a fine-grained ranking.</p>
 <h1><a class="anchor" id="threshold"></a>
 With a minimum change threshold</h1>
-<p>Setting a minimum change threshold (see <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html#a507dbb049c6a0412fbecebf245c77a57">ScoreMarkersPairwiseOptions::threshold</a></code>) can be helpful as it prioritizes genes with large shifts in expression instead of those with low variances. Currently, only positive thresholds are supported - this focuses on genes that are upregulated in the first group compared to the second. The effect size definitions are generalized when testing against a non-zero threshold.</p>
+<p>Setting a minimum change threshold (<code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html#a507dbb049c6a0412fbecebf245c77a57">ScoreMarkersPairwiseOptions::threshold</a></code>) prioritizes genes with large shifts in expression instead of those with low variances. Currently, only positive thresholds are supported, which focuses on genes that are upregulated in the first group compared to the second. The effect size definitions are generalized when testing against a non-zero threshold:</p>
 <ul>
-<li>Cohen's d is redefined as the standardized difference between the difference in means and the specified threshold, analogous to the TREAT method from <b>limma</b>. Large positive values are only obtained when the observed difference in means is significantly greater than the threshold. For example, if we had a threshold of 2 and we obtained a Cohen's d of 3, this means that the observed difference in means was 3 standard deviations greater than 2. Importantly, a negative Cohen's d cannot be intepreted as downregulation, as the difference may still be positive but less than the threshold.</li>
-<li>The AUC is generalized to the probability of obtaining a random observation in one group that is greater than a random observation plus the threshold in the other group. For example, if we had a threshold of 2 and we obtained an AUC of 0.8, this means that - 80% of the time - the random observation from the first group would be greater than a random observation from the second group by 2 or more. Again, AUCs below 0.5 cannot be interpreted as downregulation, as it may be caused by a positive shift that is less than the threshold.</li>
+<li>Cohen's d is redefined as the standardized difference between the difference in means and the specified threshold, analogous to the TREAT method from the <a href="https://bioconductor.org/packages/limma"><b>limma</b></a> R/Bioconductor package. Large positive values are only obtained when the observed difference in means is significantly greater than the threshold. For example, if we had a threshold of 2 and we obtained a Cohen's d of 3, this means that the observed difference in means was 3 standard deviations greater than 2. Note that a negative Cohen's d cannot be intepreted as downregulation, as the difference in means may still be positive but less than the threshold.</li>
+<li>The AUC is generalized to the probability of obtaining a random observation in one group that is greater than a random observation plus the threshold in the other group. For example, if we had a threshold of 2 and we obtained an AUC of 0.8, this means that, 80% of the time, the random observation from the first group would be greater than a random observation from the second group by 2 or more. Again, AUCs below 0.5 cannot be interpreted as downregulation, as it may be caused by a positive shift that is less than the threshold.</li>
 </ul>
 <h1><a class="anchor" id="other"></a>
 Other statistics</h1>
-<p>We report the mean expression of all cells in each group, as well as the proportion of cells with detectable expression in each group. These statistics are useful for quickly interpreting the differences in expression driving the effect size summaries.</p>
+<p>We report the mean expression of all cells in each group as well as the proportion of cells with detectable expression in each group. These statistics are useful for quickly interpreting the differences in expression driving the effect sizes.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">Value_</td><td>Matrix data type. </td></tr>
     <tr><td class="paramname">Index_</td><td>Matrix index type. </td></tr>
-    <tr><td class="paramname">Group_</td><td>Integer type for the group assignments. </td></tr>
-    <tr><td class="paramname">Stat_</td><td>Floating-point type to store the statistics.</td></tr>
+    <tr><td class="paramname">Group_</td><td>Integer type of the group assignments. </td></tr>
+    <tr><td class="paramname">Stat_</td><td>Floating-point type of the statistics.</td></tr>
   </table>
   </dd>
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A <b>tatami</b> matrix instance. </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A matrix of expression values, typically normalized and log-transformed. Rows should contain genes while columns should contain cells. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">group</td><td>Pointer to an array of length equal to the number of columns in <code>matrix</code>, containing the group assignments. Group identifiers should be 0-based and should contain all integers in \([0, N)\) where \(N\) is the number of unique groups. </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">options</td><td>Further options. </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">output</td><td>Collection of buffers in which to store the computed statistics. Each buffer is filled with the corresponding statistic for each group or pairwise comparison. Any of <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code>, <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#ab052f7be5c0597a28f2372614a5bb3d7">ScoreMarkersPairwiseBuffers::auc</a></code>, <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#a04fba49f4046f6ecc61edbc73ea3d546">ScoreMarkersPairwiseBuffers::delta_mean</a></code> or <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#a828364f6541a2c0ca63e9d05e020affc">ScoreMarkersPairwiseBuffers::delta_detected</a></code> may be NULL, in which case the corresponding statistic is not computed. </td></tr>
@@ -317,17 +317,17 @@ template&lt;typename Stat_  = double, typename Value_ , typename Index_ , typena
 <p>Overload of <code><a class="el" href="#a9c5a2571c6f34d150a9b155ebd396a25">score_markers_pairwise_blocked()</a></code> that allocates memory for the output statistics.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
-    <tr><td class="paramname">Stat_</td><td>Floating-point type to store the statistics. </td></tr>
+    <tr><td class="paramname">Stat_</td><td>Floating-point type of the statistics. </td></tr>
     <tr><td class="paramname">Value_</td><td>Matrix data type. </td></tr>
     <tr><td class="paramname">Index_</td><td>Matrix index type. </td></tr>
-    <tr><td class="paramname">Group_</td><td>Integer type for the group assignments. </td></tr>
-    <tr><td class="paramname">Block_</td><td>Integer type for the block assignments.</td></tr>
+    <tr><td class="paramname">Group_</td><td>Integer type of the group assignments. </td></tr>
+    <tr><td class="paramname">Block_</td><td>Integer type of the block assignments.</td></tr>
   </table>
   </dd>
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A <b>tatami</b> matrix instance. </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A matrix of expression values, typically normalized and log-transformed. Rows should contain genes while columns should contain cells. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">group</td><td>Pointer to an array of length equal to the number of columns in <code>matrix</code>, containing the group assignments. Group identifiers should be 0-based and should contain all integers in \([0, N)\) where \(N\) is the number of unique groups. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">block</td><td>Pointer to an array of length equal to the number of columns in <code>matrix</code>, containing the blocking factor. Block identifiers should be 0-based and should contain all integers in \([0, B)\) where \(B\) is the number of unique blocking levels. </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">options</td><td>Further options.</td></tr>
@@ -373,23 +373,23 @@ template&lt;typename Value_ , typename Index_ , typename Group_ , typename Block
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Compute effect sizes for pairwise comparisons between groups, accounting for any blocking factor in the dataset. Comparisons are only performed between the groups of cells in the same level of the blocking factor. The batch-specific effect sizes are then combined into a single aggregate value for output. This strategy avoids most problems related to batch effects as we never directly compare across different blocking levels.</p>
-<p>Specifically, for each gene and each pair of groups, we obtain one effect size per blocking level. We consolidate these into a single statistic by computing the weighted mean across levels. The weight for each level is defined as the product of the weights of the two groups involved in the comparison, where each weight is computed from the size of the group using the logic described in <code><a class="elRef" href="https://libscran.github.io/scran_blocks/namespacescran__blocks.html#a8227c8eff7ef9f8172737478b5d41496">scran_blocks::compute_weights()</a></code>.</p>
-<p>Obviously, blocking levels with no cells in either group will not contribute anything to the weighted mean. If two groups never co-occur in the same blocking level, no effect size will be computed and a <code>NaN</code> is reported in the output. We do not attempt to reconcile batch effects in a partially confounded scenario.</p>
-<p>For the mean and detected proportion in each group, we compute a weighted average of each statistic across blocks for each gene. Again, the weight for each block is defined from <code><a class="elRef" href="https://libscran.github.io/scran_blocks/namespacescran__blocks.html#a8227c8eff7ef9f8172737478b5d41496">scran_blocks::compute_weights()</a></code> on the size of the group in that block.</p>
+<p>Score potential marker genes as described for <code><a class="el" href="#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code> after accounting for any blocking factor in the dataset. Comparisons are only performed between the groups of cells in the same level of the blocking factor. The batch-specific effect sizes are then combined into a single aggregate value for output. This strategy avoids most problems related to batch effects as we never directly compare across different blocking levels.</p>
+<p>Specifically, for each gene and each pair of groups, we obtain one effect size per blocking level. We consolidate these into a single statistic by computing the weighted mean across levels. The weight for each level is defined as the product of the weights of the two groups involved in the comparison, where each weight is derived from the size of the group using the policy in <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html#a24f56fd20bed4003ea896ee379735343">ScoreMarkersPairwiseOptions::block_weight_policy</a></code>.</p>
+<p>Blocking levels with no cells in either group will not contribute anything to the weighted mean. If two groups never co-occur in the same blocking level, no effect size will be computed and a <code>NaN</code> is reported in the output. We do not attempt to reconcile batch effects in a partially confounded scenario.</p>
+<p>For the mean and detected proportion in each group, we compute a weighted average of each statistic across blocks for each gene. Again, the weight for each group is derived from the size of that group using the policy in <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html#a24f56fd20bed4003ea896ee379735343">ScoreMarkersPairwiseOptions::block_weight_policy</a></code>.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">Value_</td><td>Matrix data type. </td></tr>
     <tr><td class="paramname">Index_</td><td>Matrix index type. </td></tr>
-    <tr><td class="paramname">Group_</td><td>Integer type for the group assignments. </td></tr>
-    <tr><td class="paramname">Block_</td><td>Integer type for the block assignments. </td></tr>
-    <tr><td class="paramname">Stat_</td><td>Floating-point type to store the statistics.</td></tr>
+    <tr><td class="paramname">Group_</td><td>Integer type of the group assignments. </td></tr>
+    <tr><td class="paramname">Block_</td><td>Integer type of the block assignments. </td></tr>
+    <tr><td class="paramname">Stat_</td><td>Floating-point type of the statistics.</td></tr>
   </table>
   </dd>
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A <b>tatami</b> matrix instance. </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A matrix of expression values, typically normalized and log-transformed. Rows should contain genes while columns should contain cells. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">group</td><td>Pointer to an array of length equal to the number of columns in <code>matrix</code>, containing the group assignments. Group identifiers should be 0-based and should contain all integers in \([0, N)\) where \(N\) is the number of unique groups. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">block</td><td>Pointer to an array of length equal to the number of columns in <code>matrix</code>, containing the blocking factor. Block identifiers should be 0-based and should contain all integers in \([0, B)\) where \(B\) is the number of unique blocking levels. </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">options</td><td>Further options. </td></tr>
@@ -432,13 +432,13 @@ template&lt;typename Stat_  = double, typename Rank_  = int, typename Value_ , t
     <tr><td class="paramname">Rank_</td><td>Numeric type to store the minimum rank. </td></tr>
     <tr><td class="paramname">Value_</td><td>Matrix data type. </td></tr>
     <tr><td class="paramname">Index_</td><td>Matrix index type. </td></tr>
-    <tr><td class="paramname">Group_</td><td>Integer type for the group assignments.</td></tr>
+    <tr><td class="paramname">Group_</td><td>Integer type of the group assignments.</td></tr>
   </table>
   </dd>
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A <b>tatami</b> matrix instance. </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A matrix of expression values, typically normalized and log-transformed. Rows should contain genes while columns should contain cells. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">group</td><td>Pointer to an array of length equal to the number of columns in <code>matrix</code>, containing the group assignments. Group identifiers should be 0-based and should contain all integers in \([0, N)\) where \(N\) is the number of unique groups. </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">options</td><td>Further options.</td></tr>
   </table>
@@ -478,14 +478,15 @@ template&lt;typename Value_ , typename Index_ , typename Group_ , typename Stat_
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Score each gene as a candidate marker for each group of cells. Markers are identified by differential expression analyses between pairs of groups of cells (e.g., clusters, cell types). Given \(N\) groups, each group is involved in \(N - 1\) pairwise comparisons and thus has \(N - 1\) effect sizes for each gene. We summarize each group's effect sizes into a small set of desriptive statistics like the mininum, median or mean. Users can then sort genes by any of these summaries to obtain a ranking of potential markers for the group.</p>
+<p>Score each gene as a candidate marker for each group of cells, based on summaries of effect sizes from pairwise comparisons between groups.</p>
+<p>Markers are identified by differential expression analyses between pairs of groups of cells (e.g., clusters, cell types). Given \(N\) groups, each group is involved in \(N - 1\) pairwise comparisons and thus has \(N - 1\) effect sizes for each gene. We summarize each group's effect sizes into a small set of desriptive statistics like the minimum, median or mean. Users can then sort genes by any of these summaries to obtain a ranking of potential markers for the group.</p>
 <p>The choice of effect size and summary statistic determines the characteristics of the marker ranking. The effect sizes include Cohen's d, the area under the curve (AUC), the delta-mean and the delta-detected (see <code><a class="el" href="#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code>). The summary statistics include the minimum, mean, median, maximum and min-rank of the effect sizes across each group's pairwise comparisons (see <code><a class="el" href="#aefddf4357cc7de227c5242b3861d5a27">summarize_effects()</a></code>). For example, ranking by the delta-detected with the minimum summary will promote markers that are silent in every other group.</p>
 <p>This behavior of this function is equivalent to - but more efficient than - calling <code><a class="el" href="#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code> followed by <code><a class="el" href="#aefddf4357cc7de227c5242b3861d5a27">summarize_effects()</a></code> on each array of effect sizes.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">Value_</td><td>Matrix data type. </td></tr>
     <tr><td class="paramname">Index_</td><td>Matrix index type. </td></tr>
-    <tr><td class="paramname">Group_</td><td>Integer type for the group assignments. </td></tr>
+    <tr><td class="paramname">Group_</td><td>Integer type of the group assignments. </td></tr>
     <tr><td class="paramname">Stat_</td><td>Floating-point type to store the statistics. </td></tr>
     <tr><td class="paramname">Rank_</td><td>Numeric type to store the minimum rank.</td></tr>
   </table>
@@ -493,7 +494,7 @@ template&lt;typename Value_ , typename Index_ , typename Group_ , typename Stat_
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A <b>tatami</b> matrix instance. </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A matrix of expression values, typically normalized and log-transformed. Rows should contain genes while columns should contain cells. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">group</td><td>Pointer to an array of length equal to the number of columns in <code>matrix</code>, containing the group assignments. Group identifiers should be 0-based and should contain all integers in \([0, N)\) where \(N\) is the number of unique groups. </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">options</td><td>Further options. </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">output</td><td>Collection of buffers in which to store the computed statistics. Each buffer is filled with the corresponding statistic for each group or pairwise comparison. Any of <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryBuffers.html#ab2e2b1bde6d2b563ba95b91264a4538d">ScoreMarkersSummaryBuffers::cohens_d</a></code>, <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryBuffers.html#ad52aeadb45b041450c92ca4036ca39f0">ScoreMarkersSummaryBuffers::auc</a></code>, <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryBuffers.html#a9e2ed3d8b7a36bc5c8269a690f1e36c2">ScoreMarkersSummaryBuffers::delta_mean</a></code> or <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryBuffers.html#a7e5396d3a6530d20258ce45181e81ef9">ScoreMarkersSummaryBuffers::delta_detected</a></code> may be empty, in which case the corresponding statistic is not computed or summarized. </td></tr>
@@ -540,14 +541,14 @@ template&lt;typename Stat_  = double, typename Rank_  = int, typename Value_ , t
     <tr><td class="paramname">Rank_</td><td>Numeric type to store the minimum rank. </td></tr>
     <tr><td class="paramname">Value_</td><td>Matrix data type. </td></tr>
     <tr><td class="paramname">Index_</td><td>Matrix index type. </td></tr>
-    <tr><td class="paramname">Group_</td><td>Integer type for the group assignments. </td></tr>
-    <tr><td class="paramname">Block_</td><td>Integer type for the block assignments.</td></tr>
+    <tr><td class="paramname">Group_</td><td>Integer type of the group assignments. </td></tr>
+    <tr><td class="paramname">Block_</td><td>Integer type of the block assignments.</td></tr>
   </table>
   </dd>
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A <b>tatami</b> matrix instance. </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A matrix of expression values, typically normalized and log-transformed. Rows should contain genes while columns should contain cells. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">group</td><td>Pointer to an array of length equal to the number of columns in <code>matrix</code>, containing the group assignments. Group identifiers should be 0-based and should contain all integers in \([0, N)\) where \(N\) is the number of unique groups. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">block</td><td>Pointer to an array of length equal to the number of columns in <code>matrix</code>, containing the blocking factor. Block identifiers should be 0-based and should contain all integers in \([0, B)\) where \(B\) is the number of unique blocking levels. </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">options</td><td>Further options.</td></tr>
@@ -593,12 +594,12 @@ template&lt;typename Value_ , typename Index_ , typename Group_ , typename Block
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Score potential marker genes by computing summary statistics across pairwise comparisons between groups, accounting for any blocking factor in the dataset. Comparisons are only performed between the groups of cells in the same level of the blocking factor. The block-specific effect sizes are combined into a single aggregate value per comparison, which are in turn summarized as described in <code><a class="el" href="#aefddf4357cc7de227c5242b3861d5a27">summarize_effects()</a></code>. This strategy avoids most problems related to batch effects as we never directly compare across different blocking levels.</p>
+<p>Score potential marker genes by computing summary statistics across pairwise comparisons between groups, accounting for any blocking factor in the dataset. Comparisons are only performed between the groups of cells in the same level of the blocking factor, as described in <code><a class="el" href="#a9c5a2571c6f34d150a9b155ebd396a25">score_markers_pairwise_blocked()</a></code>. This strategy avoids most problems related to batch effects as we never directly compare across different blocking levels. The block-specific effect sizes are combined into a single aggregate value per comparison, which are in turn summarized as described in <code><a class="el" href="#aefddf4357cc7de227c5242b3861d5a27">summarize_effects()</a></code>. This behavior of this function is equivalent to - but more efficient than - calling <code><a class="el" href="#a9c5a2571c6f34d150a9b155ebd396a25">score_markers_pairwise_blocked()</a></code> followed by <code><a class="el" href="#aefddf4357cc7de227c5242b3861d5a27">summarize_effects()</a></code> on each array of effect sizes.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">Value_</td><td>Matrix data type. </td></tr>
     <tr><td class="paramname">Index_</td><td>Matrix index type. </td></tr>
-    <tr><td class="paramname">Group_</td><td>Integer type for the group assignments. </td></tr>
+    <tr><td class="paramname">Group_</td><td>Integer type of the group assignments. </td></tr>
     <tr><td class="paramname">Stat_</td><td>Floating-point type to store the statistics. </td></tr>
     <tr><td class="paramname">Rank_</td><td>Numeric type to store the minimum rank.</td></tr>
   </table>
@@ -606,7 +607,7 @@ template&lt;typename Value_ , typename Index_ , typename Group_ , typename Block
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A <b>tatami</b> matrix instance. </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">matrix</td><td>A matrix of expression values, typically normalized and log-transformed. Rows should contain genes while columns should contain cells. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">group</td><td>Pointer to an array of length equal to the number of columns in <code>matrix</code>, containing the group assignments. Group identifiers should be 0-based and should contain all integers in \([0, N)\) where \(N\) is the number of unique groups. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">block</td><td>Pointer to an array of length equal to the number of columns in <code>matrix</code>, containing the blocking factor. Block identifiers should be 0-based and should contain all integers in \([0, B)\) where \(B\) is the number of unique blocking levels. </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">options</td><td>Further options. </td></tr>
@@ -652,24 +653,24 @@ template&lt;typename Gene_ , typename Stat_ , typename Rank_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Given \(N\) groups, each group is involved in \(N - 1\) pairwise comparisons and thus has \(N - 1\) effect sizes (e.g., as computed by <code><a class="el" href="#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code>). We summarize each group's effect sizes into a small set of desriptive statistics like the mininum, median or mean. Users can then sort genes by any of these summaries to obtain a ranking of potential markers for the group.</p>
-<p>The choice of summary statistic dictates the interpretation of the ranking. Given a group \(X\):</p>
+<p>Given \(N\) groups, each group is involved in \(N - 1\) pairwise comparisons and thus has \(N - 1\) effect sizes (e.g., as computed by <code><a class="el" href="#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code>). We summarize each group's effect sizes into a small set of desriptive statistics like the mininum, median or mean. Users can then sort genes by any of these summaries to obtain a ranking of potential markers for that group.</p>
+<p>The choice of summary statistic determines the interpretation of the ranking. Given a group \(X\):</p>
 <ul>
-<li>A large mean effect size indicates that the gene is upregulated in \(X\) compared to the average of the other groups. A small value indicates that the gene is downregulated in \(X\) instead. This is a good general-purpose summary statistic for ranking, usually by decreasing size to obtain upregulated markers in \(X\).</li>
-<li>A large median effect size indicates that the gene is upregulated in \(X\) compared to most (&gt;50%) other groups. A small value indicates that the gene is downregulated in \(X\) instead. This is also a good general-purpose summary, with the advantage of being more robust to outlier effects compared to the mean. However, it also has the disadvantage of being less sensitive to strong effects in a minority of comparisons.</li>
+<li>A large mean effect size indicates that the gene is upregulated in \(X\) compared to the average of the other groups. A small value indicates that the gene is downregulated in \(X\) instead. This is a good general-purpose summary statistic that can be ranked in descending order to obtain the strongest upregulated markers in \(X\).</li>
+<li>A large median effect size indicates that the gene is upregulated in \(X\) compared to most (&gt;50%) other groups. A small value indicates that the gene is downregulated in \(X\) instead. This is also a good general-purpose summary like the mean, with the advantage of being more robust to outlier effects compared to the mean. However, it also has the disadvantage of being less sensitive to strong effects in a minority of comparisons.</li>
 <li>A large minimum effect size indicates that the gene is upregulated in \(X\) compared to all other groups. A small value indicates that the gene is downregulated in \(X\) compared to at least one other group. For upregulation, this is the most stringent summary as markers will only have extreme values if they are <em>uniquely</em> upregulated in \(X\) compared to every other group. However, it may not be effective if \(X\) is closely related to any of the groups.</li>
 <li>A large maximum effect size indicates that the gene is upregulated in \(X\) compared to at least one other group. A small value indicates that the gene is downregulated in \(X\) compared to all other groups. For downregulation, this is the most stringent summary as markers will only have extreme values if they are <em>uniquely</em> downregulated in \(X\) compared to every other group. However, it may not be effective if \(X\) is closely related to any of the groups.</li>
-<li>The "minimum rank" (a.k.a. min-rank) is defined by ranking genes based on decreasing effect size <em>within</em> each comparison, and then taking the smallest rank <em>across</em> comparisons. A minimum rank of 1 means that the gene is the top upregulated gene in at least one comparison to another group. More generally, a minimum rank of \(T\) indicates that the gene is the \(T\)-th upregulated gene in at least one comparison. Applying a threshold on the minimum rank is useful for obtaining a set of genes that, in combination, are guaranteed to distinguish \(X\) from every other group.</li>
+<li>The "minimum rank" (a.k.a., min-rank) is defined by ranking genes based on decreasing effect size <em>within</em> each comparison involving \(X\), and then taking the smallest rank for each gene <em>across</em> all comparisons involving \(X\). A minimum rank of 1 means that the gene is the top upregulated gene in at least one comparison to another group. More generally, a minimum rank of \(T\) indicates that the gene is the \(T\)-th upregulated gene in at least one comparison. Applying a threshold on the minimum rank is useful for obtaining a set of genes that, in combination, are guaranteed to distinguish \(X\) from every other group.</li>
 </ul>
 <p>The exact definition of "large" and "small" depends on the choice of effect size. For signed effects like Cohen's d, delta-mean and delta-detected, the value must be positive to be considered "large", and negative to be considered "small". For the AUC, a value greater than 0.5 is considered "large" and less than 0.5 is considered "small".</p>
-<p>The interpretation above is also contingent on the threshold used (see <code><a class="el" href="#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code> for details). For positive thresholds, small effects cannot be unambiguously interpreted as downregulation, as the effect is already adjusted to account for the threshold. As a result, only large effects can be interpreted as evidence for upregulation.</p>
+<p>The interpretation above is also contingent on the threshold used (see <code><a class="el" href="#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code> for details). For positive thresholds, small summary statistics cannot be unambiguously interpreted as downregulation, as the effect is already adjusted to account for the threshold. Only large summary statistics can be safely interpreted, i.e., as evidence for upregulation.</p>
 <p>NaN effect sizes are allowed, e.g., if two groups do not exist in the same block for a blocked analysis in <code><a class="el" href="#a9c5a2571c6f34d150a9b155ebd396a25">score_markers_pairwise_blocked()</a></code>. This class will ignore NaN values when computing each summary. If all effects are NaN for a particular group, the summary statistic will also be <code>NaN</code>.</p>
 <p>All choices of summary statistics are enumerated by <code>Summary</code>.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
-    <tr><td class="paramname">Gene_</td><td>Integer type for the number of genes. </td></tr>
-    <tr><td class="paramname">Stat_</td><td>Floating-point type for the statistics. </td></tr>
-    <tr><td class="paramname">Rank_</td><td>Numeric type for the minimum rank.</td></tr>
+    <tr><td class="paramname">Gene_</td><td>Integer type of the number of genes. </td></tr>
+    <tr><td class="paramname">Stat_</td><td>Floating-point type of the statistics. </td></tr>
+    <tr><td class="paramname">Rank_</td><td>Numeric type of the minimum rank.</td></tr>
   </table>
   </dd>
 </dl>
@@ -678,7 +679,7 @@ template&lt;typename Gene_ , typename Stat_ , typename Rank_ &gt; </div>
     <tr><td class="paramdir"></td><td class="paramname">ngenes</td><td>Number of genes. </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">ngroups</td><td>Number of groups. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">effects</td><td>Pointer to a 3-dimensional array containing the pairwise statistics, see <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code> for the expected contents. The entry \((i, j, k)\) (i.e., <code>effects[i * N * N + j * N + k]</code>) represents the effect size of gene \(i\) upon comparing group \(j\) against group \(k\). </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">summaries</td><td>Vector of length equal to the number of groups. Each entry corresponds to a group and is used to store the summary statistics for that group. Each pointer in any given <code><a class="el" href="structscran__markers_1_1SummaryBuffers.html" title="Pointers to arrays to hold the summary statistics.">SummaryBuffers</a></code> should either point to an array of length equal to the number of genes, or be NULL to indicate that the corresponding summary statistic should not be computed for that group. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">summaries</td><td>Vector of length equal to the number of groups. Each entry corresponds to a group and is used to store the summary statistics for that group. Each pointer in any given <code><a class="el" href="structscran__markers_1_1SummaryBuffers.html" title="Pointers to arrays to hold the summary statistics.">SummaryBuffers</a></code> should either point to an array of length equal to the number of genes, or be <code>NULL</code> to indicate that the corresponding summary statistic should not be computed for that group. </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">options</td><td>Further options. </td></tr>
   </table>
   </dd>
@@ -719,9 +720,9 @@ template&lt;typename Stat_  = double, typename Rank_  = int, typename Gene_ &gt;
 <p>Overload of <code><a class="el" href="#aefddf4357cc7de227c5242b3861d5a27">summarize_effects()</a></code> that allocates memory for the output summary statistics.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
-    <tr><td class="paramname">Gene_</td><td>Integer type for the number of genes. </td></tr>
-    <tr><td class="paramname">Stat</td><td>Floating point type for the statistics. </td></tr>
-    <tr><td class="paramname">Rank_</td><td>Numeric type for the minimum rank.</td></tr>
+    <tr><td class="paramname">Gene_</td><td>Integer type of the number of genes. </td></tr>
+    <tr><td class="paramname">Stat</td><td>Floating point type of the statistics. </td></tr>
+    <tr><td class="paramname">Rank_</td><td>Numeric type of the minimum rank.</td></tr>
   </table>
   </dd>
 </dl>

@@ -142,7 +142,9 @@ Public Attributes</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Policy to use for weighting blocks when computing average statistics/effect sizes across blocks. </p>
+<p>Policy to use for weighting blocks when computing average statistics/effect sizes across blocks.</p>
+<p>The default of <code>scran_blocks::WeightPolicy::VARIABLE</code> is to define equal weights for blocks once they reach a certain size (see <code><a class="el" href="#af6ab275bc541e6c0ffe62d9da271f550">ScoreMarkersPairwiseOptions::variable_block_weight_parameters</a></code>). For smaller blocks, the weight is linearly proportional to its size to avoid outsized contributions from very small blocks.</p>
+<p>Other options include <code>scran_blocks::WeightPolicy::EQUAL</code>, where all blocks are equally weighted regardless of size; and <code>scran_blocks::WeightPolicy::NONE</code>, where the contribution of each block is proportional to its size. </p>
 
 </div>
 </div>
@@ -232,7 +234,7 @@ Public Attributes</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Threshold on the differences in expression values, used to adjust the Cohen's D and AUC calculations. This should be non-negative. </p>
+<p>Threshold on the differences in expression values between groups, used to adjust the Cohen's d and AUC calculations. This should be non-negative. Larger thresholds will favor markers with large differences at the expense of markers with low variance that would otherwise have comparable effect sizes. </p>
 
 </div>
 </div>
@@ -247,7 +249,7 @@ Public Attributes</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Parameters for the variable block weights. Only used when <code><a class="el" href="#a24f56fd20bed4003ea896ee379735343">ScoreMarkersPairwiseOptions::block_weight_policy</a> = scran_blocks::WeightPolicy::VARIABLE</code>. </p>
+<p>Parameters for the variable block weights, including the threshold at which blocks are considered to be large enough to have equal weight. Only used when <code><a class="el" href="#a24f56fd20bed4003ea896ee379735343">ScoreMarkersPairwiseOptions::block_weight_policy</a> = scran_blocks::WeightPolicy::VARIABLE</code>. </p>
 
 </div>
 </div>

@@ -6,7 +6,7 @@ var searchData=
   ['cells_3',['Marker detection for groups of cells',['../index.html',1,'']]],
   ['change_20threshold_4',['With a minimum change threshold',['../namespacescran__markers.html#threshold',1,'']]],
   ['check_5',['check',['https://tatami-inc.github.io/tatami/structtatami_1_1CompressedSparseMatrixOptions.html#a88f4bdb918e8ce35bf07e6a16c464bfc',1,'tatami::CompressedSparseMatrixOptions::check'],['https://tatami-inc.github.io/tatami/structtatami_1_1FragmentedSparseMatrixOptions.html#ad0bd65e9fafe7060867db6e048b1919d',1,'tatami::FragmentedSparseMatrixOptions::check']]],
-  ['choice_20of_20effect_20sizes_6',['Choice of effect sizes',['../namespacescran__markers.html#effect-sizes',1,'']]],
+  ['choice_20of_20effect_20size_6',['Choice of effect size',['../namespacescran__markers.html#effect-sizes',1,'']]],
   ['cmake_20with_20tt_20fetchcontent_20tt_7',['CMake with &lt;tt&gt;FetchContent&lt;/tt&gt;',['../index.html#autotoc_md4',1,'']]],
   ['cmake_20with_20tt_20find_5fpackage_20tt_8',['CMake with &lt;tt&gt;find_package()&lt;/tt&gt;',['../index.html#autotoc_md5',1,'']]],
   ['cohens_5fd_9',['cohens_d',['../structscran__markers_1_1ScoreMarkersPairwiseBuffers.html#a09a285a84e5ba22649d5aa0d87b2a21b',1,'scran_markers::ScoreMarkersPairwiseBuffers::cohens_d'],['../structscran__markers_1_1ScoreMarkersPairwiseResults.html#a767e41fc513f9d35904267fe5376705b',1,'scran_markers::ScoreMarkersPairwiseResults::cohens_d'],['../structscran__markers_1_1ScoreMarkersSummaryBuffers.html#ab2e2b1bde6d2b563ba95b91264a4538d',1,'scran_markers::ScoreMarkersSummaryBuffers::cohens_d'],['../structscran__markers_1_1ScoreMarkersSummaryResults.html#a19851939b8385ab173517b3e2e2acd49',1,'scran_markers::ScoreMarkersSummaryResults::cohens_d']]],

@@ -542,7 +542,7 @@
       <anchorfile>namespacescran__markers.html</anchorfile>
       <anchor>a6c63a08774d6f2105b68b656f8a3da94</anchor>
       <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const ScoreMarkersPairwiseOptions &amp;options, const ScoreMarkersPairwiseBuffers&lt; Stat_ &gt; &amp;output)</arglist>
-      <docanchor file="namespacescran__markers.html" title="Choice of effect sizes">effect-sizes</docanchor>
+      <docanchor file="namespacescran__markers.html" title="Choice of effect size">effect-sizes</docanchor>
       <docanchor file="namespacescran__markers.html" title="With a minimum change threshold">threshold</docanchor>
       <docanchor file="namespacescran__markers.html" title="Other statistics">other</docanchor>
     </member>

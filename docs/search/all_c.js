@@ -1,7 +1,7 @@
 var searchData=
 [
   ['of_20cells_0',['Marker detection for groups of cells',['../index.html',1,'']]],
-  ['of_20effect_20sizes_1',['Choice of effect sizes',['../namespacescran__markers.html#effect-sizes',1,'']]],
+  ['of_20effect_20size_1',['Choice of effect size',['../namespacescran__markers.html#effect-sizes',1,'']]],
   ['operator_21_3d_2',['operator!=',['https://tatami-inc.github.io/tatami/structtatami_1_1SomeNumericArray_1_1Iterator.html#aceaacc0688f277a597e180db6763402f',1,'tatami::SomeNumericArray::Iterator']]],
   ['operator_2a_3',['operator*',['https://tatami-inc.github.io/tatami/structtatami_1_1SomeNumericArray_1_1Iterator.html#a0e050c233fb9f338c44326cda7efd2f9',1,'tatami::SomeNumericArray::Iterator']]],
   ['operator_2b_4',['operator+',['https://tatami-inc.github.io/tatami/structtatami_1_1SomeNumericArray_1_1Iterator.html#a95a2610460a8f3883c889afa5c019046',1,'tatami::SomeNumericArray::Iterator::operator+(std::size_t n) const'],['https://tatami-inc.github.io/tatami/structtatami_1_1SomeNumericArray_1_1Iterator.html#a20033fee0c6079cc9cb677bd264185de',1,'tatami::SomeNumericArray::Iterator::operator+']]],

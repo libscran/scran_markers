@@ -129,8 +129,8 @@ Public Attributes</h2></td></tr>
 struct scran_markers::ScoreMarkersSummaryResults&lt; Stat_, Rank_ &gt;</div><p>Results for <code><a class="el" href="namespacescran__markers.html#a92c28687f963fbe5535e3fc0c4a60a80">score_markers_summary()</a></code> and friends. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
-    <tr><td class="paramname">Stat_</td><td>Floating-point type for the output statistics. </td></tr>
-    <tr><td class="paramname">Rank_</td><td>Numeric type for the rank. </td></tr>
+    <tr><td class="paramname">Stat_</td><td>Floating-point type of the output statistics. </td></tr>
+    <tr><td class="paramname">Rank_</td><td>Numeric type of the rank. </td></tr>
   </table>
   </dd>
 </dl>
@@ -184,7 +184,7 @@ template&lt;typename Stat_ , typename Rank_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Vector of length equal to the number of groups, containing the summaries of the delta-detected for each group. This may be an empty vector if <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryOptions.html#a2149d5a26bf1924de644cc0948f28839">ScoreMarkersSummaryOptions::compute_delta_detected</a> = false</code>.</p>
+<p>Vector of length equal to the number of groups, containing the summaries of the differences in detected proportions for each group. This may be an empty vector if <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryOptions.html#a2149d5a26bf1924de644cc0948f28839">ScoreMarkersSummaryOptions::compute_delta_detected</a> = false</code>.</p>
 <p>Individual vectors inside the <code><a class="el" href="structscran__markers_1_1SummaryResults.html" title="Container for the summary statistics.">SummaryResults</a></code> may also be empty if specified by the relevant option, e.g., <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryOptions.html#a51472efaed737fea2dc57f16fdc53870">ScoreMarkersSummaryOptions::compute_min</a> = false</code> will cause <code><a class="el" href="structscran__markers_1_1SummaryResults.html#ab6661dc9ff5feafdfd4410493fd1d4e6">SummaryResults::min</a></code> to be empty. </p>
 
 </div>
@@ -202,7 +202,7 @@ template&lt;typename Stat_ , typename Rank_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Vector of length equal to the number of groups, containing the summaries of the delta-mean for each group. This may be an empty vector if <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryOptions.html#ad10d15521459563cf74df5d7f9a98cc6">ScoreMarkersSummaryOptions::compute_delta_mean</a> = false</code>.</p>
+<p>Vector of length equal to the number of groups, containing the summaries of the differences in means for each group. This may be an empty vector if <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryOptions.html#ad10d15521459563cf74df5d7f9a98cc6">ScoreMarkersSummaryOptions::compute_delta_mean</a> = false</code>.</p>
 <p>Individual vectors inside the <code><a class="el" href="structscran__markers_1_1SummaryResults.html" title="Container for the summary statistics.">SummaryResults</a></code> may also be empty if specified by the relevant option, e.g., <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryOptions.html#a51472efaed737fea2dc57f16fdc53870">ScoreMarkersSummaryOptions::compute_min</a> = false</code> will cause <code><a class="el" href="structscran__markers_1_1SummaryResults.html#ab6661dc9ff5feafdfd4410493fd1d4e6">SummaryResults::min</a></code> to be empty. </p>
 
 </div>
