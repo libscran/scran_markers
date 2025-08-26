@@ -22,43 +22,43 @@ namespace scran_markers {
 /**
  * @brief Pointers to arrays to hold the summary statistics.
  *
- * @tparam Stat_ Floating-point type for the statistics.
- * @tparam Rank_ Numeric type for the rank.
+ * @tparam Stat_ Floating-point type of the statistics.
+ * @tparam Rank_ Numeric type of the rank.
  */
 template<typename Stat_ = double, typename Rank_ = int>
 struct SummaryBuffers {
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the minimum effect size for each gene.
-     * If NULL, the minimum is not computed.
+     * If `NULL`, the minimum is not computed.
      */ 
     Stat_* min = NULL;
 
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the mean effect size for each gene.
-     * If NULL, the mean is not computed.
+     * If `NULL`, the mean is not computed.
      */ 
     Stat_* mean = NULL;
 
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the median effect size for each gene.
-     * If NULL, the median is not computed.
+     * If `NULL`, the median is not computed.
      */ 
     Stat_* median = NULL;
 
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the maximum effect size for each gene.
-     * If NULL, the maximum is not computed.
+     * If `NULL`, the maximum is not computed.
      */ 
     Stat_* max = NULL;
 
     /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the minimum rank of the effect sizes for each gene.
-     * If NULL, the minimum rank is not computed.
+     * If `NULL`, the minimum rank is not computed.
      */ 
     Rank_* min_rank = NULL;
 };
@@ -66,8 +66,8 @@ struct SummaryBuffers {
 /**
  * @brief Container for the summary statistics.
  *
- * @tparam Stat_ Floating-point type for the statistics.
- * @tparam Rank_ Numeric type for the rank.
+ * @tparam Stat_ Floating-point type of the statistics.
+ * @tparam Rank_ Numeric type of the rank.
  */
 template<typename Stat_ = double, typename Rank_ = int>
 struct SummaryResults {

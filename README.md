@@ -139,4 +139,4 @@ See the tags in [`extern/CMakeLists.txt`](extern/CMakeLists.txt) to find compati
 ### Manual
 
 If you're not using CMake, the simple approach is to just copy the files in `include/` - either directly or with Git submodules - and include their path during compilation with, e.g., GCC's `-I`.
-This requires the external dependencies listed in [`extern/CMakeLists.txt`](extern/CMakeLists.txt), which also need to be made available during compilation.
+This also requires the external dependencies listed in [`extern/CMakeLists.txt`](extern/CMakeLists.txt). 

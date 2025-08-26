@@ -45,6 +45,11 @@ Stat_ cohen_denominator(const Stat_ left_var, const Stat_ right_var) {
     } else if (std::isnan(right_var)) {
         return std::sqrt(left_var);
     } else {
+        // Technically, we should use the pooled variance, but this introduces some unintuitive asymmetry in the behavior of the groups.
+        // You wouldn't get the same (expected) Cohen's d when you change the sizes of the groups with different variances.
+        // For example, if the larger group has low variance (e.g., because it's all zero), the variance of the smaller group is effectively ignored,
+        // unfairly favoring genes with highly variable expression in the smaller group. 
+        // So we take a simple average instead.
         return std::sqrt(left_var + (right_var - left_var)/2); // reduce risk of overflow.
     }
 }

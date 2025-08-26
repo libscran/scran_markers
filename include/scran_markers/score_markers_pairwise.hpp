@@ -29,8 +29,9 @@ namespace scran_markers {
  */
 struct ScoreMarkersPairwiseOptions {
     /**
-     * Threshold on the differences in expression values, used to adjust the Cohen's D and AUC calculations.
+     * Threshold on the differences in expression values between groups, used to adjust the Cohen's d and AUC calculations.
      * This should be non-negative.
+     * Higher thresholds will favor genes with large differences at the expense of those with low variance. 
      */
     double threshold = 0;
 
@@ -66,11 +67,18 @@ struct ScoreMarkersPairwiseOptions {
 
     /**
      * Policy to use for weighting blocks when computing average statistics/effect sizes across blocks.
+     *
+     * The default of `scran_blocks::WeightPolicy::VARIABLE` is to define equal weights for blocks once they reach a certain size
+     * (see `ScoreMarkersPairwiseOptions::variable_block_weight_parameters`).
+     * For smaller blocks, the weight is linearly proportional to its size to avoid outsized contributions from very small blocks.
+     *
+     * Other options include `scran_blocks::WeightPolicy::EQUAL`, where all blocks are equally weighted regardless of size;
+     * and `scran_blocks::WeightPolicy::NONE`, where the contribution of each block is proportional to its size.
      */
     scran_blocks::WeightPolicy block_weight_policy = scran_blocks::WeightPolicy::VARIABLE;
 
     /**
-     * Parameters for the variable block weights.
+     * Parameters for the variable block weights, including the threshold at which blocks are considered to be large enough to have equal weight.
      * Only used when `ScoreMarkersPairwiseOptions::block_weight_policy = scran_blocks::WeightPolicy::VARIABLE`.
      */
     scran_blocks::VariableWeightParameters variable_block_weight_parameters;
@@ -78,7 +86,7 @@ struct ScoreMarkersPairwiseOptions {
 
 /**
  * @brief Buffers for `score_markers_pairwise()` and friends.
- * @tparam Stat_ Floating-point type for the output statistics.
+ * @tparam Stat_ Floating-point type of the output statistics.
  */
 template<typename Stat_>
 struct ScoreMarkersPairwiseBuffers {
@@ -98,7 +106,7 @@ struct ScoreMarkersPairwiseBuffers {
 
     /**
      * Pointer to an array of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
-     * This is a 3-dimensional \f$G \times N \times N\f$ array to be filled with the Cohen's D for the comparison between each pair of groups for each gene.
+     * This is a 3-dimensional \f$G \times N \times N\f$ array to be filled with the Cohen's d for the comparison between each pair of groups for each gene.
      *
      * The first dimension is the slowest changing, is of length equal to the number of genes, and represents the gene.
      * The second dimension is the second-fastest changing, is of length equal to the number of groups, and represents the first group.
@@ -106,10 +114,10 @@ struct ScoreMarkersPairwiseBuffers {
      *
      * Thus, the entry \f$(i, j, k)\f$ (i.e., `effects[i * N * N + j * N + k]`) represents the effect size of gene \f$i\f$ upon comparing group \f$j\f$ against group \f$k\f$.
      * Positive values represent upregulation in group \f$j\f$ compared to \f$k\f$.
-     * Note that the comparison of each group to itself is always assigned an effect size of zero, regardless of the `threshold` used in `score_markers_pairwise()`;
+     * Note that the comparison of each group to itself is always assigned an effect size of zero, regardless of `ScoreMarkersPairwiseOptions::threshold`;
      * this is only done to avoid exposing uninitialized memory, and the value should be ignored in downstream steps.
      *
-     * Alternatively NULL, in which case the Cohen's D is not stored.
+     * Alternatively NULL, in which case the Cohen's d is not stored.
      */
     Stat_* cohens_d = NULL;
 
@@ -118,9 +126,9 @@ struct ScoreMarkersPairwiseBuffers {
      * This is a 3-dimensional array to be filled with the AUC for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for more details.
      *
-     * Unlike Cohen's D, all AUC values will lie in \f$[0, 1]\f$.
+     * Unlike Cohen's d, all AUC values will lie in \f$[0, 1]\f$.
      * Values above 0.5 represent upregulation in group \f$j\f$ compared to \f$k\f$.
-     * The exception to this logic is the comparison of each group to itself, which is always assigned an effect size of zero instead of 0.5;
+     * The exception is the comparison of each group to itself, which is always assigned an effect size of zero instead of 0.5, regardless of `ScoreMarkersPairwiseOptions::threshold`;
      * this is only done to avoid exposing uninitialized memory, and the value should be ignored in downstream steps.
      *
      * Alternatively NULL, in which case the AUC is not stored.
@@ -146,7 +154,7 @@ struct ScoreMarkersPairwiseBuffers {
 
 /**
  * @brief Results for `score_markers_pairwise()` and friends.
- * @tparam Stat_ Floating-point type for the output statistics.
+ * @tparam Stat_ Floating-point type of the output statistics.
  */
 template<typename Stat_>
 struct ScoreMarkersPairwiseResults {
@@ -163,15 +171,15 @@ struct ScoreMarkersPairwiseResults {
     std::vector<std::vector<Stat_> > detected;
 
     /**
-     * Vector of length equal to \f$GN^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
-     * This is a 3-dimensional array to be filled with the Cohen's D for the comparison between each pair of groups for each gene;
+     * Vector of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
+     * This is a 3-dimensional array to be filled with the Cohen's d for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for details on the layout.
      * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_cohens_d = false`.
      */
     std::vector<Stat_> cohens_d;
 
     /**
-     * Vector of length equal to \f$GN^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
+     * Vector of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the AUC for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::auc` for details on the layout.
      * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_auc = false`.
@@ -179,16 +187,16 @@ struct ScoreMarkersPairwiseResults {
     std::vector<Stat_> auc;
 
     /**
-     * Vector of length equal to \f$GN^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
-     * This is a 3-dimensional array to be filled with the delta-mean for the comparison between each pair of groups for each gene;
+     * Vector of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
+     * This is a 3-dimensional array to be filled with the difference in means for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for details on the layout.
      * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_mean = false`.
      */
     std::vector<Stat_> delta_mean;
 
     /**
-     * Vector of length equal to \f$GN^2\f$, where \f$N\f$ is the number of genes and \f$G\f$ is the number of groups.
-     * This is a 3-dimensional array to be filled with the delta-detected for the comparison between each pair of groups for each gene;
+     * Vector of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
+     * This is a 3-dimensional array to be filled with the difference in detected proportions for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for details on the layout.
      * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_detected = false`.
      */
@@ -297,14 +305,14 @@ ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(const Index_ ngenes, co
  */
 
 /**
- * Compute the effect sizes for the pairwise comparisons between groups.
- * This can be used to identify marker genes based on a specific comparison between two groups of interest.
- * Alternatively, the pairwise effects can be passed to `summarize_effects()` to obtain summaries for each group
- * (though it would be more efficient to use `score_markers_summary() to do so).
+ * Score potential marker genes based on the effect sizes for the pairwise comparisons between groups. 
+ * For each group, the strongest markers are those genes with the largest effect sizes (i.e., upregulated) when compared to all other groups.
+ * The pairwise effect sizes computed by this function can be used to identify markers to distinguish two specific groups,
+ * or the effect sizes for multiple comparisons involving a group can be passed to `summarize_effects()` to obtain a single ranking for that group.
  *
- * @section effect-sizes Choice of effect sizes
+ * @section effect-sizes Choice of effect size
  * The delta-mean is the difference in the mean expression between groups.
- * This is fairly straightforward to interpret, where a positive delta-mean corresponds to increased expression in the first group compared to the second. 
+ * This is fairly straightforward to interpret - a positive delta-mean corresponds to increased expression in the first group compared to the second. 
  * The delta-mean can also be treated as the log-fold change if the input matrix contains log-transformed normalized expression values.
  *
  * The delta-detected is the difference in the proportion of cells with detected expression between groups.
@@ -318,37 +326,43 @@ ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(const Index_ ngenes, co
  * Cohen's d is analogous to the t-statistic in a two-sample t-test and avoids spuriously large effect sizes from comparisons between highly variable groups.
  * We can also interpret Cohen's d as the number of standard deviations between the two group means.
  *
- * The area under the curve (AUC) can be interpreted as the probability that a randomly chosen observation in one group is greater than a randomly chosen observation in the other group. 
+ * The area under the curve (AUC) is the probability that a randomly chosen observation in one group is greater than a randomly chosen observation in the other group. 
  * Values greater than 0.5 indicate that a gene is upregulated in the first group.
  * The AUC is closely related to the U-statistic used in the Wilcoxon rank sum test. 
  * The key difference between the AUC and Cohen's d is that the former is less sensitive to the variance within each group, e.g.,
  * if two distributions exhibit no overlap, the AUC is the same regardless of the variance of each distribution. 
- * This may or may not be desirable as it improves robustness to outliers but reduces the information available to obtain a highly resolved ranking. 
+ * This may or may not be desirable as it improves robustness to outliers but reduces the information available to obtain a fine-grained ranking. 
  *
  * @section threshold With a minimum change threshold
- * Setting a minimum change threshold (see `ScoreMarkersPairwiseOptions::threshold`) can be helpful as it prioritizes genes with large shifts in expression instead of those with low variances.
- * Currently, only positive thresholds are supported - this focuses on genes that are upregulated in the first group compared to the second.
- * The effect size definitions are generalized when testing against a non-zero threshold.
+ * Setting a minimum change threshold (`ScoreMarkersPairwiseOptions::threshold`) prioritizes genes with large shifts in expression instead of those with low variances.
+ * Currently, only positive thresholds are supported, which focuses on genes that are upregulated in the first group compared to the second.
+ * The effect size definitions are generalized when testing against a non-zero threshold:
  *
- * - Cohen's d is redefined as the standardized difference between the difference in means and the specified threshold, analogous to the TREAT method from **limma**.
+ * - Cohen's d is redefined as the standardized difference between the difference in means and the specified threshold,
+ *   analogous to the TREAT method from the [**limma**](https://bioconductor.org/packages/limma) R/Bioconductor package.
  *   Large positive values are only obtained when the observed difference in means is significantly greater than the threshold.
  *   For example, if we had a threshold of 2 and we obtained a Cohen's d of 3, this means that the observed difference in means was 3 standard deviations greater than 2.
- *   Importantly, a negative Cohen's d cannot be intepreted as downregulation, as the difference may still be positive but less than the threshold.
+ *   Note that a negative Cohen's d cannot be intepreted as downregulation, as the difference in means may still be positive but less than the threshold.
  * - The AUC is generalized to the probability of obtaining a random observation in one group that is greater than a random observation plus the threshold in the other group.
- *   For example, if we had a threshold of 2 and we obtained an AUC of 0.8, this means that - 80% of the time - 
+ *   For example, if we had a threshold of 2 and we obtained an AUC of 0.8, this means that, 80% of the time,
  *   the random observation from the first group would be greater than a random observation from the second group by 2 or more.
  *   Again, AUCs below 0.5 cannot be interpreted as downregulation, as it may be caused by a positive shift that is less than the threshold.
  * 
  * @section other Other statistics
- * We report the mean expression of all cells in each group, as well as the proportion of cells with detectable expression in each group.
- * These statistics are useful for quickly interpreting the differences in expression driving the effect size summaries.
+ * We report the mean expression of all cells in each group as well as the proportion of cells with detectable expression in each group.
+ * These statistics are useful for quickly interpreting the differences in expression driving the effect sizes.
+ *
+ * The effect sizes for all comparisons involving a particular group can be summarized into a few key statistics with `summarize_effects()`.
+ * Ranking by a selected summary statistic can identify candidate markers for the group of interest compared to any, some or all other groups.
+ * See also `score_markers_summary()`, to efficiently obtain effect size summaries for each group.
  *
  * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.
- * @tparam Group_ Integer type for the group assignments.
- * @tparam Stat_ Floating-point type to store the statistics.
+ * @tparam Group_ Integer type of the group assignments.
+ * @tparam Stat_ Floating-point type of the statistics.
  *
- * @param matrix A **tatami** matrix instance.
+ * @param matrix A matrix of expression values, typically normalized and log-transformed.
+ * Rows should contain genes while columns should contain cells.
  * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
  * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
  * @param options Further options.
@@ -426,7 +440,7 @@ void score_markers_pairwise(
 }
 
 /**
- * Compute effect sizes for pairwise comparisons between groups, accounting for any blocking factor in the dataset.
+ * Score potential marker genes as described for `score_markers_pairwise()` after accounting for any blocking factor in the dataset.
  * Comparisons are only performed between the groups of cells in the same level of the blocking factor.
  * The batch-specific effect sizes are then combined into a single aggregate value for output.
  * This strategy avoids most problems related to batch effects as we never directly compare across different blocking levels.
@@ -434,22 +448,23 @@ void score_markers_pairwise(
  * Specifically, for each gene and each pair of groups, we obtain one effect size per blocking level.
  * We consolidate these into a single statistic by computing the weighted mean across levels.
  * The weight for each level is defined as the product of the weights of the two groups involved in the comparison,
- * where each weight is computed from the size of the group using the logic described in `scran_blocks::compute_weights()`.
+ * where each weight is derived from the size of the group using the policy in `ScoreMarkersPairwiseOptions::block_weight_policy`.
  *
- * Obviously, blocking levels with no cells in either group will not contribute anything to the weighted mean.
+ * Blocking levels with no cells in either group will not contribute anything to the weighted mean.
  * If two groups never co-occur in the same blocking level, no effect size will be computed and a `NaN` is reported in the output.
  * We do not attempt to reconcile batch effects in a partially confounded scenario.
  *
  * For the mean and detected proportion in each group, we compute a weighted average of each statistic across blocks for each gene.
- * Again, the weight for each block is defined from `scran_blocks::compute_weights()` on the size of the group in that block.
+ * Again, the weight for each group is derived from the size of that group using the policy in `ScoreMarkersPairwiseOptions::block_weight_policy`.
  *
  * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.
- * @tparam Group_ Integer type for the group assignments.
- * @tparam Block_ Integer type for the block assignments.
- * @tparam Stat_ Floating-point type to store the statistics.
+ * @tparam Group_ Integer type of the group assignments.
+ * @tparam Block_ Integer type of the block assignments.
+ * @tparam Stat_ Floating-point type of the statistics.
  *
- * @param matrix A **tatami** matrix instance.
+ * @param matrix A matrix of expression values, typically normalized and log-transformed.
+ * Rows should contain genes while columns should contain cells.
  * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
  * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
  * @param[in] block Pointer to an array of length equal to the number of columns in `matrix`, containing the blocking factor.
@@ -533,12 +548,13 @@ void score_markers_pairwise_blocked(
 /**
  * Overload of `score_markers_pairwise()` that allocates memory for the output statistics.
  *
- * @tparam Stat_ Floating-point type to store the statistics.
+ * @tparam Stat_ Floating-point type of the statistics.
  * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.
- * @tparam Group_ Integer type for the group assignments.
+ * @tparam Group_ Integer type of the group assignments.
  *
- * @param matrix A **tatami** matrix instance.
+ * @param matrix A matrix of expression values, typically normalized and log-transformed.
+ * Rows should contain genes while columns should contain cells.
  * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
  * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
  * @param options Further options.
@@ -557,13 +573,14 @@ ScoreMarkersPairwiseResults<Stat_> score_markers_pairwise(const tatami::Matrix<V
 /**
  * Overload of `score_markers_pairwise_blocked()` that allocates memory for the output statistics.
  *
- * @tparam Stat_ Floating-point type to store the statistics.
+ * @tparam Stat_ Floating-point type of the statistics.
  * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.
- * @tparam Group_ Integer type for the group assignments.
- * @tparam Block_ Integer type for the block assignments. 
+ * @tparam Group_ Integer type of the group assignments.
+ * @tparam Block_ Integer type of the block assignments. 
  *
- * @param matrix A **tatami** matrix instance.
+ * @param matrix A matrix of expression values, typically normalized and log-transformed.
+ * Rows should contain genes while columns should contain cells.
  * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
  * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
  * @param[in] block Pointer to an array of length equal to the number of columns in `matrix`, containing the blocking factor.

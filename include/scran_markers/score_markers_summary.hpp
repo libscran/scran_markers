@@ -31,6 +31,7 @@ struct ScoreMarkersSummaryOptions {
     /**
      * Threshold on the differences in expression values, used to adjust the Cohen's d and AUC calculations.
      * This should be non-negative.
+     * Higher thresholds will favor genes with large differences at the expense of those with low variance. 
      */
     double threshold = 0;
 
@@ -102,11 +103,18 @@ struct ScoreMarkersSummaryOptions {
 
     /**
      * Policy to use for weighting blocks when computing average statistics/effect sizes across blocks.
+     *
+     * The default of `scran_blocks::WeightPolicy::VARIABLE` is to define equal weights for blocks once they reach a certain size
+     * (see `ScoreMarkersPairwiseOptions::variable_block_weight_parameters`).
+     * For smaller blocks, the weight is linearly proportional to its size to avoid outsized contributions from very small blocks.
+     *
+     * Other options include `scran_blocks::WeightPolicy::EQUAL`, where all blocks are equally weighted regardless of size;
+     * and `scran_blocks::WeightPolicy::NONE`, where the contribution of each block is proportional to its size.
      */
     scran_blocks::WeightPolicy block_weight_policy = scran_blocks::WeightPolicy::VARIABLE;
 
     /**
-     * Parameters for the variable block weights. 
+     * Parameters for the variable block weights, including the threshold at which blocks are considered to be large enough to have equal weight.
      * Only used when `ScoreMarkersSummaryOptions::block_weight_policy = scran_blocks::WeightPolicy::VARIABLE`.
      */
     scran_blocks::VariableWeightParameters variable_block_weight_parameters;
@@ -114,8 +122,8 @@ struct ScoreMarkersSummaryOptions {
 
 /**
  * @brief Buffers for `score_markers_summary()` and friends.
- * @tparam Stat_ Floating-point type for the output statistics.
- * @tparam Rank_ Numeric type for the rank.
+ * @tparam Stat_ Floating-point type of the output statistics.
+ * @tparam Rank_ Numeric type of the rank.
  */
 template<typename Stat_, typename Rank_>
 struct ScoreMarkersSummaryBuffers {
@@ -153,7 +161,7 @@ struct ScoreMarkersSummaryBuffers {
 
     /**
      * Vector of length equal to the number of groups.
-     * Each entry contains the buffers in which to store the corresponding group's summary statistics for the delta-mean.
+     * Each entry contains the buffers in which to store the corresponding group's summary statistics for the difference in means.
      *
      * Any of the pointers in any of the `SummaryBuffers` may be NULL, in which case the corresponding summary statistic is not computed.
      * This vector may also be empty, in which case no summary statistics are computed for this effect size.
@@ -162,7 +170,7 @@ struct ScoreMarkersSummaryBuffers {
 
     /**
      * Vector of length equal to the number of groups.
-     * Each entry contains the buffers in which to store the corresponding group's summary statistics for the delta-detected.
+     * Each entry contains the buffers in which to store the corresponding group's summary statistics for the difference in the detected proportions.
      *
      * Any of the pointers in any of the `SummaryBuffers` may be NULL, in which case the corresponding summary statistic is not computed.
      * This vector may also be empty, in which case no summary statistics are computed for this effect size.
@@ -172,8 +180,8 @@ struct ScoreMarkersSummaryBuffers {
 
 /**
  * @brief Results for `score_markers_summary()` and friends.
- * @tparam Stat_ Floating-point type for the output statistics.
- * @tparam Rank_ Numeric type for the rank.
+ * @tparam Stat_ Floating-point type of the output statistics.
+ * @tparam Rank_ Numeric type of the rank.
  */
 template<typename Stat_, typename Rank_>
 struct ScoreMarkersSummaryResults {
@@ -208,7 +216,7 @@ struct ScoreMarkersSummaryResults {
     std::vector<SummaryResults<Stat_, Rank_> > auc;
 
     /**
-     * Vector of length equal to the number of groups, containing the summaries of the delta-mean for each group.
+     * Vector of length equal to the number of groups, containing the summaries of the differences in means for each group.
      * This may be an empty vector if `ScoreMarkersSummaryOptions::compute_delta_mean = false`.
      *
      * Individual vectors inside the `SummaryResults` may also be empty if specified by the relevant option,
@@ -217,7 +225,7 @@ struct ScoreMarkersSummaryResults {
     std::vector<SummaryResults<Stat_, Rank_> > delta_mean;
 
     /**
-     * Vector of length equal to the number of groups, containing the summaries of the delta-detected for each group.
+     * Vector of length equal to the number of groups, containing the summaries of the differences in detected proportions for each group.
      * This may be an empty vector if `ScoreMarkersSummaryOptions::compute_delta_detected = false`.
      *
      * Individual vectors inside the `SummaryResults` may also be empty if specified by the relevant option,
@@ -643,10 +651,11 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(
  */
 
 /**
- * Score each gene as a candidate marker for each group of cells.
+ * Score each gene as a candidate marker for each group of cells, based on summaries of effect sizes from pairwise comparisons between groups.
+ *
  * Markers are identified by differential expression analyses between pairs of groups of cells (e.g., clusters, cell types).
  * Given \f$N\f$ groups, each group is involved in \f$N - 1\f$ pairwise comparisons and thus has \f$N - 1\f$ effect sizes for each gene.
- * We summarize each group's effect sizes into a small set of desriptive statistics like the mininum, median or mean.
+ * We summarize each group's effect sizes into a small set of desriptive statistics like the minimum, median or mean.
  * Users can then sort genes by any of these summaries to obtain a ranking of potential markers for the group.
  *
  * The choice of effect size and summary statistic determines the characteristics of the marker ranking.
@@ -658,11 +667,12 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(
  *
  * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.
- * @tparam Group_ Integer type for the group assignments.
+ * @tparam Group_ Integer type of the group assignments.
  * @tparam Stat_ Floating-point type to store the statistics.
  * @tparam Rank_ Numeric type to store the minimum rank.
  *
- * @param matrix A **tatami** matrix instance.
+ * @param matrix A matrix of expression values, typically normalized and log-transformed.
+ * Rows should contain genes while columns should contain cells.
  * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
  * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
  * @param options Further options.
@@ -756,18 +766,19 @@ void score_markers_summary(
 
 /**
  * Score potential marker genes by computing summary statistics across pairwise comparisons between groups, accounting for any blocking factor in the dataset.
- * Comparisons are only performed between the groups of cells in the same level of the blocking factor.
- * The block-specific effect sizes are combined into a single aggregate value per comparison,
- * which are in turn summarized as described in `summarize_effects()`.
+ * Comparisons are only performed between the groups of cells in the same level of the blocking factor, as described in `score_markers_pairwise_blocked()`.
  * This strategy avoids most problems related to batch effects as we never directly compare across different blocking levels.
+ * The block-specific effect sizes are combined into a single aggregate value per comparison, which are in turn summarized as described in `summarize_effects()`.
+ * This behavior of this function is equivalent to - but more efficient than - calling `score_markers_pairwise_blocked()` followed by `summarize_effects()` on each array of effect sizes.
  *
  * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.
- * @tparam Group_ Integer type for the group assignments.
+ * @tparam Group_ Integer type of the group assignments.
  * @tparam Stat_ Floating-point type to store the statistics.
  * @tparam Rank_ Numeric type to store the minimum rank.
  *
- * @param matrix A **tatami** matrix instance.
+ * @param matrix A matrix of expression values, typically normalized and log-transformed.
+ * Rows should contain genes while columns should contain cells.
  * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
  * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
  * @param[in] block Pointer to an array of length equal to the number of columns in `matrix`, containing the blocking factor.
@@ -870,9 +881,10 @@ void score_markers_summary_blocked(
  * @tparam Rank_ Numeric type to store the minimum rank.
  * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.
- * @tparam Group_ Integer type for the group assignments.
+ * @tparam Group_ Integer type of the group assignments.
  *
- * @param matrix A **tatami** matrix instance.
+ * @param matrix A matrix of expression values, typically normalized and log-transformed.
+ * Rows should contain genes while columns should contain cells.
  * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
  * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
  * @param options Further options.
@@ -899,10 +911,11 @@ ScoreMarkersSummaryResults<Stat_, Rank_> score_markers_summary(
  * @tparam Rank_ Numeric type to store the minimum rank.
  * @tparam Value_ Matrix data type.
  * @tparam Index_ Matrix index type.
- * @tparam Group_ Integer type for the group assignments.
- * @tparam Block_ Integer type for the block assignments. 
+ * @tparam Group_ Integer type of the group assignments.
+ * @tparam Block_ Integer type of the block assignments. 
  *
- * @param matrix A **tatami** matrix instance.
+ * @param matrix A matrix of expression values, typically normalized and log-transformed.
+ * Rows should contain genes while columns should contain cells.
  * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
  * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
  * @param[in] block Pointer to an array of length equal to the number of columns in `matrix`, containing the blocking factor.
