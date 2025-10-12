@@ -28,13 +28,15 @@ protected:
         EXPECT_EQ(res.size(), ngroups);
         EXPECT_EQ(other.size(), ngroups);
 
-        // Don't compare min-rank here, as minor numerical differences
-        // can change the ranks by a small amount when effects are tied.
         for (int l = 0; l < ngroups; ++l) {
             scran_tests::compare_almost_equal(res[l].min, other[l].min);
             scran_tests::compare_almost_equal(res[l].mean, other[l].mean);
             scran_tests::compare_almost_equal(res[l].median, other[l].median);
             scran_tests::compare_almost_equal(res[l].max, other[l].max);
+
+            // Don't compare min-rank values here, as minor numerical differences
+            // can change the ranks by a small amount when effects are tied.
+            EXPECT_EQ(res[l].min_rank.size(), other[l].min_rank.size());
         }
     }
 
@@ -71,6 +73,21 @@ protected:
 
             EXPECT_GE(currank, 1);
             EXPECT_LE(currank, ngenes);
+        }
+    }
+
+    static void wipe_min_rank(scran_markers::ScoreMarkersSummaryResults<double, int>& results) { 
+        for (auto& x : results.auc) {
+            x.min_rank.clear();
+        }
+        for (auto& x : results.cohens_d) {
+            x.min_rank.clear();
+        }
+        for (auto& x : results.delta_detected) {
+            x.min_rank.clear();
+        }
+        for (auto& x : results.delta_mean) {
+            x.min_rank.clear();
         }
     }
 };
@@ -143,46 +160,68 @@ TEST_P(ScoreMarkersSummaryTest, Basic) {
             }
         }
 
+        // Comparing the efficient ScoreMarkers implementation against the
+        // PairwiseEffects + SummarizeEffects combination, which is less mind-bending
+        // but requires holding a large 3D matrix in memory.
+        scran_markers::ScoreMarkersPairwiseOptions popt;
+        popt.compute_auc = do_auc;
+        auto pairres = scran_markers::score_markers_pairwise(*dense_row, groupings.data(), popt);
+        compare_averages(ref, pairres, ngroups);
+
+        scran_markers::SummarizeEffectsOptions sopt;
+        auto cohen_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.cohens_d.data(), sopt);
+        compare_summaries_for_effect(ngroups, cohen_summ, ref.cohens_d);
+
+        auto dm_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.delta_mean.data(), sopt);
+        compare_summaries_for_effect(ngroups, dm_summ, ref.delta_mean);
+
+        auto dd_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.delta_detected.data(), sopt);
+        compare_summaries_for_effect(ngroups, dd_summ, ref.delta_detected);
+
+        if (do_auc) {
+            auto auc_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.auc.data(), sopt);
+            compare_summaries_for_effect(ngroups, auc_summ, ref.auc);
+        }
+
     } else {
         opt.num_threads = nthreads;
-        auto drref = scran_markers::score_markers_summary(*dense_row, groupings.data(), opt);
-        compare_averages(ref, drref, ngroups);
-        compare_effects(ngroups, ref, drref, do_auc);
+        auto dr = scran_markers::score_markers_summary(*dense_row, groupings.data(), opt);
+        compare_averages(ref, dr, ngroups);
+        compare_effects(ngroups, ref, dr, do_auc);
     }
 
-    auto dcref = scran_markers::score_markers_summary(*dense_column, groupings.data(), opt);
-    compare_averages(ref, dcref, ngroups);
-    compare_effects(ngroups, ref, dcref, do_auc);
+    // Comparing to all of the other matrix representations.
+    {
+        auto dc = scran_markers::score_markers_summary(*dense_column, groupings.data(), opt);
+        compare_averages(ref, dc, ngroups);
+        compare_effects(ngroups, ref, dc, do_auc);
 
-    auto srref = scran_markers::score_markers_summary(*dense_column, groupings.data(), opt);
-    compare_averages(ref, srref, ngroups);
-    compare_effects(ngroups, ref, srref, do_auc);
+        auto sr = scran_markers::score_markers_summary(*sparse_row, groupings.data(), opt);
+        compare_averages(ref, sr, ngroups);
+        compare_effects(ngroups, ref, sr, do_auc);
 
-    auto scref = scran_markers::score_markers_summary(*dense_column, groupings.data(), opt);
-    compare_averages(ref, scref, ngroups);
-    compare_effects(ngroups, ref, scref, do_auc);
+        auto sc = scran_markers::score_markers_summary(*sparse_column, groupings.data(), opt);
+        compare_averages(ref, sc, ngroups);
+        compare_effects(ngroups, ref, sc, do_auc);
+    }
 
-    // Comparing the efficient ScoreMarkers implementation against the
-    // PairwiseEffects + SummarizeEffects combination, which is less mind-bending
-    // but requires holding a large 3D matrix in memory.
-    scran_markers::ScoreMarkersPairwiseOptions popt;
-    popt.compute_auc = do_auc;
-    auto pairres = scran_markers::score_markers_pairwise(*dense_row, groupings.data(), popt);
-    compare_averages(ref, pairres, ngroups);
-
-    scran_markers::SummarizeEffectsOptions sopt;
-    auto cohen_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.cohens_d.data(), sopt);
-    compare_summaries_for_effect(ngroups, cohen_summ, ref.cohens_d);
-
-    auto dm_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.delta_mean.data(), sopt);
-    compare_summaries_for_effect(ngroups, dm_summ, ref.delta_mean);
-
-    auto dd_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.delta_detected.data(), sopt);
-    compare_summaries_for_effect(ngroups, dd_summ, ref.delta_detected);
-
+    // Comparing to what happens if we disable minrank, which allows for more efficient AUC calculations.
     if (do_auc) {
-        auto auc_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.auc.data(), sopt);
-        compare_summaries_for_effect(ngroups, auc_summ, ref.auc);
+        scran_markers::ScoreMarkersSummaryOptions opt_no_mr = opt;
+        opt_no_mr.compute_min_rank = false;
+        wipe_min_rank(ref);
+
+        auto dr_nmr = scran_markers::score_markers_summary(*dense_row, groupings.data(), opt_no_mr);
+        compare_effects(ngroups, ref, dr_nmr, true);
+
+        auto dc_nmr = scran_markers::score_markers_summary(*dense_column, groupings.data(), opt_no_mr);
+        compare_effects(ngroups, ref, dc_nmr, true);
+
+        auto sr_nmr = scran_markers::score_markers_summary(*sparse_row, groupings.data(), opt_no_mr);
+        compare_effects(ngroups, ref, sr_nmr, true);
+
+        auto sc_nmr = scran_markers::score_markers_summary(*sparse_column, groupings.data(), opt_no_mr);
+        compare_effects(ngroups, ref, sc_nmr, true);
     }
 }
 
@@ -264,25 +303,47 @@ TEST_P(ScoreMarkersSummaryBlockedTest, AgainstPairwise) {
             auto auc_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.auc.data(), sopt);
             compare_summaries_for_effect(ngroups, auc_summ, ref.auc);
         }
+
     } else {
         opt.num_threads = nthreads;
-        auto drref = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), blocks.data(), opt);
-        compare_averages(ref, drref, ngroups);
-        compare_effects(ngroups, ref, drref, do_auc);
+        auto dr = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), blocks.data(), opt);
+        compare_averages(ref, dr, ngroups);
+        compare_effects(ngroups, ref, dr, do_auc);
     }
 
     // Checking the other references.
-    auto dcref = scran_markers::score_markers_summary_blocked(*dense_column, groupings.data(), blocks.data(), opt);
-    compare_averages(ref, dcref, ngroups);
-    compare_effects(ngroups, ref, dcref, do_auc);
+    {
+        auto dc = scran_markers::score_markers_summary_blocked(*dense_column, groupings.data(), blocks.data(), opt);
+        compare_averages(ref, dc, ngroups);
+        compare_effects(ngroups, ref, dc, do_auc);
 
-    auto srref = scran_markers::score_markers_summary_blocked(*dense_column, groupings.data(), blocks.data(), opt);
-    compare_averages(ref, srref, ngroups);
-    compare_effects(ngroups, ref, srref, do_auc);
+        auto sr = scran_markers::score_markers_summary_blocked(*sparse_row, groupings.data(), blocks.data(), opt);
+        compare_averages(ref, sr, ngroups);
+        compare_effects(ngroups, ref, sr, do_auc);
 
-    auto scref = scran_markers::score_markers_summary_blocked(*dense_column, groupings.data(), blocks.data(), opt);
-    compare_averages(ref, scref, ngroups);
-    compare_effects(ngroups, ref, scref, do_auc);
+        auto sc = scran_markers::score_markers_summary_blocked(*sparse_column, groupings.data(), blocks.data(), opt);
+        compare_averages(ref, sc, ngroups);
+        compare_effects(ngroups, ref, sc, do_auc);
+    }
+
+    // Comparing to what happens if we disable minrank, which allows for more efficient AUC calculations.
+    if (do_auc) {
+        scran_markers::ScoreMarkersSummaryOptions opt_no_mr = opt;
+        opt_no_mr.compute_min_rank = false;
+        wipe_min_rank(ref);
+
+        auto dr_nmr = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), blocks.data(), opt_no_mr);
+        compare_effects(ngroups, ref, dr_nmr, true);
+
+        auto dc_nmr = scran_markers::score_markers_summary_blocked(*dense_column, groupings.data(), blocks.data(), opt_no_mr);
+        compare_effects(ngroups, ref, dc_nmr, true);
+
+        auto sr_nmr = scran_markers::score_markers_summary_blocked(*sparse_row, groupings.data(), blocks.data(), opt_no_mr);
+        compare_effects(ngroups, ref, sr_nmr, true);
+
+        auto sc_nmr = scran_markers::score_markers_summary_blocked(*sparse_column, groupings.data(), blocks.data(), opt_no_mr);
+        compare_effects(ngroups, ref, sc_nmr, true);
+    }
 }
 
 INSTANTIATE_TEST_SUITE_P(

@@ -148,30 +148,42 @@ void process_auc_for_rows(
     }
 }
 
-template<bool single_block_, typename Value_, typename Index_, typename Group_, typename Block_, typename Stat_, typename Weight_, typename Threshold_>
-void scan_matrix_by_row(
+template<
+    bool single_block_,
+    typename Value_,
+    typename Index_,
+    typename Group_,
+    typename Block_,
+    typename Combo_,
+    typename Stat_,
+    class AucResultInitialize_,
+    class AucResultProcess_,
+    typename Weight_
+>
+void scan_matrix_by_row_custom_auc(
     const tatami::Matrix<Value_, Index_>& matrix, 
     const std::size_t ngroups,
     const Group_* const group,
     const std::size_t nblocks, // should be equal to 1 if single_block_ = 1.
     const Block_* const block, // ignored if single_block_ = true.
     const std::size_t ncombos, // should be equal to ngroups if single_block_ = true. 
-    const std::size_t* const combinations, // ignored if single_block_ = true.
+    const Combo_* const combo, // ignored if single_block_ = true.
     std::vector<Stat_>& combo_means,
     std::vector<Stat_>& combo_vars,
     std::vector<Stat_>& combo_detected,
-    Stat_* const auc,
+    const bool do_auc,
+    AucResultInitialize_ auc_result_init, // generate workspace for processing the final AUC results.
+    AucResultProcess_ auc_result_process, // process the pairwise AUC comparisons into the final AUC results.
     const std::vector<Index_>& combo_size,
     const std::vector<Weight_>& combo_weights,
-    const Threshold_ threshold,
-    const int num_threads)
-{
+    const int num_threads
+) {
     const Index_ NC = matrix.ncol();
     const auto grouping = [&]{
         if constexpr(single_block_) {
             return group;
         } else {
-            return combinations;
+            return combo;
         }
     }();
 
@@ -185,8 +197,10 @@ void scan_matrix_by_row(
 
         // A vast array of AUC-related bits and pieces.
         AucScanWorkspace<Value_, Group_, Index_, Stat_> auc_work;
-        if (auc) {
+        decltype(I(auc_result_init())) auc_res_work;
+        if (do_auc) {
             initialize_auc_workspace(auc_work, ngroups, nblocks, combo_size, combo_weights);
+            auc_res_work = auc_result_init();
         }
 
         if (matrix.is_sparse()) {
@@ -222,7 +236,7 @@ void scan_matrix_by_row(
                     det_ptr[co] /= combo_size[co];
                 }
 
-                if (auc) {
+                if (do_auc) {
                     auto nzIt = auc_work.block_num_zeros.begin();
                     for (const auto& t : auc_work.block_totals) {
                         std::copy(t.begin(), t.end(), nzIt->begin());
@@ -248,8 +262,7 @@ void scan_matrix_by_row(
                         }
                     }
 
-                    const auto auc_ptr = auc + sanisizer::product_unsafe<std::size_t>(r, ngroups, ngroups);
-                    process_auc_for_rows(auc_work, ngroups, nblocks, threshold, auc_ptr);
+                    auc_result_process(r, auc_work, auc_res_work);
                 }
             }
 
@@ -282,7 +295,7 @@ void scan_matrix_by_row(
                     det_ptr[co] /= combo_size[co];
                 }
 
-                if (auc) {
+                if (do_auc) {
                     for (auto& z : auc_work.block_num_zeros) {
                         std::fill(z.begin(), z.end(), 0);
                     }
@@ -306,19 +319,71 @@ void scan_matrix_by_row(
                         }
                     }
 
-                    const auto auc_ptr = auc + sanisizer::product_unsafe<std::size_t>(r, ngroups, ngroups);
-                    process_auc_for_rows(auc_work, ngroups, nblocks, threshold, auc_ptr);
+                    auc_result_process(r, auc_work, auc_res_work);
                 }
             }
         }
     }, matrix.nrow(), num_threads);
 }
 
-template<typename Value_, typename Index_, typename Combination_, typename Stat_>
+template<
+    bool single_block_,
+    typename Value_,
+    typename Index_,
+    typename Group_,
+    typename Block_,
+    typename Combo_,
+    typename Stat_, 
+    typename Weight_,
+    typename Threshold_
+>
+void scan_matrix_by_row_full_auc(
+    const tatami::Matrix<Value_, Index_>& matrix, 
+    const std::size_t ngroups,
+    const Group_* const group,
+    const std::size_t nblocks,
+    const Block_* const block,
+    const std::size_t ncombos,
+    const Combo_* const combo,
+    std::vector<Stat_>& combo_means,
+    std::vector<Stat_>& combo_vars,
+    std::vector<Stat_>& combo_detected,
+    Stat_* const auc,
+    const std::vector<Index_>& combo_size,
+    const std::vector<Weight_>& combo_weights,
+    const Threshold_ threshold,
+    const int num_threads
+) {
+    scan_matrix_by_row_custom_auc<single_block_>(
+        matrix, 
+        ngroups,
+        group,
+        nblocks,
+        block,
+        ncombos,
+        combo,
+        combo_means,
+        combo_vars,
+        combo_detected,
+        /* do_auc = */ auc != NULL,
+        /* auc_result_initialize = */ [&]() -> bool {
+            return false;
+        },
+        /* auc_result_process = */ [&](const Index_ gene, AucScanWorkspace<Value_, Group_, Index_, Stat_>& auc_work, bool) -> void {
+            const auto auc_ptr = auc + sanisizer::product_unsafe<std::size_t>(gene, ngroups, ngroups);
+            process_auc_for_rows(auc_work, ngroups, nblocks, threshold, auc_ptr);
+        },
+        combo_size,
+        combo_weights,
+        num_threads
+    );
+}
+
+template<typename Value_, typename Index_, typename Combo_, typename Stat_>
 void scan_matrix_by_column(
     const tatami::Matrix<Value_, Index_>& matrix, 
     const std::size_t ncombos,
-    const Combination_* const combinations,
+    const Combo_* const combo,
     std::vector<Stat_>& combo_means,
     std::vector<Stat_>& combo_vars,
     std::vector<Stat_>& combo_detected,
@@ -354,7 +419,7 @@ void scan_matrix_by_column(
 
             for (Index_ c = 0; c < NC; ++c) {
                 const auto range = ext->fetch(vbuffer.data(), ibuffer.data());
-                const auto co = combinations[c];
+                const auto co = combo[c];
                 runners[co].add(range.value, range.index, range.number);
 
                 auto& curdet = tmp_dets[co];
@@ -377,7 +442,7 @@ void scan_matrix_by_column(
 
             for (Index_ c = 0; c < NC; ++c) {
                 const auto ptr = ext->fetch(vbuffer.data());
-                const auto co = combinations[c];
+                const auto co = combo[c];
                 runners[co].add(ptr);
 
                 auto& curdet = tmp_dets[co];
