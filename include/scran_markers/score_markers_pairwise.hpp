@@ -393,14 +393,14 @@ void score_markers_pairwise(
     std::vector<Stat_> group_means(payload_size), group_vars(payload_size), group_detected(payload_size);
 
     if (output.auc != NULL || matrix.prefer_rows()) {
-        internal::scan_matrix_by_row<true>(
+        internal::scan_matrix_by_row_full_auc<true>(
             matrix, 
             ngroups,
             group,
             1,
             static_cast<int*>(NULL),
             ngroups,
-            NULL,
+            static_cast<std::size_t*>(NULL),
             group_means,
             group_vars,
             group_detected,
@@ -499,7 +499,7 @@ void score_markers_pairwise_blocked(
     std::vector<Stat_> combo_means(payload_size), combo_vars(payload_size), combo_detected(payload_size);
 
     if (output.auc != NULL || matrix.prefer_rows()) {
-        internal::scan_matrix_by_row<false>(
+        internal::scan_matrix_by_row_full_auc<false>(
             matrix, 
             ngroups,
             group,
