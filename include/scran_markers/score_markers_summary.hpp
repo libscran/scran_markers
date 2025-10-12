@@ -493,9 +493,9 @@ void process_simple_summary_effects(
 
                     for (decltype(I(ngroups)) other = 0; other < ngroups; ++other) {
                         auto cache_action = cache.get_action(other);
-                        if (cache_action == internal::CacheAction::COMPUTE) {
+                        if (cache_action == CacheAction::COMPUTE) {
                             store_ptr[other] = compute_pairwise_cohens_d_one_sided(group, other, my_means, my_variances, ngroups, nblocks, preweights, threshold);
-                        } else if (cache_action == internal::CacheAction::CACHE) {
+                        } else if (cache_action == CacheAction::CACHE) {
                             auto tmp = compute_pairwise_cohens_d_two_sided(group, other, my_means, my_variances, ngroups, nblocks, preweights, threshold);
                             store_ptr[other] = tmp.first;
                             cache.get_cache_location(other)[gene] = tmp.second;
@@ -526,7 +526,7 @@ void process_simple_summary_effects(
 
                     for (decltype(I(ngroups)) other = 0; other < ngroups; ++other) {
                         const auto cache_action = cache.get_action(other);
-                        if (cache_action != internal::CacheAction::SKIP) {
+                        if (cache_action != CacheAction::SKIP) {
                             const auto val = compute_pairwise_simple_diff(group, other, my_means, ngroups, nblocks, preweights);
                             store_ptr[other] = val;
                             if (cache_action == CacheAction::CACHE) {
@@ -588,10 +588,10 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(
 {
     ScoreMarkersSummaryBuffers<Stat_, Rank_> output;
 
-    internal::fill_average_results(ngenes, ngroups, store.mean, store.detected, output.mean, output.detected);
+    fill_average_results(ngenes, ngroups, store.mean, store.detected, output.mean, output.detected);
 
     if (options.compute_cohens_d) {
-        output.cohens_d = internal::fill_summary_results(
+        output.cohens_d = fill_summary_results(
             ngenes,
             ngroups,
             store.cohens_d,
@@ -604,7 +604,7 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(
     }
 
     if (options.compute_auc) {
-        output.auc = internal::fill_summary_results(
+        output.auc = fill_summary_results(
             ngenes,
             ngroups,
             store.auc,
@@ -617,7 +617,7 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(
     }
 
     if (options.compute_delta_mean) {
-        output.delta_mean = internal::fill_summary_results(
+        output.delta_mean = fill_summary_results(
             ngenes,
             ngroups,
             store.delta_mean,
@@ -630,7 +630,7 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(
     }
 
     if (options.compute_delta_detected) {
-        output.delta_detected = internal::fill_summary_results(
+        output.delta_detected = fill_summary_results(
             ngenes,
             ngroups,
             store.delta_detected,
@@ -768,7 +768,7 @@ void score_markers_summary(
         }
 
     } else {
-        internal::scan_matrix_by_column(
+        scan_matrix_by_column(
             matrix,
             [&]{
                 if constexpr(single_block_) {
@@ -791,8 +791,8 @@ void score_markers_summary(
             options.num_threads
         );
     }
- 
-    internal::process_simple_summary_effects(
+
+    process_simple_summary_effects(
         matrix.nrow(),
         ngroups,
         nblocks,

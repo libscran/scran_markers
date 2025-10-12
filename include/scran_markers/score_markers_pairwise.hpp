@@ -241,15 +241,15 @@ void process_simple_pairwise_effects(
             // Computing the effect sizes.
             const auto out_offset = sanisizer::product_unsafe<std::size_t>(gene, ngroups, ngroups);
             if (output.cohens_d != NULL) {
-                internal::compute_pairwise_cohens_d(tmp_means, tmp_variances, ngroups, nblocks, preweights, threshold, output.cohens_d + out_offset);
+                compute_pairwise_cohens_d(tmp_means, tmp_variances, ngroups, nblocks, preweights, threshold, output.cohens_d + out_offset);
             }
 
             if (output.delta_detected != NULL) {
-                internal::compute_pairwise_simple_diff(tmp_detected, ngroups, nblocks, preweights, output.delta_detected + out_offset);
+                compute_pairwise_simple_diff(tmp_detected, ngroups, nblocks, preweights, output.delta_detected + out_offset);
             }
 
             if (output.delta_mean != NULL) {
-                internal::compute_pairwise_simple_diff(tmp_means, ngroups, nblocks, preweights, output.delta_mean + out_offset);
+                compute_pairwise_simple_diff(tmp_means, ngroups, nblocks, preweights, output.delta_mean + out_offset);
             }
         }
     }, ngenes, num_threads);
@@ -259,7 +259,7 @@ template<typename Index_, typename Stat_>
 ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(const Index_ ngenes, const std::size_t ngroups, ScoreMarkersPairwiseResults<Stat_>& store, const ScoreMarkersPairwiseOptions& opt) {
     ScoreMarkersPairwiseBuffers<Stat_> output;
 
-    internal::fill_average_results(ngenes, ngroups, store.mean, store.detected, output.mean, output.detected);
+    fill_average_results(ngenes, ngroups, store.mean, store.detected, output.mean, output.detected);
 
     const auto num_effect_sizes = sanisizer::product<typename std::vector<Stat_>::size_type>(ngenes, ngroups, ngroups);
 
@@ -297,6 +297,97 @@ ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(const Index_ ngenes, co
     }
 
     return output;
+}
+
+template<
+    bool single_block_,
+    typename Value_,
+    typename Index_,
+    typename Group_,
+    typename Block_,
+    typename Stat_
+>
+void score_markers_pairwise(
+    const tatami::Matrix<Value_, Index_>& matrix, 
+    const std::size_t ngroups,
+    const Group_* const group, 
+    const std::size_t nblocks,
+    const Block_* const block,
+    const std::size_t ncombos,
+    const std::size_t* const combo,
+    const std::vector<Index_>& combo_sizes,
+    const ScoreMarkersPairwiseOptions& options,
+    const ScoreMarkersPairwiseBuffers<Stat_>& output
+) {
+    const auto ngenes = matrix.nrow();
+    const auto payload_size = sanisizer::product<typename std::vector<Stat_>::size_type>(ngenes, ncombos);
+    std::vector<Stat_> combo_means(payload_size), combo_vars(payload_size), combo_detected(payload_size);
+
+    // For a single block, this usually doesn't really matter, but we do it for consistency with the multi-block case,
+    // and to account for variable weighting where non-zero block sizes get zero weight.
+    const auto combo_weights = scran_blocks::compute_weights<Stat_>(
+        combo_sizes,
+        options.block_weight_policy,
+        options.variable_block_weight_parameters
+    );
+
+    if (output.auc != NULL || matrix.prefer_rows()) {
+        scan_matrix_by_row_full_auc<single_block_>(
+            matrix, 
+            ngroups,
+            group,
+            nblocks,
+            block,
+            ncombos,
+            combo,
+            combo_means,
+            combo_vars,
+            combo_detected,
+            output.auc,
+            combo_sizes,
+            combo_weights,
+            options.threshold,
+            options.num_threads
+        );
+
+    } else {
+        scan_matrix_by_column(
+            matrix,
+            [&]{
+                if constexpr(single_block_) {
+                    return ngroups;
+                } else {
+                    return ncombos;
+                }
+            }(),
+            [&]{
+                if constexpr(single_block_) {
+                    return group;
+                } else {
+                    return combo;
+                }
+            }(),
+            combo_means,
+            combo_vars,
+            combo_detected,
+            combo_sizes,
+            options.num_threads
+        );
+    }
+
+    process_simple_pairwise_effects(
+        matrix.nrow(),
+        ngroups,
+        nblocks,
+        ncombos,
+        combo_means,
+        combo_vars,
+        combo_detected,
+        output,
+        combo_weights,
+        options.threshold,
+        options.num_threads
+    );
 }
 
 }
@@ -379,63 +470,23 @@ void score_markers_pairwise(
     const tatami::Matrix<Value_, Index_>& matrix, 
     const Group_* const group, 
     const ScoreMarkersPairwiseOptions& options,
-    const ScoreMarkersPairwiseBuffers<Stat_>& output) 
-{
+    const ScoreMarkersPairwiseBuffers<Stat_>& output
+) {
     const Index_ NC = matrix.ncol();
     const auto group_sizes = tatami_stats::tabulate_groups(group, NC); 
+    const auto ngroups = sanisizer::cast<std::size_t>(group_sizes.size());
 
-    // In most cases this doesn't really matter, but we do it for consistency with the 1-block case,
-    // and to account for variable weighting where non-zero block sizes get zero weight.
-    const auto group_weights = scran_blocks::compute_weights<Stat_>(group_sizes, options.block_weight_policy, options.variable_block_weight_parameters);
-
-    const auto ngroups = group_sizes.size();
-    const auto payload_size = sanisizer::product<typename std::vector<Stat_>::size_type>(matrix.nrow(), ngroups);
-    std::vector<Stat_> group_means(payload_size), group_vars(payload_size), group_detected(payload_size);
-
-    if (output.auc != NULL || matrix.prefer_rows()) {
-        internal::scan_matrix_by_row_full_auc<true>(
-            matrix, 
-            ngroups,
-            group,
-            1,
-            static_cast<int*>(NULL),
-            ngroups,
-            static_cast<std::size_t*>(NULL),
-            group_means,
-            group_vars,
-            group_detected,
-            output.auc,
-            group_sizes,
-            group_weights,
-            options.threshold,
-            options.num_threads
-        );
-
-    } else {
-        internal::scan_matrix_by_column(
-            matrix,
-            ngroups,
-            group,
-            group_means,
-            group_vars,
-            group_detected,
-            group_sizes,
-            options.num_threads
-        );
-    }
-
-    internal::process_simple_pairwise_effects(
-        matrix.nrow(),
+    internal::score_markers_pairwise<true>(
+        matrix,
         ngroups,
+        group,
         1,
+        static_cast<int*>(NULL),
         ngroups,
-        group_means,
-        group_vars,
-        group_detected,
-        output,
-        group_weights,
-        options.threshold,
-        options.num_threads
+        static_cast<std::size_t*>(NULL),
+        group_sizes,
+        options,
+        output
     );
 }
 
@@ -484,8 +535,8 @@ void score_markers_pairwise_blocked(
     const Group_* const group, 
     const Block_* const block,
     const ScoreMarkersPairwiseOptions& options,
-    const ScoreMarkersPairwiseBuffers<Stat_>& output) 
-{
+    const ScoreMarkersPairwiseBuffers<Stat_>& output
+) {
     const Index_ NC = matrix.ncol();
     const auto ngroups = output.mean.size();
     const auto nblocks = tatami_stats::total_groups(block, NC); 
@@ -493,55 +544,18 @@ void score_markers_pairwise_blocked(
     const auto combinations = internal::create_combinations(ngroups, group, block, NC);
     const auto combo_sizes = internal::tabulate_combinations<Index_>(ngroups, nblocks, combinations);
     const auto ncombos = combo_sizes.size();
-    const auto combo_weights = scran_blocks::compute_weights<Stat_>(combo_sizes, options.block_weight_policy, options.variable_block_weight_parameters);
 
-    const auto payload_size = sanisizer::product<typename std::vector<Stat_>::size_type>(matrix.nrow(), ncombos);
-    std::vector<Stat_> combo_means(payload_size), combo_vars(payload_size), combo_detected(payload_size);
-
-    if (output.auc != NULL || matrix.prefer_rows()) {
-        internal::scan_matrix_by_row_full_auc<false>(
-            matrix, 
-            ngroups,
-            group,
-            nblocks,
-            block,
-            ncombos,
-            combinations.data(),
-            combo_means,
-            combo_vars,
-            combo_detected,
-            output.auc,
-            combo_sizes,
-            combo_weights, 
-            options.threshold,
-            options.num_threads
-        );
-
-    } else {
-        internal::scan_matrix_by_column(
-            matrix,
-            ncombos,
-            combinations.data(),
-            combo_means,
-            combo_vars,
-            combo_detected,
-            combo_sizes,
-            options.num_threads
-        );
-    }
- 
-    internal::process_simple_pairwise_effects(
-        matrix.nrow(),
-        ngroups,
-        nblocks,
-        ncombos,
-        combo_means,
-        combo_vars,
-        combo_detected,
-        output,
-        combo_weights,
-        options.threshold,
-        options.num_threads
+    internal::score_markers_pairwise<false>(
+        matrix,
+        sanisizer::cast<std::size_t>(ngroups),
+        group,
+        sanisizer::cast<std::size_t>(nblocks),
+        block,
+        sanisizer::cast<std::size_t>(ncombos),
+        combinations.data(),
+        combo_sizes,
+        options,
+        output
     );
 }
 
