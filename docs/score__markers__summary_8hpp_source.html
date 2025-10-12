@@ -443,9 +443,9 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00493" name="l00493"></a><span class="lineno">  493</span> </div>
 <div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span>                    <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(ngroups)) other = 0; other &lt; ngroups; ++other) {</div>
 <div class="line"><a id="l00495" name="l00495"></a><span class="lineno">  495</span>                        <span class="keyword">auto</span> cache_action = cache.get_action(other);</div>
-<div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span>                        <span class="keywordflow">if</span> (cache_action == internal::CacheAction::COMPUTE) {</div>
+<div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span>                        <span class="keywordflow">if</span> (cache_action == CacheAction::COMPUTE) {</div>
 <div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span>                            store_ptr[other] = compute_pairwise_cohens_d_one_sided(group, other, my_means, my_variances, ngroups, nblocks, preweights, threshold);</div>
-<div class="line"><a id="l00498" name="l00498"></a><span class="lineno">  498</span>                        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (cache_action == internal::CacheAction::CACHE) {</div>
+<div class="line"><a id="l00498" name="l00498"></a><span class="lineno">  498</span>                        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (cache_action == CacheAction::CACHE) {</div>
 <div class="line"><a id="l00499" name="l00499"></a><span class="lineno">  499</span>                            <span class="keyword">auto</span> tmp = compute_pairwise_cohens_d_two_sided(group, other, my_means, my_variances, ngroups, nblocks, preweights, threshold);</div>
 <div class="line"><a id="l00500" name="l00500"></a><span class="lineno">  500</span>                            store_ptr[other] = tmp.first;</div>
 <div class="line"><a id="l00501" name="l00501"></a><span class="lineno">  501</span>                            cache.get_cache_location(other)[gene] = tmp.second;</div>
@@ -476,7 +476,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span> </div>
 <div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span>                    <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(ngroups)) other = 0; other &lt; ngroups; ++other) {</div>
 <div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span>                        <span class="keyword">const</span> <span class="keyword">auto</span> cache_action = cache.get_action(other);</div>
-<div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span>                        <span class="keywordflow">if</span> (cache_action != internal::CacheAction::SKIP) {</div>
+<div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span>                        <span class="keywordflow">if</span> (cache_action != CacheAction::SKIP) {</div>
 <div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span>                            <span class="keyword">const</span> <span class="keyword">auto</span> val = compute_pairwise_simple_diff(group, other, my_means, ngroups, nblocks, preweights);</div>
 <div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span>                            store_ptr[other] = val;</div>
 <div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span>                            <span class="keywordflow">if</span> (cache_action == CacheAction::CACHE) {</div>
@@ -538,10 +538,10 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>{</div>
 <div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>    ScoreMarkersSummaryBuffers&lt;Stat_, Rank_&gt; output;</div>
 <div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span> </div>
-<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>    internal::fill_average_results(ngenes, ngroups, store.mean, store.detected, output.mean, output.detected);</div>
+<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>    fill_average_results(ngenes, ngroups, store.mean, store.detected, output.mean, output.detected);</div>
 <div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span> </div>
 <div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>    <span class="keywordflow">if</span> (options.compute_cohens_d) {</div>
-<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span>        output.cohens_d = internal::fill_summary_results(</div>
+<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span>        output.cohens_d = fill_summary_results(</div>
 <div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>            ngenes,</div>
 <div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>            ngroups,</div>
 <div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>            store.cohens_d,</div>
@@ -554,7 +554,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>    }</div>
 <div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span> </div>
 <div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>    <span class="keywordflow">if</span> (options.compute_auc) {</div>
-<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>        output.auc = internal::fill_summary_results(</div>
+<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>        output.auc = fill_summary_results(</div>
 <div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span>            ngenes,</div>
 <div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span>            ngroups,</div>
 <div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span>            store.auc,</div>
@@ -567,7 +567,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span>    }</div>
 <div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span> </div>
 <div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>    <span class="keywordflow">if</span> (options.compute_delta_mean) {</div>
-<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>        output.delta_mean = internal::fill_summary_results(</div>
+<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>        output.delta_mean = fill_summary_results(</div>
 <div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span>            ngenes,</div>
 <div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>            ngroups,</div>
 <div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>            store.delta_mean,</div>
@@ -580,7 +580,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>    }</div>
 <div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span> </div>
 <div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>    <span class="keywordflow">if</span> (options.compute_delta_detected) {</div>
-<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>        output.delta_detected = internal::fill_summary_results(</div>
+<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>        output.delta_detected = fill_summary_results(</div>
 <div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>            ngenes,</div>
 <div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>            ngroups,</div>
 <div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span>            store.delta_detected,</div>
