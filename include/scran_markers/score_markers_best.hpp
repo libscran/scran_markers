@@ -221,10 +221,10 @@ using PairwiseTopQueues = std::vector<std::vector<topicks::TopQueue<Stat_, Index
 template<typename Stat_, typename Index_>
 void allocate_best_top_queues(
     PairwiseTopQueues<Stat_, Index_>& pqueues,
-    std::size_t ngroups,
-    int top,
-    bool larger,
-    bool keep_ties,
+    const std::size_t ngroups,
+    const int top,
+    const bool larger,
+    const bool keep_ties,
     const std::optional<Stat_>& bound
 ) {
     topicks::TopQueueOptions<Stat_> opt;
@@ -254,7 +254,7 @@ void add_best_top_queues(
         for (decltype(I(ngroups)) g2 = 0; g2 < ngroups; ++g2) {
             const auto val = effects[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1)];
             if (g1 != g2) {
-                pqueues[g1][g2].emplace(gene, val);
+                pqueues[g1][g2].emplace(val, gene);
             }
         }
     }
@@ -299,7 +299,7 @@ void report_best_top_queues(
                 current_out.emplace_back(best.second, best.first);
                 current_in.pop();
             }
-            std::reverse(output.begin(), output.end()); // earliest element should have the strongest effect sizes.
+            std::reverse(current_out.begin(), current_out.end()); // earliest element should have the strongest effect sizes.
         }
     }
 }
@@ -399,11 +399,11 @@ void find_best_simple_best_effects(
     }
 
     if (options.compute_delta_mean) {
-        report_best_top_queues(delta_mean_queues, ngroups, output.cohens_d);
+        report_best_top_queues(delta_mean_queues, ngroups, output.delta_mean);
     }
 
     if (options.compute_delta_detected) {
-        report_best_top_queues(delta_detected_queues, ngroups, output.cohens_d);
+        report_best_top_queues(delta_detected_queues, ngroups, output.delta_detected);
     }
 }
 
@@ -467,7 +467,7 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
             combo_detected,
             /* do_auc = */ true,
             /* auc_result_initialize = */ [&](int t) -> AucResultWorkspace {
-                allocate_best_top_queues(auc_queues[t], ngroups, top, options.largest_auc, options.keep_ties, options.threshold_cohens_d);
+                allocate_best_top_queues(auc_queues[t], ngroups, top, options.largest_auc, options.keep_ties, options.threshold_auc);
                 return AucResultWorkspace(ngroups, auc_queues[t]);
             },
             /* auc_result_process = */ [&](const Index_ gene, AucScanWorkspace<Value_, Group_, Index_, Stat_>& auc_work, AucResultWorkspace& res_work) -> void {
