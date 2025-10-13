@@ -19,6 +19,12 @@ FetchContent_Declare(
 )
 
 FetchContent_Declare(
+  topicks
+  GIT_REPOSITORY https://github.com/libscran/topicks
+  GIT_TAG master # ^0.2.1
+)
+
+FetchContent_Declare(
   sanisizer
   GIT_REPOSITORY https://github.com/LTLA/sanisizer
   GIT_TAG master # ^0.1.2
@@ -27,4 +33,5 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(tatami)
 FetchContent_MakeAvailable(tatami_stats)
 FetchContent_MakeAvailable(scran_blocks)
+FetchContent_MakeAvailable(topicks)
 FetchContent_MakeAvailable(sanisizer)

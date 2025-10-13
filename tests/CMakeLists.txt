@@ -41,6 +41,7 @@ set(LIST_FILES
     src/summarize_effects.cpp
     src/score_markers_pairwise.cpp
     src/score_markers_summary.cpp
+    src/score_markers_best.cpp
     src/create_combinations.cpp
     src/average_group_stats.cpp
 )

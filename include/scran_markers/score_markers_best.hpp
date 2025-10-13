@@ -12,7 +12,7 @@
 
 #include "scan_matrix.hpp"
 #include "average_group_stats.hpp"
-#include "PrecomputedBestWeights.hpp"
+#include "PrecomputedPairwiseWeights.hpp"
 #include "create_combinations.hpp"
 #include "cohens_d.hpp"
 #include "simple_diff.hpp"
@@ -145,8 +145,9 @@ struct ScoreMarkersBestOptions {
 /**
  * @brief Results for `score_markers_best()` and friends.
  * @tparam Stat_ Floating-point type of the output statistics.
+ * @tparam Index_ Integer type of the matrix row indices.
  */
-template<typename Stat_>
+template<typename Stat_, typename Index_>
 struct ScoreMarkersBestResults {
     /**
      * Vector of length equal to the number of groups.
@@ -215,18 +216,20 @@ struct ScoreMarkersBestResults {
 namespace internal {
 
 template<typename Stat_, typename Index_>
-using PairwiseTopQueues = std::vector<std::vector<std::vector<topicks::TopQueue<Stat_, Index_> > > >;
+using PairwiseTopQueues = std::vector<std::vector<topicks::TopQueue<Stat_, Index_> > >;
 
 template<typename Stat_, typename Index_>
 void allocate_best_top_queues(
-    PairwiseThreadQueues<Stat_, Index_>& pqueues,
+    PairwiseTopQueues<Stat_, Index_>& pqueues,
     std::size_t ngroups,
+    int top,
     bool larger,
+    bool keep_ties,
     const std::optional<Stat_>& bound
 ) {
     topicks::TopQueueOptions<Stat_> opt;
     opt.check_nan = true;
-    opt.keep_ties = options.keep_ties;
+    opt.keep_ties = keep_ties;
     if (bound.has_value()) {
         opt.bound = *bound;
     }
@@ -242,15 +245,16 @@ void allocate_best_top_queues(
 
 template<typename Stat_, typename Index_>
 void add_best_top_queues(
-    PairwiseThreadQueues<Stat_, Index_>& pqueues,
+    PairwiseTopQueues<Stat_, Index_>& pqueues,
+    const Index_ gene,
     std::size_t ngroups,
     const std::vector<Stat_>& effects
 ) {
     for (decltype(I(ngroups)) g1 = 0; g1 < ngroups; ++g1) {
         for (decltype(I(ngroups)) g2 = 0; g2 < ngroups; ++g2) {
-            const auto val = effect[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1)];
+            const auto val = effects[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1)];
             if (g1 != g2) {
-                pqueues[g1][g2].add(val);
+                pqueues[g1][g2].emplace(gene, val);
             }
         }
     }
@@ -258,20 +262,23 @@ void add_best_top_queues(
 
 template<typename Stat_, typename Index_>
 void report_best_top_queues(
-    std::vector<PairwiseThreadQueues<Stat_, Index_> >& pqueues,
-    int num_threads,
+    std::vector<PairwiseTopQueues<Stat_, Index_> >& pqueues,
     std::size_t ngroups,
     std::vector<std::vector<std::vector<std::pair<Index_, Stat_> > > >& output
 ) {
+    // We know it fits int an 'int' as this is what we got originally.
+    const int num_threads = pqueues.size();
+
     // Consolidating all of the thread-specific queues into a single queue.
-    const auto& true_pqueue = pqueues.front(); // we better have at least one thread.
+    auto& true_pqueue = pqueues.front(); // we better have at least one thread.
     for (int t = 1; t < num_threads; ++t) {
         for (decltype(I(ngroups)) g1 = 0; g1 < ngroups; ++g1) {
             for (decltype(I(ngroups)) g2 = 0; g2 < ngroups; ++g2) {
                 auto& current_in = pqueues[t][g1][g2];
+                auto& current_out = true_pqueue[g1][g2];
                 while (!current_in.empty()) {
-                    const auto& best = current_in.top();
-                    true_pqueue.push(best);
+                    current_out.push(current_in.top());
+                    current_in.pop();
                 }
             }
         }
@@ -289,7 +296,8 @@ void report_best_top_queues(
             auto& current_out = output[g1][g2];
             while (!current_in.empty()) {
                 const auto& best = current_in.top();
-                output.emplace_back(best.second, best.first);
+                current_out.emplace_back(best.second, best.first);
+                current_in.pop();
             }
             std::reverse(output.begin(), output.end()); // earliest element should have the strongest effect sizes.
         }
@@ -306,7 +314,7 @@ void find_best_simple_best_effects(
     std::vector<Stat_>& combo_means,
     std::vector<Stat_>& combo_vars,
     std::vector<Stat_>& combo_detected,
-    ScoreMarkersBestResults<Stat_>& output,
+    ScoreMarkersBestResults<Stat_, Index_>& output,
     int top,
     const ScoreMarkersBestOptions& options
 ) {
@@ -316,7 +324,7 @@ void find_best_simple_best_effects(
         total_weights_per_group = compute_total_weight_per_group(ngroups, nblocks, combo_weights.data());
         total_weights_ptr = total_weights_per_group.data();
     }
-    PrecomputedBestWeights<Stat_> preweights(ngroups, nblocks, combo_weights.data());
+    PrecomputedPairwiseWeights<Stat_> preweights(ngroups, nblocks, combo_weights.data());
 
     std::vector<Stat_*> mptrs;
     mptrs.reserve(ngroups);
@@ -335,7 +343,7 @@ void find_best_simple_best_effects(
     }
 
     // Setting up the output queues.
-    std::vector<PairwiseThreadQueues> cohens_d_queues, delta_detected_queues, delta_mean_queues;
+    std::vector<PairwiseTopQueues<Stat_, Index_> > cohens_d_queues, delta_detected_queues, delta_mean_queues;
     if (options.compute_cohens_d) {
         sanisizer::resize(cohens_d_queues, options.num_threads);
     }
@@ -350,13 +358,13 @@ void find_best_simple_best_effects(
 
     tatami::parallelize([&](const int t, const Index_ start, const Index_ length) -> void {
         if (options.compute_cohens_d) {
-            allocate_best_top_queues(cohens_d_queues[t], ngroups, options.largest_cohens_d, options.threshold_cohens_d);
+            allocate_best_top_queues(cohens_d_queues[t], ngroups, top, options.largest_cohens_d, options.keep_ties, options.threshold_cohens_d);
         }
         if (options.compute_delta_mean) {
-            allocate_best_top_queues(delta_mean_queues[t], ngroups, options.largest_delta_mean, options.threshold_delta_mean);
+            allocate_best_top_queues(delta_mean_queues[t], ngroups, top, options.largest_delta_mean, options.keep_ties, options.threshold_delta_mean);
         }
         if (options.compute_delta_detected) {
-            allocate_best_top_queues(delta_detected_queues[t], ngroups, options.largest_delta_detected, options.threshold_delta_detected);
+            allocate_best_top_queues(delta_detected_queues[t], ngroups, top, options.largest_delta_detected, options.keep_ties, options.threshold_delta_detected);
         }
         std::vector<Stat_> buffer(ngroups2);
 
@@ -369,21 +377,21 @@ void find_best_simple_best_effects(
 
             // Computing the effect sizes.
             if (options.compute_cohens_d) {
-                compute_best_cohens_d(tmp_means, tmp_variances, ngroups, nblocks, preweights, threshold, buffer.data());
-                add_best_top_queues(cohens_d_queues[t], ngroups, buffer);
+                compute_pairwise_cohens_d(tmp_means, tmp_variances, ngroups, nblocks, preweights, options.threshold, buffer.data());
+                add_best_top_queues(cohens_d_queues[t], gene, ngroups, buffer);
             }
 
-            if (output.compute_delta_mean) {
-                compute_best_simple_diff(tmp_means, ngroups, nblocks, preweights, buffer.data());
-                add_best_top_queues(delta_mean_queues[t], ngroups, buffer);
+            if (options.compute_delta_mean) {
+                compute_pairwise_simple_diff(tmp_means, ngroups, nblocks, preweights, buffer.data());
+                add_best_top_queues(delta_mean_queues[t], gene, ngroups, buffer);
             }
 
             if (options.compute_delta_detected) {
-                compute_best_simple_diff(tmp_detected, ngroups, nblocks, preweights, buffer.data());
-                add_best_top_queues(delta_detected_queues[t], ngroups, buffer);
+                compute_pairwise_simple_diff(tmp_detected, ngroups, nblocks, preweights, buffer.data());
+                add_best_top_queues(delta_detected_queues[t], gene, ngroups, buffer);
             }
         }
-    }, ngenes, num_threads);
+    }, ngenes, options.num_threads);
 
     // Now figuring out which of these are the top dogs.
     if (options.compute_cohens_d) {
@@ -407,7 +415,7 @@ template<
     typename Group_,
     typename Block_
 >
-ScoreMarkersBestResults<Stat_> score_markers_best(
+ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
     const tatami::Matrix<Value_, Index_>& matrix, 
     const std::size_t ngroups,
     const Group_* const group, 
@@ -431,10 +439,10 @@ ScoreMarkersBestResults<Stat_> score_markers_best(
         options.variable_block_weight_parameters
     );
 
-    ScoreMarkersBestResults<Stat_>& output;
+    ScoreMarkersBestResults<Stat_, Index_> output;
 
     if (options.compute_auc) {
-        auto auc_queues = sanisizer::create<std::vector<PairwiseThreadQueues> >(options.num_threads);
+        auto auc_queues = sanisizer::create<std::vector<PairwiseTopQueues<Stat_, Index_> > >(options.num_threads);
 
         struct AucResultWorkspace {
             AucResultWorkspace() = default;
@@ -459,16 +467,15 @@ ScoreMarkersBestResults<Stat_> score_markers_best(
             combo_detected,
             /* do_auc = */ true,
             /* auc_result_initialize = */ [&](int t) -> AucResultWorkspace {
-                allocate_best_top_queues(auc_queues[t], ngroups, options.largest_auc, options.threshold_cohens_d);
+                allocate_best_top_queues(auc_queues[t], ngroups, top, options.largest_auc, options.keep_ties, options.threshold_cohens_d);
                 return AucResultWorkspace(ngroups, auc_queues[t]);
             },
             /* auc_result_process = */ [&](const Index_ gene, AucScanWorkspace<Value_, Group_, Index_, Stat_>& auc_work, AucResultWorkspace& res_work) -> void {
-                process_auc_for_rows(auc_work, ngroups, nblocks, threshold, res_work.buffer.data());
-                add_best_top_queues(*(res_work.queue_ptr), ngroups, res_work.buffer);
+                process_auc_for_rows(auc_work, ngroups, nblocks, options.threshold, res_work.pairwise_buffer.data());
+                add_best_top_queues(*(res_work.queue_ptr), gene, ngroups, res_work.pairwise_buffer);
             },
             combo_sizes,
             combo_weights,
-            options.threshold,
             options.num_threads
         );
 
@@ -486,7 +493,7 @@ ScoreMarkersBestResults<Stat_> score_markers_best(
             combo_means,
             combo_vars,
             combo_detected,
-            output.auc,
+            static_cast<Stat_*>(NULL),
             combo_sizes,
             combo_weights,
             options.threshold,
@@ -560,9 +567,10 @@ ScoreMarkersBestResults<Stat_> score_markers_best(
  * @return Object containing the top markers with the largest effect sizes from each pairwise comparison.
  */
 template<typename Stat_, typename Value_, typename Index_, typename Group_>
-ScoreMarkersBestBuffers<Stat_> score_markers_best(
+ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
     const tatami::Matrix<Value_, Index_>& matrix, 
     const Group_* const group, 
+    int top,
     const ScoreMarkersBestOptions& options
 ) {
     const Index_ NC = matrix.ncol();
@@ -607,7 +615,7 @@ ScoreMarkersBestBuffers<Stat_> score_markers_best(
  * @return Object containing the top markers with the largest effect sizes from each pairwise comparison.
  */
 template<typename Stat_, typename Value_, typename Index_, typename Group_, typename Block_>
-ScoreMarkersBestResults<Stat_> score_markers_best_blocked(
+ScoreMarkersBestResults<Stat_, Index_> score_markers_best_blocked(
     const tatami::Matrix<Value_, Index_>& matrix, 
     const Group_* const group, 
     const Block_* const block,
@@ -615,7 +623,7 @@ ScoreMarkersBestResults<Stat_> score_markers_best_blocked(
     const ScoreMarkersBestOptions& options
 ) {
     const Index_ NC = matrix.ncol();
-    const auto ngroups = output.mean.size();
+    const auto ngroups = tatami_stats::total_groups(group, NC);
     const auto nblocks = tatami_stats::total_groups(block, NC); 
 
     const auto combinations = internal::create_combinations(ngroups, group, block, NC);
