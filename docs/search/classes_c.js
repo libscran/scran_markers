@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['variableweightparameters_0',['VariableWeightParameters',['https://libscran.github.io/scran_blocks/structscran__blocks_1_1VariableWeightParameters.html',1,'scran_blocks']]]
+  ['topqueue_0',['TopQueue',['https://libscran.github.io/topicks/classtopicks_1_1TopQueue.html',1,'topicks']]],
+  ['topqueueoptions_1',['TopQueueOptions',['https://libscran.github.io/topicks/structtopicks_1_1TopQueueOptions.html',1,'topicks']]]
 ];

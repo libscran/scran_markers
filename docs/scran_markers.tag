@@ -1,6 +1,14 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
 <tagfile doxygen_version="1.12.0">
   <compound kind="file">
+    <name>score_markers_best.hpp</name>
+    <path>/github/workspace/include/scran_markers/</path>
+    <filename>score__markers__best_8hpp.html</filename>
+    <class kind="struct">scran_markers::ScoreMarkersBestOptions</class>
+    <class kind="struct">scran_markers::ScoreMarkersBestResults</class>
+    <namespace>scran_markers</namespace>
+  </compound>
+  <compound kind="file">
     <name>score_markers_pairwise.hpp</name>
     <path>/github/workspace/include/scran_markers/</path>
     <filename>score__markers__pairwise_8hpp.html</filename>
@@ -43,6 +51,177 @@
     <includes id="summarize__comparisons_8hpp" name="summarize_comparisons.hpp" local="yes" import="no" module="no" objc="no">summarize_comparisons.hpp</includes>
     <class kind="struct">scran_markers::SummarizeEffectsOptions</class>
     <namespace>scran_markers</namespace>
+  </compound>
+  <compound kind="struct">
+    <name>scran_markers::ScoreMarkersBestOptions</name>
+    <filename>structscran__markers_1_1ScoreMarkersBestOptions.html</filename>
+    <member kind="variable">
+      <type>double</type>
+      <name>threshold</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>a1bfe79e22da0a7e1b8600baf13d3fbb3</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>int</type>
+      <name>num_threads</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>ad8fcee53b0fde5cf4e811746b96ef240</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>compute_cohens_d</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>a123cba61d40fcdc36d8cc1e674b6965f</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>compute_auc</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>a2007c3ef0856d7c924820eeabe7c610f</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>compute_delta_mean</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>a3c3663407f7f6634df71173b3e0415e4</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>compute_delta_detected</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>aeb34e94fe7911ba89babdd338155d196</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>largest_cohens_d</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>a267157d5d176619cc7e0e6c322c1042d</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>largest_auc</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>aa824707714a1690fbc23648578062e3b</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>largest_delta_mean</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>a54def7db73a0f2eb9931443274b664d8</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>largest_delta_detected</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>aa4a46e58c07d0c99483a254caeb3eba8</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>std::optional&lt; double &gt;</type>
+      <name>threshold_cohens_d</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>a929083a4a766df5e2703b40e135be433</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>std::optional&lt; double &gt;</type>
+      <name>threshold_auc</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>acf10f836093794990810f8169c971ffa</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>std::optional&lt; double &gt;</type>
+      <name>threshold_delta_mean</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>a167e5d28ce2ea613a91fa96697834820</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>std::optional&lt; double &gt;</type>
+      <name>threshold_delta_detected</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>a94691cd88f06f8635561f85e1c70c0f0</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>keep_ties</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>aec6ceabe769286d92169913b28070ea9</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>scran_blocks::WeightPolicy</type>
+      <name>block_weight_policy</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>ab5ef9efd63f9799d5d7023a8a2e8334c</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>scran_blocks::VariableWeightParameters</type>
+      <name>variable_block_weight_parameters</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>ae9155fca6deafc3acc0e4c92de471ea1</anchor>
+      <arglist></arglist>
+    </member>
+  </compound>
+  <compound kind="struct">
+    <name>scran_markers::ScoreMarkersBestResults</name>
+    <filename>structscran__markers_1_1ScoreMarkersBestResults.html</filename>
+    <templarg>typename Stat_</templarg>
+    <templarg>typename Index_</templarg>
+    <member kind="variable">
+      <type>std::vector&lt; std::vector&lt; Stat_ &gt; &gt;</type>
+      <name>mean</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestResults.html</anchorfile>
+      <anchor>ad134d04290cc716dff38a32ba0282a6f</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>std::vector&lt; std::vector&lt; Stat_ &gt; &gt;</type>
+      <name>detected</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestResults.html</anchorfile>
+      <anchor>af32e4f76f3572c9d686285c73e775bc8</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>std::vector&lt; std::vector&lt; std::vector&lt; std::pair&lt; Index_, Stat_ &gt; &gt; &gt; &gt;</type>
+      <name>cohens_d</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestResults.html</anchorfile>
+      <anchor>a7c6188aed4406851850793732aa030ce</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>std::vector&lt; std::vector&lt; std::vector&lt; std::pair&lt; Index_, Stat_ &gt; &gt; &gt; &gt;</type>
+      <name>auc</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestResults.html</anchorfile>
+      <anchor>a336708567f4dfacef8ba8bf188d720f4</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>std::vector&lt; std::vector&lt; std::vector&lt; std::pair&lt; Index_, Stat_ &gt; &gt; &gt; &gt;</type>
+      <name>delta_mean</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestResults.html</anchorfile>
+      <anchor>a5cb20a7523c070686818ce889ea4d8ef</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>std::vector&lt; std::vector&lt; std::vector&lt; std::pair&lt; Index_, Stat_ &gt; &gt; &gt; &gt;</type>
+      <name>delta_detected</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestResults.html</anchorfile>
+      <anchor>a8a0be5bb72f393dddc153e40bb2cb8e2</anchor>
+      <arglist></arglist>
+    </member>
   </compound>
   <compound kind="struct">
     <name>scran_markers::ScoreMarkersPairwiseBuffers</name>
@@ -527,6 +706,8 @@
   <compound kind="namespace">
     <name>scran_markers</name>
     <filename>namespacescran__markers.html</filename>
+    <class kind="struct">scran_markers::ScoreMarkersBestOptions</class>
+    <class kind="struct">scran_markers::ScoreMarkersBestResults</class>
     <class kind="struct">scran_markers::ScoreMarkersPairwiseBuffers</class>
     <class kind="struct">scran_markers::ScoreMarkersPairwiseOptions</class>
     <class kind="struct">scran_markers::ScoreMarkersPairwiseResults</class>
@@ -566,6 +747,20 @@
       <anchorfile>namespacescran__markers.html</anchorfile>
       <anchor>ab07e111b7e98525a9230937bb5ff61f8</anchor>
       <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, const ScoreMarkersPairwiseOptions &amp;options)</arglist>
+    </member>
+    <member kind="function">
+      <type>ScoreMarkersBestResults&lt; Stat_, Index_ &gt;</type>
+      <name>score_markers_best</name>
+      <anchorfile>namespacescran__markers.html</anchorfile>
+      <anchor>a3b877db1571dd74a128af35eee5641d3</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, int top, const ScoreMarkersBestOptions &amp;options)</arglist>
+    </member>
+    <member kind="function">
+      <type>ScoreMarkersBestResults&lt; Stat_, Index_ &gt;</type>
+      <name>score_markers_best_blocked</name>
+      <anchorfile>namespacescran__markers.html</anchorfile>
+      <anchor>afb11bdcf5c54fc4886a20e5f2f003aa2</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, int top, const ScoreMarkersBestOptions &amp;options)</arglist>
     </member>
     <member kind="function">
       <type>void</type>
