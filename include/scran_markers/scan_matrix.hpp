@@ -192,15 +192,15 @@ void scan_matrix_by_row_custom_auc(
         assert(nblocks == 1);
     }
 
-    tatami::parallelize([&](const int, const Index_ start, const Index_ length) -> void {
+    tatami::parallelize([&](const int t, const Index_ start, const Index_ length) -> void {
         auto vbuffer = tatami::create_container_of_Index_size<std::vector<Value_> >(NC);
 
         // A vast array of AUC-related bits and pieces.
         AucScanWorkspace<Value_, Group_, Index_, Stat_> auc_work;
-        decltype(I(auc_result_init())) auc_res_work;
+        decltype(I(auc_result_init(0))) auc_res_work;
         if (do_auc) {
             initialize_auc_workspace(auc_work, ngroups, nblocks, combo_size, combo_weights);
-            auc_res_work = auc_result_init();
+            auc_res_work = auc_result_init(t);
         }
 
         if (matrix.is_sparse()) {
@@ -366,7 +366,7 @@ void scan_matrix_by_row_full_auc(
         combo_vars,
         combo_detected,
         /* do_auc = */ auc != NULL,
-        /* auc_result_initialize = */ [&]() -> bool {
+        /* auc_result_initialize = */ [&](int) -> bool {
             return false;
         },
         /* auc_result_process = */ [&](const Index_ gene, AucScanWorkspace<Value_, Group_, Index_, Stat_>& auc_work, bool) -> void {
