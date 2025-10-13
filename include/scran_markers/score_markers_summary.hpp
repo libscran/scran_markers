@@ -716,7 +716,7 @@ void score_markers_summary(
                 combo_vars,
                 combo_detected,
                 /* do_auc = */ true,
-                /* auc_result_initialize = */ [&]() -> AucResultWorkspace {
+                /* auc_result_initialize = */ [&](int) -> AucResultWorkspace {
                     return AucResultWorkspace(ngroups);
                 },
                 /* auc_result_process = */ [&](
