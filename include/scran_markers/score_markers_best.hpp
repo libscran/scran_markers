@@ -44,25 +44,21 @@ struct ScoreMarkersBestOptions {
 
     /**
      * Whether to compute Cohen's d. 
-     * This only affects the `score_markers_best()` overload that returns a `ScoreMarkersBestResults`.
      */
     bool compute_cohens_d = true;
 
     /**
      * Whether to compute the AUC.
-     * This only affects the `score_markers_best()` overload that returns a `ScoreMarkersBestResults`.
      */
     bool compute_auc = true;
 
     /**
-     * Whether to compute the difference in means.
-     * This only affects the `score_markers_best()` overload that returns a `ScoreMarkersBestResults`.
+     * Whether to compute the delta-mean, i.e., difference in means.
      */
     bool compute_delta_mean = true;
 
     /**
-     * Whether to compute the difference in the detected proportion.
-     * This only affects the `score_markers_best()` overload that returns a `ScoreMarkersBestResults`.
+     * Whether to compute the delta-detected, i.e., difference in the detected proportion.
      */
     bool compute_delta_detected = true;
 
@@ -92,28 +88,28 @@ struct ScoreMarkersBestOptions {
 
     /**
      * The threshold on the Cohen's d.
-     * Genes are only retained if their Cohen's d is greater (if `ScoreMarkersBestOptions::largest_cohens_d = true`) or less than (otherwise) this bound.
+     * Genes are only retained if their Cohen's d is greater (if `ScoreMarkersBestOptions::largest_cohens_d = true`) or less than this bound (otherwise).
      * If missing, no threshold is applied on the Cohen's d.
      */
     std::optional<double> threshold_cohens_d = 0;
 
     /**
      * The threshold on the AUC.
-     * Genes are only retained if their AUC is greater (if `ScoreMarkersBestOptions::largest_auc = true`) or less than (otherwise) this bound.
+     * Genes are only retained if their AUC is greater (if `ScoreMarkersBestOptions::largest_auc = true`) or less than this bound (otherwise).
      * If missing, no threshold is applied on the AUC.
      */
     std::optional<double> threshold_auc = 0.5;
 
     /**
      * The threshold on the delta-mean.
-     * Genes are only retained if their delta-mean is greater (if `ScoreMarkersBestOptions::largest_delta_mean = true`) or less than (otherwise) this bound.
+     * Genes are only retained if their delta-mean is greater (if `ScoreMarkersBestOptions::largest_delta_mean = true`) or less than this bound (otherwise).
      * If missing, no threshold is applied on the delta-mean.
      */
     std::optional<double> threshold_delta_mean = 0;
 
     /**
      * The threshold on the delta-detected.
-     * Genes are only retained if their delta-detected is greater (if `ScoreMarkersBestOptions::largest_delta_detected = true`) or less than (otherwise) this bound.
+     * Genes are only retained if their delta-detected is greater (if `ScoreMarkersBestOptions::largest_delta_detected = true`) or less than this bound (otherwise).
      * If missing, no threshold is applied on the delta-detected.
      */
     std::optional<double> threshold_delta_detected = 0;
@@ -562,9 +558,12 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
  * Rows should contain genes while columns should contain cells.
  * @param[in] group Pointer to an array of length equal to the number of columns in `matrix`, containing the group assignments.
  * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
+ * @param top Number of top genes to retain from each pairwise comparison.
+ * The actual number of retained genes may be less than or greater than `top` depending on the number of rows in `matrix`
+ * and the choices of `ScoreMarkersBestOptions::keep_ties`, `ScoreMarkersBestOptions::threshold_cohens_d`, etc.
  * @param options Further options.
  *
- * @return Object containing the top markers with the largest effect sizes from each pairwise comparison.
+ * @return Object containing the top markers from each pairwise comparison.
  */
 template<typename Stat_, typename Value_, typename Index_, typename Group_>
 ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
@@ -610,6 +609,9 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
  * Group identifiers should be 0-based and should contain all integers in \f$[0, N)\f$ where \f$N\f$ is the number of unique groups.
  * @param[in] block Pointer to an array of length equal to the number of columns in `matrix`, containing the blocking factor.
  * Block identifiers should be 0-based and should contain all integers in \f$[0, B)\f$ where \f$B\f$ is the number of unique blocking levels.
+ * @param top Number of top genes to retain from each pairwise comparison.
+ * The actual number of retained genes may be less than or greater than `top` depending on the number of rows in `matrix`
+ * and the choices of `ScoreMarkersBestOptions::keep_ties`, `ScoreMarkersBestOptions::threshold_cohens_d`, etc.
  * @param options Further options.
  *
  * @return Object containing the top markers with the largest effect sizes from each pairwise comparison.

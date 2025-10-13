@@ -908,6 +908,7 @@ WARN_LOGFILE           =
 
 INPUT                  = ../README.md  \
                          ../include/scran_markers/score_markers_pairwise.hpp \
+                         ../include/scran_markers/score_markers_best.hpp \
                          ../include/scran_markers/summarize_effects.hpp \
                          ../include/scran_markers/summarize_comparisons.hpp \
                          ../include/scran_markers/score_markers_summary.hpp \
@@ -2330,7 +2331,8 @@ SKIP_FUNCTION_MACROS   = YES
 # run, you must also specify the path to the tagfile here.
 
 TAGFILES               = tatami.tag=https://tatami-inc.github.io/tatami \
-                         scran_blocks.tag=https://libscran.github.io/scran_blocks
+                         scran_blocks.tag=https://libscran.github.io/scran_blocks \
+                         topicks.tag=https://libscran.github.io/topicks
 
 # When a file name is specified after GENERATE_TAGFILE, doxygen will create a
 # tag file that is based on the input files it reads. See section "Linking to
