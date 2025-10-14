@@ -43,6 +43,16 @@ struct ScoreMarkersBestOptions {
     int num_threads = 1;
 
     /**
+     * Whether to compute the mean expression in each group.
+     */
+    bool compute_group_mean = true;
+
+    /**
+     * Whether to compute the proportion of cells with detected expression in each group.
+     */
+    bool compute_group_detected = true;
+
+    /**
      * Whether to compute Cohen's d. 
      */
     bool compute_cohens_d = true;
@@ -323,19 +333,23 @@ void find_best_simple_best_effects(
     PrecomputedPairwiseWeights<Stat_> preweights(ngroups, nblocks, combo_weights.data());
 
     std::vector<Stat_*> mptrs;
-    mptrs.reserve(ngroups);
-    sanisizer::resize(output.mean, ngroups);
-    for (auto& x : output.mean) {
-        sanisizer::resize(x, ngenes);
-        mptrs.push_back(x.data());
+    if (options.compute_group_mean) {
+        mptrs.reserve(ngroups);
+        sanisizer::resize(output.mean, ngroups);
+        for (auto& x : output.mean) {
+            sanisizer::resize(x, ngenes);
+            mptrs.push_back(x.data());
+        }
     }
 
     std::vector<Stat_*> dptrs;
-    dptrs.reserve(ngroups);
-    sanisizer::resize(output.detected, ngroups);
-    for (auto& x : output.detected) {
-        sanisizer::resize(x, ngenes);
-        dptrs.push_back(x.data());
+    if (options.compute_group_detected) {
+        dptrs.reserve(ngroups);
+        sanisizer::resize(output.detected, ngroups);
+        for (auto& x : output.detected) {
+            sanisizer::resize(x, ngenes);
+            dptrs.push_back(x.data());
+        }
     }
 
     // Setting up the output queues.
@@ -362,27 +376,39 @@ void find_best_simple_best_effects(
         if (options.compute_delta_detected) {
             allocate_best_top_queues(delta_detected_queues[t], ngroups, top, options.largest_delta_detected, options.keep_ties, options.threshold_delta_detected);
         }
-        std::vector<Stat_> buffer(ngroups2);
+        std::vector<Stat_> buffer;
+        if (options.compute_cohens_d || options.compute_delta_mean || options.compute_delta_detected) {
+            buffer.resize(ngroups2);
+        }
 
         for (Index_ gene = start, end = start + length; gene < end; ++gene) {
             auto in_offset = sanisizer::product_unsafe<std::size_t>(gene, ncombos);
-            const auto tmp_means = combo_means.data() + in_offset;
-            const auto tmp_variances = combo_vars.data() + in_offset;
-            const auto tmp_detected = combo_detected.data() + in_offset;
-            average_group_stats(gene, ngroups, nblocks, tmp_means, tmp_detected, combo_weights.data(), total_weights_ptr, mptrs, dptrs);
+
+            if (options.compute_group_mean) {
+                const auto tmp_means = combo_means.data() + in_offset;
+                average_group_stats(gene, ngroups, nblocks, tmp_means, combo_weights.data(), total_weights_ptr, mptrs);
+            }
+            if (options.compute_group_detected) {
+                const auto tmp_detected = combo_detected.data() + in_offset;
+                average_group_stats(gene, ngroups, nblocks, tmp_detected, combo_weights.data(), total_weights_ptr, dptrs);
+            }
 
             // Computing the effect sizes.
             if (options.compute_cohens_d) {
+                const auto tmp_means = combo_means.data() + in_offset;
+                const auto tmp_variances = combo_vars.data() + in_offset;
                 compute_pairwise_cohens_d(tmp_means, tmp_variances, ngroups, nblocks, preweights, options.threshold, buffer.data());
                 add_best_top_queues(cohens_d_queues[t], gene, ngroups, buffer);
             }
 
             if (options.compute_delta_mean) {
+                const auto tmp_means = combo_means.data() + in_offset;
                 compute_pairwise_simple_diff(tmp_means, ngroups, nblocks, preweights, buffer.data());
                 add_best_top_queues(delta_mean_queues[t], gene, ngroups, buffer);
             }
 
             if (options.compute_delta_detected) {
+                const auto tmp_detected = combo_detected.data() + in_offset;
                 compute_pairwise_simple_diff(tmp_detected, ngroups, nblocks, preweights, buffer.data());
                 add_best_top_queues(delta_detected_queues[t], gene, ngroups, buffer);
             }
@@ -425,7 +451,16 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
 ) {
     const auto ngenes = matrix.nrow();
     const auto payload_size = sanisizer::product<typename std::vector<Stat_>::size_type>(ngenes, ncombos);
-    std::vector<Stat_> combo_means(payload_size), combo_vars(payload_size), combo_detected(payload_size);
+    std::vector<Stat_> combo_means, combo_vars, combo_detected;
+    if (options.compute_group_mean || options.compute_cohens_d || options.compute_delta_mean) {
+        combo_means.resize(payload_size);
+    }
+    if (options.compute_cohens_d) {
+        combo_vars.resize(payload_size);
+    }
+    if (options.compute_group_detected || options.compute_delta_detected) {
+        combo_detected.resize(payload_size);
+    }
 
     // For a single block, this usually doesn't really matter, but we do it for consistency with the multi-block case,
     // and to account for variable weighting where non-zero block sizes get zero weight.

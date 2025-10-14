@@ -10,16 +10,11 @@
 
 class ScoreMarkersBestTestCore {
 protected:
-    template<class Left_, class Right_>
-    static void compare_averages(const Left_& res, const Right_& other, int ngroups) {
-        EXPECT_EQ(other.mean.size(), ngroups);
-        EXPECT_EQ(other.detected.size(), ngroups);
-        EXPECT_EQ(res.mean.size(), ngroups);
-        EXPECT_EQ(res.detected.size(), ngroups);
-
+    static void compare_averages(const std::vector<std::vector<double> >& res, const std::vector<std::vector<double> >& other) {
+        const int ngroups = res.size();
+        ASSERT_EQ(ngroups, other.size());
         for (int l = 0; l < ngroups; ++l) {
-            scran_tests::compare_almost_equal(res.mean[l], other.mean[l]);
-            scran_tests::compare_almost_equal(res.detected[l], other.detected[l]);
+            scran_tests::compare_almost_equal(res[l], other[l]);
         }
     }
 
@@ -173,7 +168,8 @@ TEST_P(ScoreMarkersBestTest, Basic) {
         scran_markers::ScoreMarkersPairwiseOptions popt;
         popt.compute_auc = do_auc;
         auto pairres = scran_markers::score_markers_pairwise(*dense_row, groupings.data(), popt);
-        compare_averages(ref, pairres, ngroups);
+        compare_averages(ref.mean, pairres.mean);
+        compare_averages(ref.detected, pairres.detected);
 
         compare_best_to_pairwise(ref.cohens_d, pairres.cohens_d, ngenes, ngroups, top, opt.largest_cohens_d, keep_ties, opt.threshold_cohens_d);
         compare_best_to_pairwise(ref.delta_mean, pairres.delta_mean, ngenes, ngroups, top, opt.largest_delta_mean, keep_ties, opt.threshold_delta_mean);
@@ -185,22 +181,26 @@ TEST_P(ScoreMarkersBestTest, Basic) {
     } else {
         opt.num_threads = nthreads;
         auto dr = scran_markers::score_markers_best<double>(*dense_row, groupings.data(), top, opt);
-        compare_averages(ref, dr, ngroups);
+        compare_averages(ref.mean, dr.mean);
+        compare_averages(ref.detected, dr.detected);
         compare_best(ref, dr);
     }
 
     // Comparing to all of the other matrix representations.
     {
         auto dc = scran_markers::score_markers_best<double>(*dense_column, groupings.data(), top, opt);
-        compare_averages(ref, dc, ngroups);
+        compare_averages(ref.mean, dc.mean);
+        compare_averages(ref.detected, dc.detected);
         compare_best(ref, dc);
 
         auto sr = scran_markers::score_markers_best<double>(*sparse_row, groupings.data(), top, opt);
-        compare_averages(ref, sr, ngroups);
+        compare_averages(ref.mean, sr.mean);
+        compare_averages(ref.detected, sr.detected);
         compare_best(ref, sr);
 
         auto sc = scran_markers::score_markers_best<double>(*sparse_column, groupings.data(), top, opt);
-        compare_averages(ref, sc, ngroups);
+        compare_averages(ref.mean, sc.mean);
+        compare_averages(ref.detected, sc.detected);
         compare_best(ref, sc);
     }
 }
@@ -289,7 +289,8 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwise) {
         popt.compute_auc = do_auc;
         popt.block_weight_policy = policy;
         auto pairres = scran_markers::score_markers_pairwise_blocked(*dense_row, groupings.data(), blocks.data(), popt);
-        compare_averages(ref, pairres, ngroups);
+        compare_averages(ref.mean, pairres.mean);
+        compare_averages(ref.detected, pairres.detected);
 
         compare_best_to_pairwise(ref.cohens_d, pairres.cohens_d, ngenes, ngroups, top, opt.largest_cohens_d, keep_ties, opt.threshold_cohens_d);
         compare_best_to_pairwise(ref.delta_mean, pairres.delta_mean, ngenes, ngroups, top, opt.largest_delta_mean, keep_ties, opt.threshold_delta_mean);
@@ -304,15 +305,18 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwise) {
     // Comparing to all of the other matrix representations.
     {
         auto dc = scran_markers::score_markers_best_blocked<double>(*dense_column, groupings.data(), blocks.data(), top, opt);
-        compare_averages(ref, dc, ngroups);
+        compare_averages(ref.mean, dc.mean);
+        compare_averages(ref.detected, dc.detected);
         compare_best(ref, dc);
 
         auto sr = scran_markers::score_markers_best_blocked<double>(*sparse_row, groupings.data(), blocks.data(), top, opt);
-        compare_averages(ref, sr, ngroups);
+        compare_averages(ref.mean, sr.mean);
+        compare_averages(ref.detected, sr.detected);
         compare_best(ref, sr);
 
         auto sc = scran_markers::score_markers_best_blocked<double>(*sparse_column, groupings.data(), blocks.data(), top, opt);
-        compare_averages(ref, sc, ngroups);
+        compare_averages(ref.mean, sc.mean);
+        compare_averages(ref.detected, sc.detected);
         compare_best(ref, sc);
     }
 }
@@ -381,14 +385,55 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
     int top = 15;
     auto ref = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
 
-    // Only Cohen's d.
+    // Only the group mean.
     {
         scran_markers::ScoreMarkersBestOptions opt;
+        opt.compute_group_detected = false;
+        opt.compute_cohens_d = false;
         opt.compute_auc = false;
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
+
+        auto alt = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
+        compare_averages(ref.mean, alt.mean);
+        EXPECT_TRUE(alt.detected.empty());
+        EXPECT_TRUE(alt.cohens_d.empty());
+        EXPECT_TRUE(alt.auc.empty());
+        EXPECT_TRUE(alt.delta_mean.empty());
+        EXPECT_TRUE(alt.delta_detected.empty());
+    }
+
+    // Only the group detected proportions.
+    {
+        scran_markers::ScoreMarkersBestOptions opt;
+        opt.compute_group_mean = false;
+        opt.compute_cohens_d = false;
+        opt.compute_auc = false;
+        opt.compute_delta_mean = false;
+        opt.compute_delta_detected = false;
+
+        auto alt = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
+        compare_averages(ref.detected, alt.detected);
+        EXPECT_TRUE(alt.mean.empty());
+        EXPECT_TRUE(alt.cohens_d.empty());
+        EXPECT_TRUE(alt.auc.empty());
+        EXPECT_TRUE(alt.delta_mean.empty());
+        EXPECT_TRUE(alt.delta_detected.empty());
+    }
+
+    // Only Cohen's d.
+    {
+        scran_markers::ScoreMarkersBestOptions opt;
+        opt.compute_group_mean = false;
+        opt.compute_group_detected = false;
+        opt.compute_auc = false;
+        opt.compute_delta_mean = false;
+        opt.compute_delta_detected = false;
+
         auto alt = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
         compare_best(alt.cohens_d, ref.cohens_d);
+        EXPECT_TRUE(alt.mean.empty());
+        EXPECT_TRUE(alt.detected.empty());
         EXPECT_TRUE(alt.auc.empty());
         EXPECT_TRUE(alt.delta_mean.empty());
         EXPECT_TRUE(alt.delta_detected.empty());
@@ -397,10 +442,13 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
     // Only AUC.
     {
         scran_markers::ScoreMarkersBestOptions opt;
+        opt.compute_group_mean = false;
+        opt.compute_group_detected = false;
         opt.compute_cohens_d = false;
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
-        auto alt = scran_markers::score_markers_best<double>(*dense_row, groupings.data(), top, opt);
+
+        auto alt = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
         compare_best(alt.auc, ref.auc);
         EXPECT_TRUE(alt.cohens_d.empty());
         EXPECT_TRUE(alt.delta_mean.empty());
@@ -410,11 +458,16 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
     // Only delta-mean.
     {
         scran_markers::ScoreMarkersBestOptions opt;
+        opt.compute_group_mean = false;
+        opt.compute_group_detected = false;
         opt.compute_cohens_d = false;
         opt.compute_auc = false;
         opt.compute_delta_detected = false;
-        auto alt = scran_markers::score_markers_best<double>(*dense_row, groupings.data(), top, opt);
+
+        auto alt = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
         compare_best(alt.delta_mean, ref.delta_mean);
+        EXPECT_TRUE(alt.mean.empty());
+        EXPECT_TRUE(alt.detected.empty());
         EXPECT_TRUE(alt.cohens_d.empty());
         EXPECT_TRUE(alt.auc.empty());
         EXPECT_TRUE(alt.delta_detected.empty());
@@ -423,11 +476,16 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
     // Only delta-mean.
     {
         scran_markers::ScoreMarkersBestOptions opt;
+        opt.compute_group_mean = false;
+        opt.compute_group_detected = false;
         opt.compute_cohens_d = false;
         opt.compute_auc = false;
         opt.compute_delta_mean = false;
-        auto alt = scran_markers::score_markers_best<double>(*dense_row, groupings.data(), top, opt);
+
+        auto alt = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
         compare_best(alt.delta_detected, ref.delta_detected);
+        EXPECT_TRUE(alt.mean.empty());
+        EXPECT_TRUE(alt.detected.empty());
         EXPECT_TRUE(alt.cohens_d.empty());
         EXPECT_TRUE(alt.auc.empty());
         EXPECT_TRUE(alt.delta_mean.empty());
@@ -439,4 +497,3 @@ INSTANTIATE_TEST_SUITE_P(
     ScoreMarkersBestOneAtATimeTest,
     ::testing::Values(0, 1, 2, 3)
 );
-

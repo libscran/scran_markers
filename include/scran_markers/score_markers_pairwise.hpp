@@ -42,6 +42,18 @@ struct ScoreMarkersPairwiseOptions {
     int num_threads = 1;
 
     /**
+     * Whether to compute the mean expression in each group.
+     * This only affects the `score_markers_pairwise()` overload that returns a `ScoreMarkersPairwiseResults`.
+     */
+    bool compute_group_mean = true;
+
+    /**
+     * Whether to compute the proportion of cells with detected expression in each group.
+     * This only affects the `score_markers_pairwise()` overload that returns a `ScoreMarkersPairwiseResults`.
+     */
+    bool compute_group_detected = true;
+
+    /**
      * Whether to compute Cohen's d. 
      * This only affects the `score_markers_pairwise()` overload that returns a `ScoreMarkersPairwiseResults`.
      */
@@ -94,6 +106,8 @@ struct ScoreMarkersPairwiseBuffers {
      * Vector of length equal to the number of groups.
      * Each pointer corresponds to a group and points to an array of length equal to the number of genes,
      * to be filled with the mean expression of each gene in that group. 
+     *
+     * Alternatively, this vector may be empty, in which case the means are not computed.
      */
     std::vector<Stat_*> mean;
 
@@ -101,6 +115,8 @@ struct ScoreMarkersPairwiseBuffers {
      * Vector of length equal to the number of groups.
      * Each pointer corresponds to a group and points to an array of length equal to the number of genes,
      * to be filled with the proportion of cells with detected expression in that group. 
+     *
+     * Alternatively, this vector may be empty, in which case the detected proportions are not computed.
      */
     std::vector<Stat_*> detected;
 
@@ -139,6 +155,7 @@ struct ScoreMarkersPairwiseBuffers {
      * Pointer to an array of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the difference in means for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for more details.
+     *
      * Alternatively NULL, in which case the difference in means is not stored.
      */
     Stat_* delta_mean = NULL;
@@ -147,6 +164,7 @@ struct ScoreMarkersPairwiseBuffers {
      * Pointer to an array of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the difference in the detected proportions for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for more details.
+     *
      * Alternatively NULL, in which case the difference in detected proportions is not stored.
      */
     Stat_* delta_detected = NULL;
@@ -161,12 +179,16 @@ struct ScoreMarkersPairwiseResults {
     /**
      * Vector of length equal to the number of groups.
      * Each inner vector corresponds to a group and contains the mean expression of each gene in that group. 
+     *
+     * Alternatively, this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_group_mean = false`.
      */
     std::vector<std::vector<Stat_> > mean;
 
     /**
      * Vector of length equal to the number of groups.
      * Each inner vector corresponds to a group and contains the mean expression of each gene in that group. 
+     *
+     * Alternatively, this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_group_detected = false`.
      */
     std::vector<std::vector<Stat_> > detected;
 
@@ -174,7 +196,8 @@ struct ScoreMarkersPairwiseResults {
      * Vector of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the Cohen's d for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for details on the layout.
-     * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_cohens_d = false`.
+     *
+     * Alternatively, this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_cohens_d = false`.
      */
     std::vector<Stat_> cohens_d;
 
@@ -182,7 +205,8 @@ struct ScoreMarkersPairwiseResults {
      * Vector of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the AUC for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::auc` for details on the layout.
-     * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_auc = false`.
+     *
+     * Alternatively, this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_auc = false`.
      */
     std::vector<Stat_> auc;
 
@@ -190,7 +214,8 @@ struct ScoreMarkersPairwiseResults {
      * Vector of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the difference in means for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for details on the layout.
-     * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_mean = false`.
+     *
+     * Alternatively, this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_mean = false`.
      */
     std::vector<Stat_> delta_mean;
 
@@ -198,7 +223,8 @@ struct ScoreMarkersPairwiseResults {
      * Vector of length equal to \f$GN^2\f$, where \f$G\f$ is the number of genes and \f$N\f$ is the number of groups.
      * This is a 3-dimensional array to be filled with the difference in detected proportions for the comparison between each pair of groups for each gene;
      * see `ScoreMarkersPairwiseBuffers::cohens_d` for details on the layout.
-     * Alternatively this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_detected = false`.
+     *
+     * Alternatively, this may be an empty vector if `ScoreMarkersPairwiseOptions::compute_delta_detected = false`.
      */
     std::vector<Stat_> delta_detected;
 };
@@ -233,22 +259,32 @@ void process_simple_pairwise_effects(
     tatami::parallelize([&](const int, const Index_ start, const Index_ length) -> void {
         for (Index_ gene = start, end = start + length; gene < end; ++gene) {
             auto in_offset = sanisizer::product_unsafe<std::size_t>(gene, ncombos);
-            const auto tmp_means = combo_means.data() + in_offset;
-            const auto tmp_variances = combo_vars.data() + in_offset;
-            const auto tmp_detected = combo_detected.data() + in_offset;
-            average_group_stats(gene, ngroups, nblocks, tmp_means, tmp_detected, combo_weights.data(), total_weights_ptr, output.mean, output.detected);
+
+            if (!output.mean.empty()) {
+                const auto tmp_means = combo_means.data() + in_offset;
+                average_group_stats(gene, ngroups, nblocks, tmp_means, combo_weights.data(), total_weights_ptr, output.mean);
+            }
+            if (!output.detected.empty()) {
+                const auto tmp_detected = combo_detected.data() + in_offset;
+                average_group_stats(gene, ngroups, nblocks, tmp_detected, combo_weights.data(), total_weights_ptr, output.detected);
+            }
 
             // Computing the effect sizes.
             const auto out_offset = sanisizer::product_unsafe<std::size_t>(gene, ngroups, ngroups);
+
             if (output.cohens_d != NULL) {
+                const auto tmp_means = combo_means.data() + in_offset;
+                const auto tmp_variances = combo_vars.data() + in_offset;
                 compute_pairwise_cohens_d(tmp_means, tmp_variances, ngroups, nblocks, preweights, threshold, output.cohens_d + out_offset);
             }
 
             if (output.delta_detected != NULL) {
+                const auto tmp_detected = combo_detected.data() + in_offset;
                 compute_pairwise_simple_diff(tmp_detected, ngroups, nblocks, preweights, output.delta_detected + out_offset);
             }
 
             if (output.delta_mean != NULL) {
+                const auto tmp_means = combo_means.data() + in_offset;
                 compute_pairwise_simple_diff(tmp_means, ngroups, nblocks, preweights, output.delta_mean + out_offset);
             }
         }
@@ -256,10 +292,15 @@ void process_simple_pairwise_effects(
 }
 
 template<typename Index_, typename Stat_>
-ScoreMarkersPairwiseBuffers<Stat_> fill_pairwise_results(const Index_ ngenes, const std::size_t ngroups, ScoreMarkersPairwiseResults<Stat_>& store, const ScoreMarkersPairwiseOptions& opt) {
+ScoreMarkersPairwiseBuffers<Stat_> preallocate_pairwise_results(const Index_ ngenes, const std::size_t ngroups, ScoreMarkersPairwiseResults<Stat_>& store, const ScoreMarkersPairwiseOptions& opt) {
     ScoreMarkersPairwiseBuffers<Stat_> output;
 
-    fill_average_results(ngenes, ngroups, store.mean, store.detected, output.mean, output.detected);
+    if (opt.compute_group_mean) {
+        preallocate_average_results(ngenes, ngroups, store.mean, output.mean);
+    }
+    if (opt.compute_group_detected) {
+        preallocate_average_results(ngenes, ngroups, store.detected, output.detected);
+    }
 
     const auto num_effect_sizes = sanisizer::product<typename std::vector<Stat_>::size_type>(ngenes, ngroups, ngroups);
 
@@ -321,7 +362,16 @@ void score_markers_pairwise(
 ) {
     const auto ngenes = matrix.nrow();
     const auto payload_size = sanisizer::product<typename std::vector<Stat_>::size_type>(ngenes, ncombos);
-    std::vector<Stat_> combo_means(payload_size), combo_vars(payload_size), combo_detected(payload_size);
+    std::vector<Stat_> combo_means, combo_vars, combo_detected;
+    if (!output.mean.empty() || output.cohens_d != NULL || output.delta_mean != NULL) {
+        combo_means.resize(payload_size);
+    }
+    if (output.cohens_d != NULL) {
+        combo_vars.resize(payload_size);
+    }
+    if (!output.detected.empty() || output.delta_detected != NULL) {
+        combo_detected.resize(payload_size);
+    }
 
     // For a single block, this usually doesn't really matter, but we do it for consistency with the multi-block case,
     // and to account for variable weighting where non-zero block sizes get zero weight.
@@ -579,7 +629,7 @@ template<typename Stat_ = double, typename Value_, typename Index_, typename Gro
 ScoreMarkersPairwiseResults<Stat_> score_markers_pairwise(const tatami::Matrix<Value_, Index_>& matrix, const Group_* const group, const ScoreMarkersPairwiseOptions& options) {
     const auto ngroups = tatami_stats::total_groups(group, matrix.ncol());
     ScoreMarkersPairwiseResults<Stat_> res;
-    auto buffers = internal::fill_pairwise_results(matrix.nrow(), ngroups, res, options);
+    auto buffers = internal::preallocate_pairwise_results(matrix.nrow(), ngroups, res, options);
     score_markers_pairwise(matrix, group, options, buffers);
     return res; 
 }
@@ -612,7 +662,7 @@ ScoreMarkersPairwiseResults<Stat_> score_markers_pairwise_blocked(
 {
     const auto ngroups = tatami_stats::total_groups(group, matrix.ncol());
     ScoreMarkersPairwiseResults<Stat_> res;
-    const auto buffers = internal::fill_pairwise_results(matrix.nrow(), ngroups, res, options);
+    const auto buffers = internal::preallocate_pairwise_results(matrix.nrow(), ngroups, res, options);
     score_markers_pairwise_blocked(matrix, group, block, options, buffers);
     return res;
 }

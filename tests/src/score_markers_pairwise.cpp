@@ -6,36 +6,43 @@
 
 #include "utils.h"
 
-void compare_results(
-    const scran_markers::ScoreMarkersPairwiseResults<double>& expected, 
-    const scran_markers::ScoreMarkersPairwiseResults<double>& observed,
-    bool include_auc) 
-{
-    ASSERT_EQ(expected.mean.size(), observed.mean.size());
-    for (size_t g = 0; g < expected.mean.size(); ++g) {
-        scran_tests::compare_almost_equal(expected.mean[g], observed.mean[g]);
+class ScoreMarkersPairwiseTestCore {
+protected:
+    static void compare_averages(const std::vector<std::vector<double> >& res, const std::vector<std::vector<double> >& other) {
+        const int ngroups = res.size();
+        ASSERT_EQ(ngroups, other.size());
+        for (int l = 0; l < ngroups; ++l) {
+            scran_tests::compare_almost_equal(res[l], other[l]);
+        }
     }
 
-    ASSERT_EQ(expected.detected.size(), observed.detected.size());
-    for (size_t g = 0; g < expected.detected.size(); ++g) {
-        scran_tests::compare_almost_equal(expected.detected[g], observed.detected[g]);
-    }
+    static void compare_results(
+        const scran_markers::ScoreMarkersPairwiseResults<double>& expected, 
+        const scran_markers::ScoreMarkersPairwiseResults<double>& observed,
+        bool include_auc) 
+    {
+        compare_averages(expected.mean, observed.mean);
+        compare_averages(expected.detected, observed.detected);
 
-    scran_tests::compare_almost_equal(expected.cohens_d, observed.cohens_d);
-    scran_tests::compare_almost_equal(expected.delta_mean, observed.delta_mean);
-    scran_tests::compare_almost_equal(expected.delta_detected, observed.delta_detected);
+        scran_tests::compare_almost_equal(expected.cohens_d, observed.cohens_d);
+        scran_tests::compare_almost_equal(expected.delta_mean, observed.delta_mean);
+        scran_tests::compare_almost_equal(expected.delta_detected, observed.delta_detected);
 
-    if (include_auc) {
-        scran_tests::compare_almost_equal(expected.auc, observed.auc);
+        if (include_auc) {
+            scran_tests::compare_almost_equal(expected.auc, observed.auc);
+        }
     }
-}
+};
 
 /*********************************************/
 
 // We compare against the reference to check that the account-keeping
 // with respect to threading and threshold specification is correct.
 
-class ScoreMarkersPairwiseUnblockedTest : public ::testing::TestWithParam<std::tuple<int, double, bool, int> > {
+class ScoreMarkersPairwiseUnblockedTest :
+    public ScoreMarkersPairwiseTestCore,
+    public ::testing::TestWithParam<std::tuple<int, double, bool, int> >
+{
 protected:
     inline static std::shared_ptr<tatami::Matrix<double, int> > dense_row, dense_column, sparse_row, sparse_column;
 
@@ -174,7 +181,10 @@ INSTANTIATE_TEST_SUITE_P(
 
 /*********************************************/
 
-class ScoreMarkersPairwiseBlockedTest : public ::testing::TestWithParam<std::tuple<int, int, bool, scran_blocks::WeightPolicy, int> > {
+class ScoreMarkersPairwiseBlockedTest : 
+    public ScoreMarkersPairwiseTestCore,
+    public ::testing::TestWithParam<std::tuple<int, int, bool, scran_blocks::WeightPolicy, int> >
+{
 protected:
     inline static std::shared_ptr<tatami::Matrix<double, int> > dense_row, dense_column, sparse_row, sparse_column;
 
@@ -613,23 +623,167 @@ TEST(ScoreMarkersPairwiseScenarios, BlockConfounded) {
     }
 }
 
-TEST(ScoreMarkersPairwiseScenarios, Disabled) {
-    int ngenes = 10, nsamples = 40;
-    tatami::DenseRowMatrix<double, int> mat(ngenes, nsamples, std::vector<double>(ngenes * nsamples));
-    int ngroups = 4;
-    std::vector<int> groupings = create_groupings(nsamples, ngroups);
+/*********************************************/
+
+class ScoreMarkersPairwiseOneAtATimeTest :
+    public ScoreMarkersPairwiseTestCore,
+    public ::testing::TestWithParam<int>
+{
+protected:
+    inline static std::shared_ptr<tatami::Matrix<double, int> > dense_row, dense_column, sparse_row, sparse_column;
+
+    static void SetUpTestSuite() {
+        size_t nr = 128, nc = 302;
+        dense_row.reset(
+            new tatami::DenseRowMatrix<double, int>(
+                nr,
+                nc,
+                scran_tests::simulate_vector(
+                    nr * nc, 
+                    []{
+                        scran_tests::SimulationParameters sparam;
+                        sparam.density = 0.2;
+                        sparam.seed = 96;
+                        return sparam;
+                    }()
+                )
+            )
+        );
+
+        dense_column = tatami::convert_to_dense(dense_row.get(), false);
+        sparse_row = tatami::convert_to_compressed_sparse(dense_row.get(), true);
+        sparse_column = tatami::convert_to_compressed_sparse(dense_row.get(), false);
+    }
+};
+
+TEST_P(ScoreMarkersPairwiseOneAtATimeTest, Basic) {
+    auto NC = dense_row->ncol();
+    std::vector<int> groupings = create_groupings(NC, 3);
+
+    const tatami::Matrix<double, int>* mat;
+    switch (GetParam()) {
+        case 0:
+            mat = dense_row.get(); break;
+        case 1:
+            mat = dense_column.get(); break;
+        case 2:
+            mat = sparse_row.get(); break;
+        case 3:
+            mat = sparse_column.get(); break;
+    }
 
     scran_markers::ScoreMarkersPairwiseOptions opt;
-    opt.compute_cohens_d = false;
-    opt.compute_auc = false;
-    opt.compute_delta_detected = false;
-    opt.compute_delta_mean = false;
+    auto ref = scran_markers::score_markers_pairwise<double>(*mat, groupings.data(), opt);
 
-    auto empty = scran_markers::score_markers_pairwise(mat, groupings.data(), opt);
-    EXPECT_EQ(empty.mean.size(), ngroups);
-    EXPECT_EQ(empty.detected.size(), ngroups);
-    EXPECT_TRUE(empty.cohens_d.empty());
-    EXPECT_TRUE(empty.auc.empty());
-    EXPECT_TRUE(empty.delta_mean.empty());
-    EXPECT_TRUE(empty.delta_detected.empty());
+    // Only the group mean.
+    {
+        scran_markers::ScoreMarkersPairwiseOptions opt;
+        opt.compute_group_detected = false;
+        opt.compute_cohens_d = false;
+        opt.compute_auc = false;
+        opt.compute_delta_mean = false;
+        opt.compute_delta_detected = false;
+
+        auto alt = scran_markers::score_markers_pairwise<double>(*mat, groupings.data(), opt);
+        compare_averages(ref.mean, alt.mean);
+        EXPECT_TRUE(alt.detected.empty());
+        EXPECT_TRUE(alt.cohens_d.empty());
+        EXPECT_TRUE(alt.auc.empty());
+        EXPECT_TRUE(alt.delta_mean.empty());
+        EXPECT_TRUE(alt.delta_detected.empty());
+    }
+
+    // Only the group detected proportions.
+    {
+        scran_markers::ScoreMarkersPairwiseOptions opt;
+        opt.compute_group_mean = false;
+        opt.compute_cohens_d = false;
+        opt.compute_auc = false;
+        opt.compute_delta_mean = false;
+        opt.compute_delta_detected = false;
+
+        auto alt = scran_markers::score_markers_pairwise<double>(*mat, groupings.data(), opt);
+        compare_averages(ref.detected, alt.detected);
+        EXPECT_TRUE(alt.mean.empty());
+        EXPECT_TRUE(alt.cohens_d.empty());
+        EXPECT_TRUE(alt.auc.empty());
+        EXPECT_TRUE(alt.delta_mean.empty());
+        EXPECT_TRUE(alt.delta_detected.empty());
+    }
+
+    // Only Cohen's d.
+    {
+        scran_markers::ScoreMarkersPairwiseOptions opt;
+        opt.compute_group_mean = false;
+        opt.compute_group_detected = false;
+        opt.compute_auc = false;
+        opt.compute_delta_mean = false;
+        opt.compute_delta_detected = false;
+
+        auto alt = scran_markers::score_markers_pairwise<double>(*mat, groupings.data(), opt);
+        scran_tests::compare_almost_equal(alt.cohens_d, ref.cohens_d);
+        EXPECT_TRUE(alt.mean.empty());
+        EXPECT_TRUE(alt.detected.empty());
+        EXPECT_TRUE(alt.auc.empty());
+        EXPECT_TRUE(alt.delta_mean.empty());
+        EXPECT_TRUE(alt.delta_detected.empty());
+    }
+
+    // Only AUC.
+    {
+        scran_markers::ScoreMarkersPairwiseOptions opt;
+        opt.compute_group_mean = false;
+        opt.compute_group_detected = false;
+        opt.compute_cohens_d = false;
+        opt.compute_delta_mean = false;
+        opt.compute_delta_detected = false;
+
+        auto alt = scran_markers::score_markers_pairwise<double>(*mat, groupings.data(), opt);
+        scran_tests::compare_almost_equal(alt.auc, ref.auc);
+        EXPECT_TRUE(alt.cohens_d.empty());
+        EXPECT_TRUE(alt.delta_mean.empty());
+        EXPECT_TRUE(alt.delta_detected.empty());
+    }
+
+    // Only delta-mean.
+    {
+        scran_markers::ScoreMarkersPairwiseOptions opt;
+        opt.compute_group_mean = false;
+        opt.compute_group_detected = false;
+        opt.compute_cohens_d = false;
+        opt.compute_auc = false;
+        opt.compute_delta_detected = false;
+
+        auto alt = scran_markers::score_markers_pairwise<double>(*mat, groupings.data(), opt);
+        scran_tests::compare_almost_equal(alt.delta_mean, ref.delta_mean);
+        EXPECT_TRUE(alt.mean.empty());
+        EXPECT_TRUE(alt.detected.empty());
+        EXPECT_TRUE(alt.cohens_d.empty());
+        EXPECT_TRUE(alt.auc.empty());
+        EXPECT_TRUE(alt.delta_detected.empty());
+    }
+
+    // Only delta-mean.
+    {
+        scran_markers::ScoreMarkersPairwiseOptions opt;
+        opt.compute_group_mean = false;
+        opt.compute_group_detected = false;
+        opt.compute_cohens_d = false;
+        opt.compute_auc = false;
+        opt.compute_delta_mean = false;
+
+        auto alt = scran_markers::score_markers_pairwise<double>(*mat, groupings.data(), opt);
+        scran_tests::compare_almost_equal(alt.delta_detected, ref.delta_detected);
+        EXPECT_TRUE(alt.mean.empty());
+        EXPECT_TRUE(alt.detected.empty());
+        EXPECT_TRUE(alt.cohens_d.empty());
+        EXPECT_TRUE(alt.auc.empty());
+        EXPECT_TRUE(alt.delta_mean.empty());
+    }
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    ScoreMarkersPairwise,
+    ScoreMarkersPairwiseOneAtATimeTest,
+    ::testing::Values(0, 1, 2, 3)
+);
