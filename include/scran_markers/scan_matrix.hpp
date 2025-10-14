@@ -508,7 +508,7 @@ void scan_matrix_by_column(
                 } else if (do_means) {
                     auto& curmean = tmp_means[co];
                     for (Index_ r = 0; r < length; ++r) {
-                        curmean[r] += (ptr[r] != 0);
+                        curmean[r] += ptr[r];
                     }
                 }
 
