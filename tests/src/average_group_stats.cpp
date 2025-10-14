@@ -71,7 +71,7 @@ TEST_F(AverageGroupStatsTest, Basic) {
     }
 }
 
-TEST_F(AverageGroupStatsTest, Zeroed) {
+TEST_F(AverageGroupStatsTest, ZeroedBlock) {
     // Zeroing all weights in the second block.
     auto copy_weights = weights;
     std::fill_n(copy_weights.begin() + ngroups, ngroups, 0);
@@ -120,9 +120,41 @@ TEST_F(AverageGroupStatsTest, Zeroed) {
         auto expected_m = scran_blocks::average_vectors_weighted(ngenes, ptrs, current_weights.data(), /* skip_nan = */ false);
         scran_tests::compare_almost_equal(expected_m, average_mean[g]);
     }
+
+    // Same result if we replace the middle block's values with NA;
+    // ensure that zero weights are actually skipped.
+    {
+        std::vector<std::vector<double> > average_mean_copy(ngroups);
+        std::vector<double*> mean_ptrs_copy(ngroups); 
+        for (std::size_t g = 0; g < ngroups; ++g) {
+            average_mean_copy[g].resize(ngenes);
+            mean_ptrs_copy[g] = average_mean_copy[g].data();
+        }
+
+        auto means_copy = means;
+        for (std::size_t r = 0; r < ngenes; ++r) {
+            size_t offset = r * ngroups * nblocks;
+            auto mcptr = means_copy.data() + offset;
+            std::fill_n(mcptr + ngroups, nblocks, std::numeric_limits<double>::quiet_NaN());
+
+            scran_markers::internal::average_group_stats(
+                r, 
+                ngroups,
+                nblocks,
+                mcptr,
+                copy_weights.data(),
+                total_weights.data(),
+                mean_ptrs_copy
+            );
+        }
+
+        for (std::size_t g = 0; g < ngroups; ++g) {
+            EXPECT_EQ(average_mean_copy[g], average_mean[g]);
+        }
+    }
 }
 
-TEST_F(AverageGroupStatsTest, AllZeroed) {
+TEST_F(AverageGroupStatsTest, ZeroedGroup) {
     // Zeroing all weights in the first group.
     auto copy_weights = weights;
     for (size_t b = 0; b < nblocks; ++b) {

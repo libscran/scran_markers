@@ -45,7 +45,10 @@ void average_group_stats(
         for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
             // Remember, blocks are the slower changing dimension, so we need to jump by 'ngroups'.
             const auto offset = sanisizer::nd_offset<std::size_t>(g, ngroups, b);
-            output += combo_weights[offset] * tmp_stats[offset];
+            const auto& curweight = combo_weights[offset];
+            if (curweight) { // check if this is zero, in which case tmp_stats could be NaN.
+                output += curweight * tmp_stats[offset];
+            }
         }
 
         out_stats[g][gene] = output / total_weight;
