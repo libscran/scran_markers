@@ -6,18 +6,12 @@
 class AverageGroupStatsTest : public ::testing::Test {
 protected:
     inline static size_t ngroups = 5, nblocks = 3, ngenes = 100; 
-    inline static std::vector<double> means, detected, weights;
+    inline static std::vector<double> means, weights;
 
     static void SetUpTestSuite() {
         means = scran_tests::simulate_vector(ngenes * ngroups * nblocks, []{ 
             scran_tests::SimulationParameters sparam;
             sparam.seed = 43210;
-            return sparam;
-        }());
-
-        detected = scran_tests::simulate_vector(ngenes * ngroups * nblocks, []{ 
-            scran_tests::SimulationParameters sparam;
-            sparam.seed = 98765;
             return sparam;
         }());
 
@@ -32,13 +26,11 @@ protected:
 };
 
 TEST_F(AverageGroupStatsTest, Basic) {
-    std::vector<std::vector<double> > average_mean(ngroups), average_detected(ngroups);
-    std::vector<double*> mean_ptrs(ngroups), detected_ptrs(ngroups);
+    std::vector<std::vector<double> > average_mean(ngroups);
+    std::vector<double*> mean_ptrs(ngroups); 
     for (size_t g = 0; g < ngroups; ++g) {
         average_mean[g].resize(ngenes);
         mean_ptrs[g] = average_mean[g].data();
-        average_detected[g].resize(ngenes);
-        detected_ptrs[g] = average_detected[g].data();
     }
 
     auto total_weights = scran_markers::internal::compute_total_weight_per_group(ngroups, nblocks, weights.data());
@@ -49,11 +41,9 @@ TEST_F(AverageGroupStatsTest, Basic) {
             ngroups,
             nblocks,
             means.data() + offset,
-            detected.data() + offset,
             weights.data(),
             total_weights.data(),
-            mean_ptrs,
-            detected_ptrs
+            mean_ptrs
         );
     }
 
@@ -78,14 +68,6 @@ TEST_F(AverageGroupStatsTest, Basic) {
         }
         auto expected_m = scran_blocks::average_vectors_weighted(ngenes, ptrs, current_weights.data(), /* skip_nan = */ false);
         scran_tests::compare_almost_equal(expected_m, average_mean[g]);
-
-        for (size_t r = 0; r < ngenes; ++r) {
-            for (size_t b = 0; b < nblocks; ++b) {
-                buffers[b][r] = detected[(r * nblocks + b) * ngroups + g];
-            }
-        }
-        auto expected_d = scran_blocks::average_vectors_weighted(ngenes, ptrs, current_weights.data(), /* skip_nan = */ false);
-        scran_tests::compare_almost_equal(expected_d, average_detected[g]);
     }
 }
 
@@ -94,13 +76,11 @@ TEST_F(AverageGroupStatsTest, Zeroed) {
     auto copy_weights = weights;
     std::fill_n(copy_weights.begin() + ngroups, ngroups, 0);
 
-    std::vector<std::vector<double> > average_mean(ngroups), average_detected(ngroups);
-    std::vector<double*> mean_ptrs(ngroups), detected_ptrs(ngroups);
+    std::vector<std::vector<double> > average_mean(ngroups);
+    std::vector<double*> mean_ptrs(ngroups); 
     for (size_t g = 0; g < ngroups; ++g) {
         average_mean[g].resize(ngenes);
         mean_ptrs[g] = average_mean[g].data();
-        average_detected[g].resize(ngenes);
-        detected_ptrs[g] = average_detected[g].data();
     }
 
     auto total_weights = scran_markers::internal::compute_total_weight_per_group(ngroups, nblocks, copy_weights.data());
@@ -111,11 +91,9 @@ TEST_F(AverageGroupStatsTest, Zeroed) {
             ngroups,
             nblocks,
             means.data() + offset,
-            detected.data() + offset,
             copy_weights.data(),
             total_weights.data(),
-            mean_ptrs,
-            detected_ptrs
+            mean_ptrs
         );
     }
 
@@ -141,14 +119,6 @@ TEST_F(AverageGroupStatsTest, Zeroed) {
         }
         auto expected_m = scran_blocks::average_vectors_weighted(ngenes, ptrs, current_weights.data(), /* skip_nan = */ false);
         scran_tests::compare_almost_equal(expected_m, average_mean[g]);
-
-        for (size_t r = 0; r < ngenes; ++r) {
-            for (const auto& br : block_remap) {
-                buffers[br.first][r] = detected[(r * nblocks + br.second) * ngroups + g];
-            }
-        }
-        auto expected_d = scran_blocks::average_vectors_weighted(ngenes, ptrs, current_weights.data(), /* skip_nan = */ false);
-        scran_tests::compare_almost_equal(expected_d, average_detected[g]);
     }
 }
 
@@ -159,13 +129,11 @@ TEST_F(AverageGroupStatsTest, AllZeroed) {
         copy_weights[b * ngroups] = 0;
     }
 
-    std::vector<std::vector<double> > average_mean(ngroups), average_detected(ngroups);
-    std::vector<double*> mean_ptrs(ngroups), detected_ptrs(ngroups);
+    std::vector<std::vector<double> > average_mean(ngroups);
+    std::vector<double*> mean_ptrs(ngroups);
     for (size_t g = 0; g < ngroups; ++g) {
         average_mean[g].resize(ngenes);
         mean_ptrs[g] = average_mean[g].data();
-        average_detected[g].resize(ngenes);
-        detected_ptrs[g] = average_detected[g].data();
     }
 
     auto total_weights = scran_markers::internal::compute_total_weight_per_group(ngroups, nblocks, copy_weights.data());
@@ -176,11 +144,9 @@ TEST_F(AverageGroupStatsTest, AllZeroed) {
             ngroups,
             nblocks,
             means.data() + offset,
-            detected.data() + offset,
             copy_weights.data(),
             total_weights.data(),
-            mean_ptrs,
-            detected_ptrs
+            mean_ptrs
         );
     }
 
@@ -190,17 +156,10 @@ TEST_F(AverageGroupStatsTest, AllZeroed) {
     }
     EXPECT_EQ(num_na, ngenes);
 
-    num_na = 0;
-    for (auto x : average_detected[0]) {
-        num_na += std::isnan(x);
-    }
-    EXPECT_EQ(num_na, ngenes);
-
     // Other groups are not affected.
     num_na = 0;
-    for (auto x : average_detected[1]) {
+    for (auto x : average_mean[1]) {
         num_na += std::isnan(x);
     }
     EXPECT_EQ(num_na, 0);
-
 }
