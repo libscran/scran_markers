@@ -48,6 +48,18 @@ struct ScoreMarkersSummaryOptions {
     int cache_size = 100;
 
     /**
+     * Whether to compute the mean expression in each group.
+     * This only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
+     */
+    bool compute_group_mean = true;
+
+    /**
+     * Whether to compute the proportion of cells with detected expression in each group.
+     * This only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
+     */
+    bool compute_group_detected = true;
+
+    /**
      * Whether to compute Cohen's d. 
      * This only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
      */
@@ -131,6 +143,8 @@ struct ScoreMarkersSummaryBuffers {
      * Vector of length equal to the number of groups.
      * Each pointer corresponds to a group and points to an array of length equal to the number of genes,
      * to be filled with the mean expression of each gene in that group. 
+     *
+     * Alternatively, this vector may be empty, in which case the means are not computed.
      */
     std::vector<Stat_*> mean;
 
@@ -138,6 +152,8 @@ struct ScoreMarkersSummaryBuffers {
      * Vector of length equal to the number of groups.
      * Each pointer corresponds to a group and points to an array of length equal to the number of genes,
      * to be filled with the proportion of cells with detected expression in that group. 
+     *
+     * Alternatively, this vector may be empty, in which case the detected proportions are not computed.
      */
     std::vector<Stat_*> detected;
 
@@ -451,7 +467,7 @@ void process_simple_summary_effects(
     const int num_threads)
 {
     // First, computing the pooled averages to get that out of the way.
-    {
+    if (!output.mean.empty() || !output.detected.empty()) {
         std::vector<Stat_> total_weights_per_group;
         auto total_weights_ptr = combo_weights.data();
         if (nblocks > 1) {
@@ -462,11 +478,22 @@ void process_simple_summary_effects(
         tatami::parallelize([&](const int, const Index_ start, const Index_ length) -> void {
             for (Index_ gene = start, end = start + length; gene < end; ++gene) {
                 const auto in_offset = sanisizer::product_unsafe<std::size_t>(gene, ncombos);
-                const auto tmp_means = combo_means.data() + in_offset;
-                const auto tmp_detected = combo_detected.data() + in_offset;
-                average_group_stats(gene, ngroups, nblocks, tmp_means, tmp_detected, combo_weights.data(), total_weights_ptr, output.mean, output.detected);
+
+                if (!output.mean.empty()) {
+                    const auto tmp_means = combo_means.data() + in_offset;
+                    average_group_stats(gene, ngroups, nblocks, tmp_means, combo_weights.data(), total_weights_ptr, output.mean);
+                }
+
+                if (!output.detected.empty()) {
+                    const auto tmp_detected = combo_detected.data() + in_offset;
+                    average_group_stats(gene, ngroups, nblocks, tmp_detected, combo_weights.data(), total_weights_ptr, output.detected);
+                }
             }
         }, ngenes, num_threads);
+    }
+
+    if (output.cohens_d.empty() && output.delta_mean.empty() && output.delta_detected.empty()) {
+        return;
     }
 
     PrecomputedPairwiseWeights<Stat_> preweights(ngroups, nblocks, combo_weights.data());
@@ -580,7 +607,7 @@ void process_simple_summary_effects(
 }
 
 template<typename Index_, typename Stat_, typename Rank_>
-ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(
+ScoreMarkersSummaryBuffers<Stat_, Rank_> preallocate_summary_results(
     const Index_ ngenes,
     const std::size_t ngroups,
     ScoreMarkersSummaryResults<Stat_, Rank_>& store,
@@ -588,7 +615,13 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> fill_summary_results(
 {
     ScoreMarkersSummaryBuffers<Stat_, Rank_> output;
 
-    fill_average_results(ngenes, ngroups, store.mean, store.detected, output.mean, output.detected);
+    if (options.compute_group_mean) { 
+        preallocate_average_results(ngenes, ngroups, store.mean, output.mean);
+    }
+
+    if (options.compute_group_detected) { 
+        preallocate_average_results(ngenes, ngroups, store.detected, output.detected);
+    }
 
     if (options.compute_cohens_d) {
         output.cohens_d = fill_summary_results(
@@ -678,7 +711,16 @@ void score_markers_summary(
 ) {
     const auto ngenes = matrix.nrow();
     const auto payload_size = sanisizer::product<typename std::vector<Stat_>::size_type>(ngenes, ncombos);
-    std::vector<Stat_> combo_means(payload_size), combo_vars(payload_size), combo_detected(payload_size);
+    std::vector<Stat_> combo_means, combo_vars, combo_detected;
+    if (!output.mean.empty() || !output.cohens_d.empty() || !output.delta_mean.empty()) {
+        combo_means.resize(payload_size);
+    }
+    if (!output.cohens_d.empty()) {
+        combo_vars.resize(payload_size);
+    }
+    if (!output.detected.empty() || !output.delta_detected.empty()) {
+        combo_detected.resize(payload_size);
+    }
 
     // For a single block, this usually doesn't really matter, but we do it for consistency with the multi-block case,
     // and to account for variable weighting where non-zero block sizes get zero weight.
@@ -689,7 +731,6 @@ void score_markers_summary(
     );
 
     const bool do_auc = !output.auc.empty();
-
     if (do_auc || matrix.prefer_rows()) {
         if (do_auc && !auc_needs_minrank(output.auc)) {
             // If we don't need the min-rank, we can compute summaries for the AUCs directly.
@@ -956,7 +997,7 @@ ScoreMarkersSummaryResults<Stat_, Rank_> score_markers_summary(
 {
     const auto ngroups = tatami_stats::total_groups(group, matrix.ncol());
     ScoreMarkersSummaryResults<Stat_, Rank_> output;
-    const auto buffers = internal::fill_summary_results(matrix.nrow(), ngroups, output, options);
+    const auto buffers = internal::preallocate_summary_results(matrix.nrow(), ngroups, output, options);
     score_markers_summary(matrix, group, options, buffers);
     return output;
 }
@@ -990,7 +1031,7 @@ ScoreMarkersSummaryResults<Stat_, Rank_> score_markers_summary_blocked(
 {
     const auto ngroups = tatami_stats::total_groups(group, matrix.ncol());
     ScoreMarkersSummaryResults<Stat_, Rank_> output;
-    const auto buffers = internal::fill_summary_results(matrix.nrow(), ngroups, output, options);
+    const auto buffers = internal::preallocate_summary_results(matrix.nrow(), ngroups, output, options);
     score_markers_summary_blocked(matrix, group, block, options, buffers);
     return output;
 }
