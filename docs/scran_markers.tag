@@ -71,6 +71,20 @@
     </member>
     <member kind="variable">
       <type>bool</type>
+      <name>compute_group_mean</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>a6c7a5f44323e9ce0e6910933a1cdcb30</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>compute_group_detected</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>a69e2082f057cc0d2db9b66dbfc0635ea</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
       <name>compute_cohens_d</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
       <anchor>a123cba61d40fcdc36d8cc1e674b6965f</anchor>
@@ -289,6 +303,20 @@
     </member>
     <member kind="variable">
       <type>bool</type>
+      <name>compute_group_mean</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersPairwiseOptions.html</anchorfile>
+      <anchor>a201e69fcbaacf2886b7056778f39a8a4</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>compute_group_detected</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersPairwiseOptions.html</anchorfile>
+      <anchor>a933d78cc72b7cd25c91bc0aea014d1ad</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
       <name>compute_cohens_d</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersPairwiseOptions.html</anchorfile>
       <anchor>aafa7f898adc49ec6fdb72cc9300406c1</anchor>
@@ -447,6 +475,20 @@
       <name>cache_size</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
       <anchor>a29fbb41c392819f973c9a96826555aa9</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>compute_group_mean</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>a4ebd443ade8dc5f6f5d6602080201a59</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>compute_group_detected</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>a1275da27456adda933f2516835199715</anchor>
       <arglist></arglist>
     </member>
     <member kind="variable">

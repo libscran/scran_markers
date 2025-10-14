@@ -186,7 +186,8 @@ template&lt;typename Stat_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Pointer to an array of length equal to \(GN^2\), where \(G\) is the number of genes and \(N\) is the number of groups. This is a 3-dimensional array to be filled with the difference in the detected proportions for the comparison between each pair of groups for each gene; see <code><a class="el" href="#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code> for more details. Alternatively NULL, in which case the difference in detected proportions is not stored. </p>
+<p>Pointer to an array of length equal to \(GN^2\), where \(G\) is the number of genes and \(N\) is the number of groups. This is a 3-dimensional array to be filled with the difference in the detected proportions for the comparison between each pair of groups for each gene; see <code><a class="el" href="#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code> for more details.</p>
+<p>Alternatively NULL, in which case the difference in detected proportions is not stored. </p>
 
 </div>
 </div>
@@ -203,7 +204,8 @@ template&lt;typename Stat_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Pointer to an array of length equal to \(GN^2\), where \(G\) is the number of genes and \(N\) is the number of groups. This is a 3-dimensional array to be filled with the difference in means for the comparison between each pair of groups for each gene; see <code><a class="el" href="#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code> for more details. Alternatively NULL, in which case the difference in means is not stored. </p>
+<p>Pointer to an array of length equal to \(GN^2\), where \(G\) is the number of genes and \(N\) is the number of groups. This is a 3-dimensional array to be filled with the difference in means for the comparison between each pair of groups for each gene; see <code><a class="el" href="#a09a285a84e5ba22649d5aa0d87b2a21b">ScoreMarkersPairwiseBuffers::cohens_d</a></code> for more details.</p>
+<p>Alternatively NULL, in which case the difference in means is not stored. </p>
 
 </div>
 </div>
@@ -220,7 +222,8 @@ template&lt;typename Stat_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Vector of length equal to the number of groups. Each pointer corresponds to a group and points to an array of length equal to the number of genes, to be filled with the proportion of cells with detected expression in that group. </p>
+<p>Vector of length equal to the number of groups. Each pointer corresponds to a group and points to an array of length equal to the number of genes, to be filled with the proportion of cells with detected expression in that group.</p>
+<p>Alternatively, this vector may be empty, in which case the detected proportions are not computed. </p>
 
 </div>
 </div>
@@ -237,7 +240,8 @@ template&lt;typename Stat_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Vector of length equal to the number of groups. Each pointer corresponds to a group and points to an array of length equal to the number of genes, to be filled with the mean expression of each gene in that group. </p>
+<p>Vector of length equal to the number of groups. Each pointer corresponds to a group and points to an array of length equal to the number of genes, to be filled with the mean expression of each gene in that group.</p>
+<p>Alternatively, this vector may be empty, in which case the means are not computed. </p>
 
 </div>
 </div>

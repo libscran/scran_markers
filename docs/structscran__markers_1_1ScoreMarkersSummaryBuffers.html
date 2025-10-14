@@ -220,7 +220,8 @@ template&lt;typename Stat_ , typename Rank_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Vector of length equal to the number of groups. Each pointer corresponds to a group and points to an array of length equal to the number of genes, to be filled with the proportion of cells with detected expression in that group. </p>
+<p>Vector of length equal to the number of groups. Each pointer corresponds to a group and points to an array of length equal to the number of genes, to be filled with the proportion of cells with detected expression in that group.</p>
+<p>Alternatively, this vector may be empty, in which case the detected proportions are not computed. </p>
 
 </div>
 </div>
@@ -237,7 +238,8 @@ template&lt;typename Stat_ , typename Rank_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Vector of length equal to the number of groups. Each pointer corresponds to a group and points to an array of length equal to the number of genes, to be filled with the mean expression of each gene in that group. </p>
+<p>Vector of length equal to the number of groups. Each pointer corresponds to a group and points to an array of length equal to the number of genes, to be filled with the mean expression of each gene in that group.</p>
+<p>Alternatively, this vector may be empty, in which case the means are not computed. </p>
 
 </div>
 </div>

@@ -115,6 +115,10 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a1bfe79e22da0a7e1b8600baf13d3fbb3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad8fcee53b0fde5cf4e811746b96ef240" id="r_ad8fcee53b0fde5cf4e811746b96ef240"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad8fcee53b0fde5cf4e811746b96ef240">num_threads</a> = 1</td></tr>
 <tr class="separator:ad8fcee53b0fde5cf4e811746b96ef240"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6c7a5f44323e9ce0e6910933a1cdcb30" id="r_a6c7a5f44323e9ce0e6910933a1cdcb30"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6c7a5f44323e9ce0e6910933a1cdcb30">compute_group_mean</a> = true</td></tr>
+<tr class="separator:a6c7a5f44323e9ce0e6910933a1cdcb30"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a69e2082f057cc0d2db9b66dbfc0635ea" id="r_a69e2082f057cc0d2db9b66dbfc0635ea"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a69e2082f057cc0d2db9b66dbfc0635ea">compute_group_detected</a> = true</td></tr>
+<tr class="separator:a69e2082f057cc0d2db9b66dbfc0635ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a123cba61d40fcdc36d8cc1e674b6965f" id="r_a123cba61d40fcdc36d8cc1e674b6965f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a123cba61d40fcdc36d8cc1e674b6965f">compute_cohens_d</a> = true</td></tr>
 <tr class="separator:a123cba61d40fcdc36d8cc1e674b6965f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2007c3ef0856d7c924820eeabe7c610f" id="r_a2007c3ef0856d7c924820eeabe7c610f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2007c3ef0856d7c924820eeabe7c610f">compute_auc</a> = true</td></tr>
@@ -223,6 +227,36 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Whether to compute the delta-mean, i.e., difference in means. </p>
+
+</div>
+</div>
+<a id="a69e2082f057cc0d2db9b66dbfc0635ea" name="a69e2082f057cc0d2db9b66dbfc0635ea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a69e2082f057cc0d2db9b66dbfc0635ea">&#9670;&#160;</a></span>compute_group_detected</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool scran_markers::ScoreMarkersBestOptions::compute_group_detected = true</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Whether to compute the proportion of cells with detected expression in each group. </p>
+
+</div>
+</div>
+<a id="a6c7a5f44323e9ce0e6910933a1cdcb30" name="a6c7a5f44323e9ce0e6910933a1cdcb30"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6c7a5f44323e9ce0e6910933a1cdcb30">&#9670;&#160;</a></span>compute_group_mean</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool scran_markers::ScoreMarkersBestOptions::compute_group_mean = true</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Whether to compute the mean expression in each group. </p>
 
 </div>
 </div>

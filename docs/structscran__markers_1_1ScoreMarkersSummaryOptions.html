@@ -117,6 +117,10 @@ Public Attributes</h2></td></tr>
 <tr class="separator:acd9fd70b56bf779527de7a6068423bf6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a29fbb41c392819f973c9a96826555aa9" id="r_a29fbb41c392819f973c9a96826555aa9"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a29fbb41c392819f973c9a96826555aa9">cache_size</a> = 100</td></tr>
 <tr class="separator:a29fbb41c392819f973c9a96826555aa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4ebd443ade8dc5f6f5d6602080201a59" id="r_a4ebd443ade8dc5f6f5d6602080201a59"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4ebd443ade8dc5f6f5d6602080201a59">compute_group_mean</a> = true</td></tr>
+<tr class="separator:a4ebd443ade8dc5f6f5d6602080201a59"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1275da27456adda933f2516835199715" id="r_a1275da27456adda933f2516835199715"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1275da27456adda933f2516835199715">compute_group_detected</a> = true</td></tr>
+<tr class="separator:a1275da27456adda933f2516835199715"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab2100fe27f4471bdc296a718748ba699" id="r_ab2100fe27f4471bdc296a718748ba699"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab2100fe27f4471bdc296a718748ba699">compute_cohens_d</a> = true</td></tr>
 <tr class="separator:ab2100fe27f4471bdc296a718748ba699"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4d614cc8e81337b5c5880a7adecdba7f" id="r_a4d614cc8e81337b5c5880a7adecdba7f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4d614cc8e81337b5c5880a7adecdba7f">compute_auc</a> = true</td></tr>
@@ -232,6 +236,36 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Whether to compute the difference in means. This only affects the <code><a class="el" href="namespacescran__markers.html#a92c28687f963fbe5535e3fc0c4a60a80">score_markers_summary()</a></code> overload that returns a <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryResults.html" title="Results for score_markers_summary() and friends.">ScoreMarkersSummaryResults</a></code>. </p>
+
+</div>
+</div>
+<a id="a1275da27456adda933f2516835199715" name="a1275da27456adda933f2516835199715"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1275da27456adda933f2516835199715">&#9670;&#160;</a></span>compute_group_detected</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool scran_markers::ScoreMarkersSummaryOptions::compute_group_detected = true</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Whether to compute the proportion of cells with detected expression in each group. This only affects the <code><a class="el" href="namespacescran__markers.html#a92c28687f963fbe5535e3fc0c4a60a80">score_markers_summary()</a></code> overload that returns a <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryResults.html" title="Results for score_markers_summary() and friends.">ScoreMarkersSummaryResults</a></code>. </p>
+
+</div>
+</div>
+<a id="a4ebd443ade8dc5f6f5d6602080201a59" name="a4ebd443ade8dc5f6f5d6602080201a59"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4ebd443ade8dc5f6f5d6602080201a59">&#9670;&#160;</a></span>compute_group_mean</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool scran_markers::ScoreMarkersSummaryOptions::compute_group_mean = true</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Whether to compute the mean expression in each group. This only affects the <code><a class="el" href="namespacescran__markers.html#a92c28687f963fbe5535e3fc0c4a60a80">score_markers_summary()</a></code> overload that returns a <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryResults.html" title="Results for score_markers_summary() and friends.">ScoreMarkersSummaryResults</a></code>. </p>
 
 </div>
 </div>
