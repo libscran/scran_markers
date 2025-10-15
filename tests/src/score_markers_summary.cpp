@@ -46,6 +46,27 @@ protected:
     }
 
     template<class Summaries_>
+    static void compare_limited_minrank(int limit, const std::vector<Summaries_>& ref, const std::vector<Summaries_>& sum) {
+        const int ngroups = ref.size();
+        for (int l = 0; l < ngroups; ++l) {
+            const auto& refmr = ref[l].min_rank;
+            const auto& summr = sum[l].min_rank;
+
+            const int ngenes = refmr.size();
+            for (int ge = 0; ge < ngenes; ++ge) {
+                auto smr = summr[ge];
+                auto rmr = refmr[ge];
+                if (smr <= limit) {
+                    EXPECT_EQ(smr, rmr);
+                } else {
+                    EXPECT_GT(rmr, limit);
+                    EXPECT_EQ(smr, ngenes);
+                }
+            }
+        }
+    }
+
+    template<class Summaries_>
     static void check_effects(size_t ngenes, size_t group, const std::vector<Summaries_>& effects) {
         for (size_t g = 0; g < ngenes; ++g) {
             double curmin = effects[group].min[g];
@@ -54,9 +75,10 @@ protected:
             double curmax = effects[group].max[g];
             double currank = effects[group].min_rank[g];
 
-            EXPECT_LE(curmin, curmean);
+            // Relaxing by a tolerance to account for numerical imprecision when averaging multiple identical values. 
+            EXPECT_LE(curmin, curmean + 1e-8);
             EXPECT_LE(curmin, curmed);
-            EXPECT_GE(curmax, curmean);
+            EXPECT_GE(curmax, curmean - 1e-8);
             EXPECT_GE(curmax, curmed);
 
             if (curmed > curmin && std::isfinite(curmin)) { // i.e., not -Inf.
@@ -94,7 +116,7 @@ protected:
     inline static std::shared_ptr<tatami::Matrix<double, int> > dense_row, dense_column, sparse_row, sparse_column;
 
     static void SetUpTestSuite() {
-        size_t nr = 548, nc = 142;
+        size_t nr = 548, nc = 192;
         dense_row.reset(
             new tatami::DenseRowMatrix<double, int>(
                 nr,
@@ -103,7 +125,7 @@ protected:
                     nr * nc, 
                     []{
                         scran_tests::SimulationParameters sparam;
-                        sparam.density = 0.1;
+                        sparam.density = 0.15;
                         sparam.seed = 4242;
                         return sparam;
                     }()
@@ -167,16 +189,20 @@ TEST_P(ScoreMarkersSummaryTest, Basic) {
         scran_markers::SummarizeEffectsOptions sopt;
         auto cohen_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.cohens_d.data(), sopt);
         compare_summaries_for_effect(ngroups, cohen_summ, ref.cohens_d);
+        compare_limited_minrank(opt.min_rank_limit, cohen_summ, ref.cohens_d);
 
         auto dm_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.delta_mean.data(), sopt);
         compare_summaries_for_effect(ngroups, dm_summ, ref.delta_mean);
+        compare_limited_minrank(opt.min_rank_limit, dm_summ, ref.delta_mean);
 
         auto dd_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.delta_detected.data(), sopt);
         compare_summaries_for_effect(ngroups, dd_summ, ref.delta_detected);
+        compare_limited_minrank(opt.min_rank_limit, dd_summ, ref.delta_detected);
 
         if (do_auc) {
             auto auc_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.auc.data(), sopt);
             compare_summaries_for_effect(ngroups, auc_summ, ref.auc);
+            compare_limited_minrank(opt.min_rank_limit, auc_summ, ref.auc);
         }
 
     } else {
@@ -205,28 +231,23 @@ TEST_P(ScoreMarkersSummaryTest, Basic) {
         compare_effects(ngroups, ref, sc, do_auc);
     }
 
-    // Comparing to what happens if we disable minrank, which allows for more efficient AUC calculations.
-    if (do_auc) {
-        scran_markers::ScoreMarkersSummaryOptions opt_no_mr = opt;
-        opt_no_mr.compute_min_rank = false;
-        wipe_min_rank(ref);
+    {
+        // Trying with a more limited min-rank count.
+        auto mr_limited_opt = opt;
+        mr_limited_opt.min_rank_limit = 10;
+        auto limited = scran_markers::score_markers_summary(*dense_row, groupings.data(), mr_limited_opt);
 
-        auto dr_nmr = scran_markers::score_markers_summary(*dense_row, groupings.data(), opt_no_mr);
-        compare_effects(ngroups, ref, dr_nmr, true);
-
-        auto dc_nmr = scran_markers::score_markers_summary(*dense_column, groupings.data(), opt_no_mr);
-        compare_effects(ngroups, ref, dc_nmr, true);
-
-        auto sr_nmr = scran_markers::score_markers_summary(*sparse_row, groupings.data(), opt_no_mr);
-        compare_effects(ngroups, ref, sr_nmr, true);
-
-        auto sc_nmr = scran_markers::score_markers_summary(*sparse_column, groupings.data(), opt_no_mr);
-        compare_effects(ngroups, ref, sc_nmr, true);
+        compare_limited_minrank(mr_limited_opt.min_rank_limit, ref.cohens_d, limited.cohens_d);
+        compare_limited_minrank(mr_limited_opt.min_rank_limit, ref.delta_mean, limited.delta_mean);
+        compare_limited_minrank(mr_limited_opt.min_rank_limit, ref.delta_detected, limited.delta_detected);
+        if (do_auc) {
+            compare_limited_minrank(mr_limited_opt.min_rank_limit, ref.auc, limited.auc);
+        }
     }
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    ScoreMarkers,
+    ScoreMarkersSummary,
     ScoreMarkersSummaryTest,
     ::testing::Combine(
         ::testing::Values(2, 3, 4, 5), // number of clusters
@@ -251,7 +272,7 @@ protected:
                     nr * nc, 
                     []{
                         scran_tests::SimulationParameters sparam;
-                        sparam.density = 0.1;
+                        sparam.density = 0.18;
                         sparam.seed = 666 ;
                         return sparam;
                     }()
@@ -293,16 +314,20 @@ TEST_P(ScoreMarkersSummaryBlockedTest, AgainstPairwise) {
         size_t ngenes = dense_row->nrow();
         auto cohen_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.cohens_d.data(), sopt);
         compare_summaries_for_effect(ngroups, cohen_summ, ref.cohens_d);
+        compare_limited_minrank(opt.min_rank_limit, cohen_summ, ref.cohens_d);
 
         auto dm_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.delta_mean.data(), sopt);
         compare_summaries_for_effect(ngroups, dm_summ, ref.delta_mean);
+        compare_limited_minrank(opt.min_rank_limit, dm_summ, ref.delta_mean);
 
         auto dd_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.delta_detected.data(), sopt);
         compare_summaries_for_effect(ngroups, dd_summ, ref.delta_detected);
+        compare_limited_minrank(opt.min_rank_limit, dd_summ, ref.delta_detected);
 
         if (do_auc) {
             auto auc_summ = scran_markers::summarize_effects(ngenes, ngroups, pairres.auc.data(), sopt);
             compare_summaries_for_effect(ngroups, auc_summ, ref.auc);
+            compare_limited_minrank(opt.min_rank_limit, auc_summ, ref.auc);
         }
 
     } else {
@@ -331,23 +356,18 @@ TEST_P(ScoreMarkersSummaryBlockedTest, AgainstPairwise) {
         compare_effects(ngroups, ref, sc, do_auc);
     }
 
-    // Comparing to what happens if we disable minrank, which allows for more efficient AUC calculations.
-    if (do_auc) {
-        scran_markers::ScoreMarkersSummaryOptions opt_no_mr = opt;
-        opt_no_mr.compute_min_rank = false;
-        wipe_min_rank(ref);
+    {
+        // Trying with a more limited min-rank count.
+        auto mr_limited_opt = opt;
+        mr_limited_opt.min_rank_limit = 10;
+        auto limited = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), blocks.data(), mr_limited_opt);
 
-        auto dr_nmr = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), blocks.data(), opt_no_mr);
-        compare_effects(ngroups, ref, dr_nmr, true);
-
-        auto dc_nmr = scran_markers::score_markers_summary_blocked(*dense_column, groupings.data(), blocks.data(), opt_no_mr);
-        compare_effects(ngroups, ref, dc_nmr, true);
-
-        auto sr_nmr = scran_markers::score_markers_summary_blocked(*sparse_row, groupings.data(), blocks.data(), opt_no_mr);
-        compare_effects(ngroups, ref, sr_nmr, true);
-
-        auto sc_nmr = scran_markers::score_markers_summary_blocked(*sparse_column, groupings.data(), blocks.data(), opt_no_mr);
-        compare_effects(ngroups, ref, sc_nmr, true);
+        compare_limited_minrank(mr_limited_opt.min_rank_limit, ref.cohens_d, limited.cohens_d);
+        compare_limited_minrank(mr_limited_opt.min_rank_limit, ref.delta_mean, limited.delta_mean);
+        compare_limited_minrank(mr_limited_opt.min_rank_limit, ref.delta_detected, limited.delta_detected);
+        if (do_auc) {
+            compare_limited_minrank(mr_limited_opt.min_rank_limit, ref.auc, limited.auc);
+        }
     }
 }
 
@@ -359,69 +379,6 @@ INSTANTIATE_TEST_SUITE_P(
         ::testing::Values(false, true), // with or without the AUC?
         ::testing::Values(scran_blocks::WeightPolicy::NONE, scran_blocks::WeightPolicy::EQUAL), // block weighting method.
         ::testing::Values(1, 3) // number of threads
-    )
-);
-
-/*********************************************/
-
-// Checking that we get the same results for different cache sizes.
-
-class ScoreMarkersSummaryCacheTest : public ScoreMarkersSummaryTestCore, public ::testing::TestWithParam<std::tuple<int, int> > {
-protected:
-    inline static std::shared_ptr<tatami::Matrix<double, int> > matrix;
-
-    static void SetUpTestSuite() {
-        size_t nr = 366, nc = 179;
-        matrix.reset(
-            new tatami::DenseRowMatrix<double, int>(
-                nr,
-                nc,
-                scran_tests::simulate_vector(
-                    nr * nc, 
-                    []{
-                        scran_tests::SimulationParameters sparam;
-                        sparam.density = 0.1;
-                        sparam.seed = 420;
-                        return sparam;
-                    }()
-                )
-            )
-        );
-    }
-
-    inline static scran_markers::ScoreMarkersSummaryResults<double, int> ref;
-    inline static int last_ngroups = 0;
-};
-
-TEST_P(ScoreMarkersSummaryCacheTest, Basic) {
-    auto param = GetParam();
-
-    auto ngroups = std::get<0>(param);
-    std::vector<int> groupings = create_groupings(matrix->ncol(), ngroups);
-    auto cache_size = std::get<1>(param);
-
-    if (ngroups != last_ngroups) { // avoid unnecessary recompute across the test suite.
-        scran_markers::ScoreMarkersSummaryOptions opt;
-        opt.cache_size = 0;
-        ref = scran_markers::score_markers_summary(*matrix, groupings.data(), opt);
-        last_ngroups = ngroups;
-    }
-
-    scran_markers::ScoreMarkersSummaryOptions opt;
-    opt.cache_size = cache_size;
-    auto cached = scran_markers::score_markers_summary(*matrix, groupings.data(), opt);
-
-    compare_averages(ref.mean, cached.mean);
-    compare_averages(ref.detected, cached.detected);
-    compare_effects(ngroups, ref, cached, true);
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    ScoreMarkersSummary,
-    ScoreMarkersSummaryCacheTest,
-    ::testing::Combine(
-        ::testing::Values(2, 4, 8, 16), // number of clusters
-        ::testing::Values(5, 10, 20, 100) // size of the cache
     )
 );
 
@@ -623,13 +580,63 @@ TEST(ScoreMarkersSummaryScenarios, DisabledSummaries) {
     EXPECT_EQ(empty.delta_detected.size(), ngroups);
 }
 
-TEST(ScoreMarkersSummary, CapCacheSize) {
-    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 1), 0);
-    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 0), 0);
-    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 10), 45);
-    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 11), 55);
-    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 21), 100);
-    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 20), 100);
+TEST(ScoreMarkersSummaryScenarios, TiedMinRank) {
+    // Simple set-up with two samples and unique delta-means for all genes.
+    int nrows = 203, ncols = 2;
+    std::vector<double> original(nrows * ncols);
+    for (int r = 0; r < nrows; ++r) {
+        original[r * 2] = r * 1.5;
+    }
+    tatami::DenseRowMatrix<double, int> omat(nrows, ncols, original);
+
+    // The idea is to duplicate the matrix and check that the duplicated genes show up in the min_rank vector. 
+    auto duplicated = original;
+    duplicated.insert(duplicated.end(), original.begin(), original.end());
+    const int nrows2 = 2 * nrows;
+    tatami::DenseRowMatrix<double, int> dmat(nrows2, ncols, duplicated);
+
+    scran_markers::ScoreMarkersSummaryOptions sopt;
+    sopt.compute_cohens_d = false;
+    sopt.compute_auc = false;
+    sopt.compute_delta_detected = false;
+
+    const int min_rank_limit = 10;
+    sopt.min_rank_limit = min_rank_limit;
+    sopt.min_rank_preserve_ties = true;
+
+    std::vector<int> groupings{ 0, 1 };
+    auto oout = scran_markers::score_markers_summary(omat, groupings.data(), sopt);
+    auto dout = scran_markers::score_markers_summary(dmat, groupings.data(), sopt);
+
+    for (int g = 0; g < 2; ++g) {
+        std::vector<std::pair<int, int> > expected;
+        for (int r = 0; r < nrows; ++r) {
+            auto orank = oout.delta_mean[g].min_rank[r];
+            if (orank <= min_rank_limit) {
+                auto drank = (orank - 1) * 2 + 1;
+                if (drank <= min_rank_limit) {
+                    expected.emplace_back(drank, r);
+                    expected.emplace_back(drank, r + nrows);
+                }
+            } else {
+                EXPECT_EQ(orank, nrows);
+            }
+        }
+        std::sort(expected.begin(), expected.end());
+
+        std::vector<std::pair<int, int> > found_ties;
+        for (int r = 0; r < nrows2; ++r) {
+            auto drank = dout.delta_mean[g].min_rank[r];
+            if (drank <= min_rank_limit) {
+                found_ties.emplace_back(drank, r);
+            } else {
+                EXPECT_EQ(drank, nrows2);
+            }
+        }
+        std::sort(found_ties.begin(), found_ties.end());
+
+        EXPECT_EQ(expected, found_ties);
+    }
 }
 
 /*********************************************/
