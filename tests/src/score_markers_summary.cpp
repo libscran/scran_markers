@@ -364,69 +364,6 @@ INSTANTIATE_TEST_SUITE_P(
 
 /*********************************************/
 
-// Checking that we get the same results for different cache sizes.
-
-class ScoreMarkersSummaryCacheTest : public ScoreMarkersSummaryTestCore, public ::testing::TestWithParam<std::tuple<int, int> > {
-protected:
-    inline static std::shared_ptr<tatami::Matrix<double, int> > matrix;
-
-    static void SetUpTestSuite() {
-        size_t nr = 366, nc = 179;
-        matrix.reset(
-            new tatami::DenseRowMatrix<double, int>(
-                nr,
-                nc,
-                scran_tests::simulate_vector(
-                    nr * nc, 
-                    []{
-                        scran_tests::SimulationParameters sparam;
-                        sparam.density = 0.1;
-                        sparam.seed = 420;
-                        return sparam;
-                    }()
-                )
-            )
-        );
-    }
-
-    inline static scran_markers::ScoreMarkersSummaryResults<double, int> ref;
-    inline static int last_ngroups = 0;
-};
-
-TEST_P(ScoreMarkersSummaryCacheTest, Basic) {
-    auto param = GetParam();
-
-    auto ngroups = std::get<0>(param);
-    std::vector<int> groupings = create_groupings(matrix->ncol(), ngroups);
-    auto cache_size = std::get<1>(param);
-
-    if (ngroups != last_ngroups) { // avoid unnecessary recompute across the test suite.
-        scran_markers::ScoreMarkersSummaryOptions opt;
-        opt.cache_size = 0;
-        ref = scran_markers::score_markers_summary(*matrix, groupings.data(), opt);
-        last_ngroups = ngroups;
-    }
-
-    scran_markers::ScoreMarkersSummaryOptions opt;
-    opt.cache_size = cache_size;
-    auto cached = scran_markers::score_markers_summary(*matrix, groupings.data(), opt);
-
-    compare_averages(ref.mean, cached.mean);
-    compare_averages(ref.detected, cached.detected);
-    compare_effects(ngroups, ref, cached, true);
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    ScoreMarkersSummary,
-    ScoreMarkersSummaryCacheTest,
-    ::testing::Combine(
-        ::testing::Values(2, 4, 8, 16), // number of clusters
-        ::testing::Values(5, 10, 20, 100) // size of the cache
-    )
-);
-
-/*********************************************/
-
 TEST(ScoreMarkersSummaryScenarios, Thresholds) {
     int nrows = 291, ncols = 91;
     tatami::DenseRowMatrix<double, int> mat(
@@ -621,15 +558,6 @@ TEST(ScoreMarkersSummaryScenarios, DisabledSummaries) {
     EXPECT_EQ(empty.auc.size(), ngroups);
     EXPECT_EQ(empty.delta_mean.size(), ngroups);
     EXPECT_EQ(empty.delta_detected.size(), ngroups);
-}
-
-TEST(ScoreMarkersSummary, CapCacheSize) {
-    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 1), 0);
-    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 0), 0);
-    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 10), 45);
-    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 11), 55);
-    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 21), 100);
-    EXPECT_EQ(scran_markers::internal::cap_cache_size(100, 20), 100);
 }
 
 /*********************************************/

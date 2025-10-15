@@ -15,6 +15,8 @@ namespace internal {
 template<typename Weight_>
 class PrecomputedPairwiseWeights {
 public:
+    PrecomputedPairwiseWeights() = default;
+
     // 'combo_weights' are expected to be 'ngroups * nblocks' arrays where
     // groups are the faster-changing dimension and the blocks are slower.
     PrecomputedPairwiseWeights(const std::size_t ngroups, const std::size_t nblocks, const Weight_* const combo_weights) :

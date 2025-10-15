@@ -56,8 +56,8 @@ Stat_ cohen_denominator(const Stat_ left_var, const Stat_ right_var) {
 
 // 'means' and 'vars' are expected to be 'ngroups * nblocks' arrays
 // where groups are the faster-changing dimension and the blocks are slower.
-template<typename Stat_, typename Weight_, class Output_>
-void compute_pairwise_cohens_d_internal(
+template<typename Stat_, typename Weight_>
+std::pair<Stat_, Stat_> compute_pairwise_cohens_d_two_sided(
     const std::size_t g1,
     const std::size_t g2,
     const Stat_* const means,
@@ -65,10 +65,9 @@ void compute_pairwise_cohens_d_internal(
     const std::size_t ngroups,
     const std::size_t nblocks,
     const PrecomputedPairwiseWeights<Weight_>& preweights,
-    const Stat_ threshold,
-    Output_& output)
-{
-    constexpr bool do_both_sides = !std::is_same<Stat_, Output_>::value;
+    const Stat_ threshold
+) {
+    std::pair<Stat_, Stat_> output(0, 0);
 
     const auto winfo = preweights.get(g1, g2);
     auto total_weight = winfo.second;
@@ -90,70 +89,27 @@ void compute_pairwise_cohens_d_internal(
                     const auto right_mean = means[offset2]; 
                     const Stat_ extra = compute_cohens_d(left_mean, right_mean, denom, threshold) * weight;
 
-                    if constexpr(do_both_sides) {
-                        output.first += extra;
-                        if (threshold) {
-                            output.second += compute_cohens_d(right_mean, left_mean, denom, threshold) * weight;
-                        }
-                    } else {
-                        output += extra;
+                    output.first += extra;
+                    if (threshold) {
+                        output.second += compute_cohens_d(right_mean, left_mean, denom, threshold) * weight;
                     }
                 }
             }
         }
     }
 
-    if constexpr(do_both_sides) {
-        if (total_weight) {
-            output.first /= total_weight;
-            if (threshold) {
-                output.second /= total_weight;
-            } else {
-                output.second = -output.first;
-            }
+    if (total_weight) {
+        output.first /= total_weight;
+        if (threshold) {
+            output.second /= total_weight;
         } else {
-            output.first = std::numeric_limits<Stat_>::quiet_NaN();
-            output.second = std::numeric_limits<Stat_>::quiet_NaN();
+            output.second = -output.first;
         }
     } else {
-        if (total_weight) {
-            output /= total_weight;
-        } else {
-            output = std::numeric_limits<Stat_>::quiet_NaN();
-        }
-        return;
+        output.first = std::numeric_limits<Stat_>::quiet_NaN();
+        output.second = std::numeric_limits<Stat_>::quiet_NaN();
     }
-}
 
-template<typename Stat_, typename Weight_>
-Stat_ compute_pairwise_cohens_d_one_sided(
-    const std::size_t g1,
-    const std::size_t g2,
-    const Stat_* const means,
-    const Stat_* const vars,
-    const std::size_t ngroups,
-    const std::size_t nblocks,
-    const PrecomputedPairwiseWeights<Weight_>& preweights,
-    const Stat_ threshold)
-{
-    Stat_ output = 0;
-    compute_pairwise_cohens_d_internal(g1, g2, means, vars, ngroups, nblocks, preweights, threshold, output);
-    return output;
-}
-
-template<typename Stat_, typename Weight_>
-std::pair<Stat_, Stat_> compute_pairwise_cohens_d_two_sided(
-    const std::size_t g1,
-    const std::size_t g2,
-    const Stat_* const means,
-    const Stat_* const vars,
-    const std::size_t ngroups,
-    const std::size_t nblocks,
-    const PrecomputedPairwiseWeights<Weight_>& preweights,
-    const Stat_ threshold)
-{
-    std::pair<Stat_, Stat_> output(0, 0);
-    compute_pairwise_cohens_d_internal(g1, g2, means, vars, ngroups, nblocks, preweights, threshold, output);
     return output;
 }
 
