@@ -108,9 +108,18 @@ struct ScoreMarkersSummaryOptions {
      */
     bool compute_min_rank = true;
 
+    /**
+     * Limit on the reported minimum rank.
+     * If a gene has a minimum rank greater than `min_rank_limit`, its reported minimum rank will be set to the number of genes.
+     * Lower values improve memory efficiency but discard all ranking information beyond `min_rank_limit`. 
+     */
     std::size_t min_rank_limit = 500;
 
-    bool preserve_min_rank_ties = false; // TODO: set this to TRUE.
+    /**
+     * Whether to preserve ties when computing the minimum rank.
+     * Tied genes with equal effect sizes receive the same rank within each pairwise comparison. 
+     */
+    bool min_rank_preserve_ties = false; // TODO: set this to TRUE.
 
     /**
      * Policy to use for weighting blocks when computing average statistics/effect sizes across blocks.
@@ -297,53 +306,15 @@ void compute_summary_stats_per_gene(
 ) {
     for (decltype(I(ngroups)) gr = 0; gr < ngroups; ++gr) {
         auto& cursummary = summaries[gr];
-        summarize_comparisons(ngroups, pairwise_buffer_ptr, gr, gene, cursummary, summary_buffer);
+        const auto in_offset = sanisizer::product_unsafe<std::size_t>(ngroups, gr);
+        summarize_comparisons(ngroups, pairwise_buffer_ptr + in_offset, gr, gene, cursummary, summary_buffer);
 
         if (cursummary.min_rank) {
             auto& cur_queues = minrank_queues[gr];
             for (decltype(I(ngroups)) gr2 = 0; gr2 < ngroups; ++gr2) {
-                const auto in_offset = sanisizer::nd_offset<std::size_t>(gr2, ngroups, gr);
                 if (gr != gr2) {
-                    cur_queues[gr2].emplace(pairwise_buffer_ptr[in_offset], gene);
+                    cur_queues[gr2].emplace(pairwise_buffer_ptr[in_offset + gr2], gene);
                 }
-            }
-        }
-    }
-}
-
-template<typename Stat_, typename Index_, typename Rank_>
-void extract_minrank_from_queue(
-    topicks::TopQueue<Stat_, Index_>& queue,
-    Rank_* const output, 
-    const bool keep_ties,
-    std::vector<Index_>& tie_buffer
-) {
-    // Cast to Rank_ is safe as queue.size() <= ngenes,
-    // and we already checked that ngenes can fit into Rank_ in report_minrank_from_queues().
-
-    if (!keep_ties) {
-        while (!queue.empty()) {
-            auto& mr = output[queue.top().second];
-            mr = std::min(mr, static_cast<Rank_>(queue.size()));
-            queue.pop();
-        }
-    } else {
-        while (!queue.empty()) {
-            tie_buffer.clear();
-            const auto curtop = queue.top();
-            queue.pop();
-
-            while (!queue.empty() && queue.top().first == curtop.first) {
-                tie_buffer.push_back(queue.top().first);
-                queue.pop();
-            }
-
-            // Increment is safe as we already reduced the size at least once.
-            const Rank_ tied_rank = queue.size() + 1;
-
-            output[curtop.second] = std::min(output[curtop.second], tied_rank);
-            for (const auto t : tie_buffer) {
-                output[t] = std::min(output[t], tied_rank);
             }
         }
     }
@@ -362,7 +333,7 @@ void report_minrank_from_queues(
         std::vector<Index_> tie_buffer;
 
         for (decltype(I(ngroups)) gr = start, grend = start + length; gr < grend; ++gr) {
-            auto mr_out = summaries[gr].min_rank;
+            const auto mr_out = summaries[gr].min_rank;
             if (mr_out == NULL) {
                 continue;
             }
@@ -386,7 +357,34 @@ void report_minrank_from_queues(
                     }
                 }
 
-                extract_minrank_from_queue(current_out, mr_out, keep_ties, tie_buffer);
+                // Cast to Rank_ is safe as current_out.size() <= ngenes,
+                // and we already checked that ngenes can fit into Rank_ in report_minrank_from_current_outs().
+                if (!keep_ties) {
+                    while (!current_out.empty()) {
+                        auto& mr = mr_out[current_out.top().second];
+                        mr = std::min(mr, static_cast<Rank_>(current_out.size()));
+                        current_out.pop();
+                    }
+                } else {
+                    while (!current_out.empty()) {
+                        tie_buffer.clear();
+                        const auto curtop = current_out.top();
+                        current_out.pop();
+
+                        while (!current_out.empty() && current_out.top().first == curtop.first) {
+                            tie_buffer.push_back(current_out.top().second);
+                            current_out.pop();
+                        }
+
+                        // Increment is safe as we already reduced the size at least once.
+                        const Rank_ tied_rank = current_out.size() + 1;
+
+                        mr_out[curtop.second] = std::min(mr_out[curtop.second], tied_rank);
+                        for (const auto t : tie_buffer) {
+                            mr_out[t] = std::min(mr_out[t], tied_rank);
+                        }
+                    }
+                }
             }
         }
     }, ngroups, num_threads);
@@ -429,7 +427,7 @@ void process_simple_summary_effects(
     }
 
     PrecomputedPairwiseWeights<Stat_> preweights;
-    if (output.cohens_d.empty() && output.delta_mean.empty() && output.delta_detected.empty()) {
+    if (!output.cohens_d.empty() || !output.delta_mean.empty() || !output.delta_detected.empty()) {
         preweights =  PrecomputedPairwiseWeights<Stat_>(ngroups, nblocks, combo_weights.data());
     }
 
@@ -603,7 +601,7 @@ void score_markers_summary(
 
     if (!output.auc.empty()) {
         std::vector<MinrankTopQueues<Stat_, Index_> > auc_minrank_all_queues;
-        preallocate_minrank_queues(ngroups, auc_minrank_all_queues, output.auc, minrank_limit, options.preserve_min_rank_ties, options.num_threads);
+        preallocate_minrank_queues(ngroups, auc_minrank_all_queues, output.auc, minrank_limit, options.min_rank_preserve_ties, options.num_threads);
 
         struct AucResultWorkspace {
             AucResultWorkspace() = default;
@@ -645,7 +643,7 @@ void score_markers_summary(
             options.num_threads
         );
 
-        report_minrank_from_queues(ngenes, ngroups, auc_minrank_all_queues, output.auc, options.preserve_min_rank_ties, options.num_threads);
+        report_minrank_from_queues(ngenes, ngroups, auc_minrank_all_queues, output.auc, options.num_threads, options.min_rank_preserve_ties);
 
     } else if (matrix.prefer_rows()) {
         scan_matrix_by_row_full_auc<single_block_>(
@@ -703,7 +701,7 @@ void score_markers_summary(
         combo_weights,
         options.threshold,
         minrank_limit,
-        options.preserve_min_rank_ties,
+        options.min_rank_preserve_ties,
         options.num_threads
     );
 }
