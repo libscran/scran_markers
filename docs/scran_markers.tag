@@ -471,13 +471,6 @@
       <arglist></arglist>
     </member>
     <member kind="variable">
-      <type>int</type>
-      <name>cache_size</name>
-      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
-      <anchor>a29fbb41c392819f973c9a96826555aa9</anchor>
-      <arglist></arglist>
-    </member>
-    <member kind="variable">
       <type>bool</type>
       <name>compute_group_mean</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
@@ -552,6 +545,20 @@
       <name>compute_min_rank</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
       <anchor>abe5423cc6df71b83a0d6633979357f26</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>std::size_t</type>
+      <name>min_rank_limit</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>af717200fc00125d5427c6f050fd50c89</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>min_rank_preserve_ties</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>a865440ea066ee6a6cd81bfbbd9a8f426</anchor>
       <arglist></arglist>
     </member>
     <member kind="variable">

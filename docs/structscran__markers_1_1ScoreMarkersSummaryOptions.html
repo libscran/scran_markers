@@ -115,8 +115,6 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a7b6daaa85845aac1cfa43b635ac43e9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acd9fd70b56bf779527de7a6068423bf6" id="r_acd9fd70b56bf779527de7a6068423bf6"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acd9fd70b56bf779527de7a6068423bf6">num_threads</a> = 1</td></tr>
 <tr class="separator:acd9fd70b56bf779527de7a6068423bf6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a29fbb41c392819f973c9a96826555aa9" id="r_a29fbb41c392819f973c9a96826555aa9"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a29fbb41c392819f973c9a96826555aa9">cache_size</a> = 100</td></tr>
-<tr class="separator:a29fbb41c392819f973c9a96826555aa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4ebd443ade8dc5f6f5d6602080201a59" id="r_a4ebd443ade8dc5f6f5d6602080201a59"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4ebd443ade8dc5f6f5d6602080201a59">compute_group_mean</a> = true</td></tr>
 <tr class="separator:a4ebd443ade8dc5f6f5d6602080201a59"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1275da27456adda933f2516835199715" id="r_a1275da27456adda933f2516835199715"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1275da27456adda933f2516835199715">compute_group_detected</a> = true</td></tr>
@@ -139,6 +137,10 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a20a322581c10b9963c6ca639cd898cb0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abe5423cc6df71b83a0d6633979357f26" id="r_abe5423cc6df71b83a0d6633979357f26"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abe5423cc6df71b83a0d6633979357f26">compute_min_rank</a> = true</td></tr>
 <tr class="separator:abe5423cc6df71b83a0d6633979357f26"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af717200fc00125d5427c6f050fd50c89" id="r_af717200fc00125d5427c6f050fd50c89"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af717200fc00125d5427c6f050fd50c89">min_rank_limit</a> = 500</td></tr>
+<tr class="separator:af717200fc00125d5427c6f050fd50c89"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a865440ea066ee6a6cd81bfbbd9a8f426" id="r_a865440ea066ee6a6cd81bfbbd9a8f426"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a865440ea066ee6a6cd81bfbbd9a8f426">min_rank_preserve_ties</a> = false</td></tr>
+<tr class="separator:a865440ea066ee6a6cd81bfbbd9a8f426"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9581052b53623da99d9b1e6498d55430" id="r_a9581052b53623da99d9b1e6498d55430"><td class="memItemLeft" align="right" valign="top"><a class="elRef" href="https://libscran.github.io/scran_blocks/namespacescran__blocks.html#ac2412948da94055ff438267ba089ba97">scran_blocks::WeightPolicy</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9581052b53623da99d9b1e6498d55430">block_weight_policy</a> = scran_blocks::WeightPolicy::VARIABLE</td></tr>
 <tr class="separator:a9581052b53623da99d9b1e6498d55430"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad16d7561289a49c342ed6eb4be6adfbc" id="r_ad16d7561289a49c342ed6eb4be6adfbc"><td class="memItemLeft" align="right" valign="top"><a class="elRef" href="https://libscran.github.io/scran_blocks/structscran__blocks_1_1VariableWeightParameters.html">scran_blocks::VariableWeightParameters</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad16d7561289a49c342ed6eb4be6adfbc">variable_block_weight_parameters</a></td></tr>
@@ -161,21 +163,6 @@ Public Attributes</h2></td></tr>
 <p>Policy to use for weighting blocks when computing average statistics/effect sizes across blocks.</p>
 <p>The default of <code>scran_blocks::WeightPolicy::VARIABLE</code> is to define equal weights for blocks once they reach a certain size (see <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html#af6ab275bc541e6c0ffe62d9da271f550">ScoreMarkersPairwiseOptions::variable_block_weight_parameters</a></code>). For smaller blocks, the weight is linearly proportional to its size to avoid outsized contributions from very small blocks.</p>
 <p>Other options include <code>scran_blocks::WeightPolicy::EQUAL</code>, where all blocks are equally weighted regardless of size; and <code>scran_blocks::WeightPolicy::NONE</code>, where the contribution of each block is proportional to its size. </p>
-
-</div>
-</div>
-<a id="a29fbb41c392819f973c9a96826555aa9" name="a29fbb41c392819f973c9a96826555aa9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a29fbb41c392819f973c9a96826555aa9">&#9670;&#160;</a></span>cache_size</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int scran_markers::ScoreMarkersSummaryOptions::cache_size = 100</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Size of the cache, in terms of the number of pairwise comparisons. Larger values speed up the comparisons at the cost of higher memory consumption. </p>
 
 </div>
 </div>
@@ -341,6 +328,36 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Whether to report the minimum rank of the effect sizes for each group. Only affects the <code><a class="el" href="namespacescran__markers.html#a92c28687f963fbe5535e3fc0c4a60a80">score_markers_summary()</a></code> overload that returns a <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryResults.html" title="Results for score_markers_summary() and friends.">ScoreMarkersSummaryResults</a></code>. </p>
+
+</div>
+</div>
+<a id="af717200fc00125d5427c6f050fd50c89" name="af717200fc00125d5427c6f050fd50c89"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af717200fc00125d5427c6f050fd50c89">&#9670;&#160;</a></span>min_rank_limit</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::size_t scran_markers::ScoreMarkersSummaryOptions::min_rank_limit = 500</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Limit on the reported minimum rank. If a gene has a minimum rank greater than <code>min_rank_limit</code>, its reported minimum rank will be set to the number of genes. Lower values improve memory efficiency but discard all ranking information beyond <code>min_rank_limit</code>. </p>
+
+</div>
+</div>
+<a id="a865440ea066ee6a6cd81bfbbd9a8f426" name="a865440ea066ee6a6cd81bfbbd9a8f426"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a865440ea066ee6a6cd81bfbbd9a8f426">&#9670;&#160;</a></span>min_rank_preserve_ties</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool scran_markers::ScoreMarkersSummaryOptions::min_rank_preserve_ties = false</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Whether to preserve ties when computing the minimum rank. Tied genes with equal effect sizes receive the same rank within each pairwise comparison. </p>
 
 </div>
 </div>

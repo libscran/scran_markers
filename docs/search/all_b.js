@@ -18,7 +18,9 @@ var searchData=
   ['median_15',['median',['../structscran__markers_1_1SummaryBuffers.html#a8b9461e76a8d534bcf2cd53057c90d43',1,'scran_markers::SummaryBuffers::median'],['../structscran__markers_1_1SummaryResults.html#a553f2a6628c8e5ce7a063a94b2be39fa',1,'scran_markers::SummaryResults::median']]],
   ['min_16',['min',['../structscran__markers_1_1SummaryBuffers.html#aaa6f6973eed92f05f823376b9ecc326c',1,'scran_markers::SummaryBuffers::min'],['../structscran__markers_1_1SummaryResults.html#ab6661dc9ff5feafdfd4410493fd1d4e6',1,'scran_markers::SummaryResults::min']]],
   ['min_5frank_17',['min_rank',['../structscran__markers_1_1SummaryBuffers.html#afdf1258e4675f184d9caa7f4b5b283b7',1,'scran_markers::SummaryBuffers::min_rank'],['../structscran__markers_1_1SummaryResults.html#ab7ba8d989f18a8cc939f5c9435876800',1,'scran_markers::SummaryResults::min_rank']]],
-  ['minimum_20change_20threshold_18',['With a minimum change threshold',['../namespacescran__markers.html#threshold',1,'']]],
-  ['myopicdenseextractor_19',['MyopicDenseExtractor',['https://tatami-inc.github.io/tatami/classtatami_1_1MyopicDenseExtractor.html',1,'tatami']]],
-  ['myopicsparseextractor_20',['MyopicSparseExtractor',['https://tatami-inc.github.io/tatami/classtatami_1_1MyopicSparseExtractor.html',1,'tatami']]]
+  ['min_5frank_5flimit_18',['min_rank_limit',['../structscran__markers_1_1ScoreMarkersSummaryOptions.html#af717200fc00125d5427c6f050fd50c89',1,'scran_markers::ScoreMarkersSummaryOptions']]],
+  ['min_5frank_5fpreserve_5fties_19',['min_rank_preserve_ties',['../structscran__markers_1_1ScoreMarkersSummaryOptions.html#a865440ea066ee6a6cd81bfbbd9a8f426',1,'scran_markers::ScoreMarkersSummaryOptions']]],
+  ['minimum_20change_20threshold_20',['With a minimum change threshold',['../namespacescran__markers.html#threshold',1,'']]],
+  ['myopicdenseextractor_21',['MyopicDenseExtractor',['https://tatami-inc.github.io/tatami/classtatami_1_1MyopicDenseExtractor.html',1,'tatami']]],
+  ['myopicsparseextractor_22',['MyopicSparseExtractor',['https://tatami-inc.github.io/tatami/classtatami_1_1MyopicSparseExtractor.html',1,'tatami']]]
 ];
