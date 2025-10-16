@@ -33,6 +33,7 @@
     <filename>scran__markers_8hpp.html</filename>
     <includes id="score__markers__pairwise_8hpp" name="score_markers_pairwise.hpp" local="yes" import="no" module="no" objc="no">score_markers_pairwise.hpp</includes>
     <includes id="score__markers__summary_8hpp" name="score_markers_summary.hpp" local="yes" import="no" module="no" objc="no">score_markers_summary.hpp</includes>
+    <includes id="score__markers__best_8hpp" name="score_markers_best.hpp" local="yes" import="no" module="no" objc="no">score_markers_best.hpp</includes>
     <includes id="summarize__effects_8hpp" name="summarize_effects.hpp" local="yes" import="no" module="no" objc="no">summarize_effects.hpp</includes>
     <namespace>scran_markers</namespace>
   </compound>
