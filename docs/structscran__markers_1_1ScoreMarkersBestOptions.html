@@ -143,7 +143,7 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a167e5d28ce2ea613a91fa96697834820"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a94691cd88f06f8635561f85e1c70c0f0" id="r_a94691cd88f06f8635561f85e1c70c0f0"><td class="memItemLeft" align="right" valign="top">std::optional&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a94691cd88f06f8635561f85e1c70c0f0">threshold_delta_detected</a> = 0</td></tr>
 <tr class="separator:a94691cd88f06f8635561f85e1c70c0f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aec6ceabe769286d92169913b28070ea9" id="r_aec6ceabe769286d92169913b28070ea9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aec6ceabe769286d92169913b28070ea9">keep_ties</a> = true</td></tr>
+<tr class="memitem:aec6ceabe769286d92169913b28070ea9" id="r_aec6ceabe769286d92169913b28070ea9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aec6ceabe769286d92169913b28070ea9">keep_ties</a> = false</td></tr>
 <tr class="separator:aec6ceabe769286d92169913b28070ea9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab5ef9efd63f9799d5d7023a8a2e8334c" id="r_ab5ef9efd63f9799d5d7023a8a2e8334c"><td class="memItemLeft" align="right" valign="top"><a class="elRef" href="https://libscran.github.io/scran_blocks/namespacescran__blocks.html#ac2412948da94055ff438267ba089ba97">scran_blocks::WeightPolicy</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab5ef9efd63f9799d5d7023a8a2e8334c">block_weight_policy</a> = scran_blocks::WeightPolicy::VARIABLE</td></tr>
 <tr class="separator:ab5ef9efd63f9799d5d7023a8a2e8334c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -267,11 +267,11 @@ Public Attributes</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool scran_markers::ScoreMarkersBestOptions::keep_ties = true</td>
+          <td class="memname">bool scran_markers::ScoreMarkersBestOptions::keep_ties = false</td>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Whether to keep genes with effect sizes that are tied with the <code>top</code>-th gene. </p>
+<p>Whether to report genes with effect sizes that are tied with the <code>top</code>-th gene. </p>
 
 </div>
 </div>
