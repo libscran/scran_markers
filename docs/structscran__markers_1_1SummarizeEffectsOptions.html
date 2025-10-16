@@ -123,6 +123,8 @@ Public Attributes</h2></td></tr>
 <tr class="separator:aa006b2f98ae9a0b6bbbbd98bf2a497e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a72ed641c77c6265d8da4583fe8f5db42" id="r_a72ed641c77c6265d8da4583fe8f5db42"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a72ed641c77c6265d8da4583fe8f5db42">compute_min_rank</a> = true</td></tr>
 <tr class="separator:a72ed641c77c6265d8da4583fe8f5db42"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5ea001f5ab4d49b472b55a9a79329230" id="r_a5ea001f5ab4d49b472b55a9a79329230"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5ea001f5ab4d49b472b55a9a79329230">min_rank_preserve_ties</a> = false</td></tr>
+<tr class="separator:a5ea001f5ab4d49b472b55a9a79329230"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Options for <code><a class="el" href="namespacescran__markers.html#aefddf4357cc7de227c5242b3861d5a27">summarize_effects()</a></code>. </p>
@@ -199,6 +201,21 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Whether to report the min-rank of the effect sizes for each group. Only affects the <code><a class="el" href="namespacescran__markers.html#aefddf4357cc7de227c5242b3861d5a27">summarize_effects()</a></code> overload that returns a vector of <code><a class="el" href="structscran__markers_1_1SummaryResults.html" title="Container for the summary statistics.">SummaryResults</a></code>. </p>
+
+</div>
+</div>
+<a id="a5ea001f5ab4d49b472b55a9a79329230" name="a5ea001f5ab4d49b472b55a9a79329230"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5ea001f5ab4d49b472b55a9a79329230">&#9670;&#160;</a></span>min_rank_preserve_ties</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool scran_markers::SummarizeEffectsOptions::min_rank_preserve_ties = false</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Whether to preserve ties when computing the minimum rank. If <code>true</code>, tied genes with equal effect sizes receive the same rank within each pairwise comparison. Otherwise, ties are broken in a stable manner, i.e., genes in earlier rows will receive a higher rank. </p>
 
 </div>
 </div>

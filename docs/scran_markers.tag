@@ -669,6 +669,13 @@
       <anchor>a72ed641c77c6265d8da4583fe8f5db42</anchor>
       <arglist></arglist>
     </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>min_rank_preserve_ties</name>
+      <anchorfile>structscran__markers_1_1SummarizeEffectsOptions.html</anchorfile>
+      <anchor>a5ea001f5ab4d49b472b55a9a79329230</anchor>
+      <arglist></arglist>
+    </member>
   </compound>
   <compound kind="struct">
     <name>scran_markers::SummaryBuffers</name>
