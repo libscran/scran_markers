@@ -8,5 +8,5 @@ var searchData=
   ['boolean_5futils_2ehpp_5',['boolean_utils.hpp',['https://tatami-inc.github.io/tatami/boolean__utils_8hpp.html',1,'']]],
   ['booleanoperation_6',['BooleanOperation',['https://tatami-inc.github.io/tatami/namespacetatami.html#a4e5eea599200bfb6bc42f184118be28a',1,'tatami']]],
   ['bound_7',['bound',['https://libscran.github.io/topicks/structtopicks_1_1PickTopGenesOptions.html#afce1d913773d4cca49ccc07a7f952f88',1,'topicks::PickTopGenesOptions::bound'],['https://libscran.github.io/topicks/structtopicks_1_1TopQueueOptions.html#a6a382963aafef610e30c921c0705c4e2',1,'topicks::TopQueueOptions::bound']]],
-  ['building_20projects_8',['Building projects',['../index.html#autotoc_md3',1,'']]]
+  ['building_20projects_8',['Building projects',['../index.html#autotoc_md4',1,'']]]
 ];

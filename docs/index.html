@@ -135,7 +135,10 @@ Quick start</h1>
 <div class="line">    opt</div>
 <div class="line">);</div>
 <div class="ttc" id="anamespacescran__markers_html_ab817d3509bf11224c5841cee6eb19d26"><div class="ttname"><a href="namespacescran__markers.html#ab817d3509bf11224c5841cee6eb19d26">scran_markers::score_markers_summary_blocked</a></div><div class="ttdeci">void score_markers_summary_blocked(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, const ScoreMarkersSummaryOptions &amp;options, const ScoreMarkersSummaryBuffers&lt; Stat_, Rank_ &gt; &amp;output)</div><div class="ttdef"><b>Definition</b> score_markers_summary.hpp:803</div></div>
-</div><!-- fragment --><p>If more detail is necessary, we can obtain effect sizes from all pairwise comparisons using the <code>score_markers_pairwise()</code> function.</p>
+</div><!-- fragment --><p>Check out the <a href="https://libscran.github.io/scran_markers">reference documentation</a> for more details.</p>
+<h1><a class="anchor" id="autotoc_md3"></a>
+Computing pairwise effects</h1>
+<p>We can compute effect sizes from all pairwise comparisons using the <code>score_markers_pairwise()</code> function.</p>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">scran_markers::ScoreMarkersPairwiseOptions</a> popt;</div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">auto</span> pair_res = <a class="code hl_function" href="namespacescran__markers.html#a6c63a08774d6f2105b68b656f8a3da94">scran_markers::score_markers_pairwise</a>(</div>
@@ -149,17 +152,29 @@ Quick start</h1>
 <div class="line">pair_res.auc; </div>
 <div class="ttc" id="anamespacescran__markers_html_a6c63a08774d6f2105b68b656f8a3da94"><div class="ttname"><a href="namespacescran__markers.html#a6c63a08774d6f2105b68b656f8a3da94">scran_markers::score_markers_pairwise</a></div><div class="ttdeci">void score_markers_pairwise(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const ScoreMarkersPairwiseOptions &amp;options, const ScoreMarkersPairwiseBuffers&lt; Stat_ &gt; &amp;output)</div><div class="ttdef"><b>Definition</b> score_markers_pairwise.hpp:519</div></div>
 <div class="ttc" id="astructscran__markers_1_1ScoreMarkersPairwiseOptions_html"><div class="ttname"><a href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">scran_markers::ScoreMarkersPairwiseOptions</a></div><div class="ttdoc">Options for score_markers_pairwise() and friends.</div><div class="ttdef"><b>Definition</b> score_markers_pairwise.hpp:30</div></div>
-</div><!-- fragment --><p>Alternatively, if we already have an array effect sizes, we can use the <code>summarize_effects()</code> function to obtain summaries for each group. In fact, <code>score_markers_summary()</code> is just a more memory-efficient version of <code>score_markers_pairwise()</code> followed by <code>summarize_effects()</code>.</p>
+</div><!-- fragment --><p>Once we have an array of effect sizes, we can use the <code>summarize_effects()</code> function to obtain summaries for each group. In fact, <code>score_markers_summary()</code> is just a more memory-efficient version of <code>score_markers_pairwise()</code> followed by <code>summarize_effects()</code>.</p>
 <div class="fragment"><div class="line"><span class="keyword">auto</span> cohen_summary = <a class="code hl_function" href="namespacescran__markers.html#aefddf4357cc7de227c5242b3861d5a27">scran_markers::summarize_effects</a>(</div>
 <div class="line">    matrix.nrows(),</div>
 <div class="line">    pair_res.mean.size(), <span class="comment">// i.e., number of groups</span></div>
 <div class="line">    pair_res.cohens_d.data()</div>
 <div class="line">);</div>
 <div class="ttc" id="anamespacescran__markers_html_aefddf4357cc7de227c5242b3861d5a27"><div class="ttname"><a href="namespacescran__markers.html#aefddf4357cc7de227c5242b3861d5a27">scran_markers::summarize_effects</a></div><div class="ttdeci">void summarize_effects(const Gene_ ngenes, const std::size_t ngroups, const Stat_ *const effects, const std::vector&lt; SummaryBuffers&lt; Stat_, Rank_ &gt; &gt; &amp;summaries, const SummarizeEffectsOptions &amp;options)</div><div class="ttdef"><b>Definition</b> summarize_effects.hpp:123</div></div>
-</div><!-- fragment --><p>Check out the <a href="https://libscran.github.io/scran_markers">reference documentation</a> for more details.</p>
-<h1><a class="anchor" id="autotoc_md3"></a>
+</div><!-- fragment --><p>If we just want the top genes from each pairwise comparison, we can use the <code>score_markers_best()</code> function to save memory:</p>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">scran_markers::ScoreMarkersPairwiseOptions</a> popt;</div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">auto</span> best_res = <a class="code hl_function" href="namespacescran__markers.html#a3b877db1571dd74a128af35eee5641d3">scran_markers::score_markers_best</a>(</div>
+<div class="line">    matrix,</div>
+<div class="line">    groupings.data(),</div>
+<div class="line">    10,</div>
+<div class="line">    popt</div>
+<div class="line">);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Vector of the top 10 genes when comparing group 0 to group 1.</span></div>
+<div class="line">best_res.cohens_d[0][1];</div>
+<div class="ttc" id="anamespacescran__markers_html_a3b877db1571dd74a128af35eee5641d3"><div class="ttname"><a href="namespacescran__markers.html#a3b877db1571dd74a128af35eee5641d3">scran_markers::score_markers_best</a></div><div class="ttdeci">ScoreMarkersBestResults&lt; Stat_, Index_ &gt; score_markers_best(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, int top, const ScoreMarkersBestOptions &amp;options)</div><div class="ttdef"><b>Definition</b> score_markers_best.hpp:604</div></div>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md4"></a>
 Building projects</h1>
-<h2><a class="anchor" id="autotoc_md4"></a>
+<h2><a class="anchor" id="autotoc_md5"></a>
 CMake with <code>FetchContent</code></h2>
 <p>If you're using CMake, you just need to add something like this to your <code>CMakeLists.txt</code>:</p>
 <div class="fragment"><div class="line">include(FetchContent)</div>
@@ -177,7 +192,7 @@ CMake with <code>FetchContent</code></h2>
 <div class="line"> </div>
 <div class="line"># For libaries</div>
 <div class="line">target_link_libraries(mylib INTERFACE libscran::scran_markers)</div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md5"></a>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md6"></a>
 CMake with <code>find_package()</code></h2>
 <div class="fragment"><div class="line">find_package(libscran_scran_markers CONFIG REQUIRED)</div>
 <div class="line">target_link_libraries(mylib INTERFACE libscran::scran_markers)</div>
@@ -186,7 +201,7 @@ CMake with <code>find_package()</code></h2>
 <div class="line">cmake .. -DSCRAN_MARKERS_TESTS=OFF</div>
 <div class="line">cmake --build . --target install</div>
 </div><!-- fragment --><p>By default, this will use <code>FetchContent</code> to fetch all external dependencies. If you want to install them manually, use <code>-DSCRAN_MARKERS_FETCH_EXTERN=OFF</code>. See the tags in <a href="extern/CMakeLists.txt"><code>extern/CMakeLists.txt</code></a> to find compatible versions of each dependency.</p>
-<h2><a class="anchor" id="autotoc_md6"></a>
+<h2><a class="anchor" id="autotoc_md7"></a>
 Manual</h2>
 <p>If you're not using CMake, the simple approach is to just copy the files in <code>include/</code> - either directly or with Git submodules - and include their path during compilation with, e.g., GCC's <code>-I</code>. This also requires the external dependencies listed in <a href="extern/CMakeLists.txt"><code>extern/CMakeLists.txt</code></a>. </p>
 </div></div><!-- PageDoc -->

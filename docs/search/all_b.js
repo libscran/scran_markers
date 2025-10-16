@@ -4,7 +4,7 @@ var searchData=
   ['make_5fdelayedsubset_1',['make_DelayedSubset',['https://tatami-inc.github.io/tatami/namespacetatami.html#af62b9d27c0c501e5b65e52ce37f0ee5d',1,'tatami']]],
   ['make_5fdelayedsubset_2ehpp_2',['make_DelayedSubset.hpp',['https://tatami-inc.github.io/tatami/make__DelayedSubset_8hpp.html',1,'']]],
   ['make_5fdelayedsubsetblock_3',['make_DelayedSubsetBlock',['https://tatami-inc.github.io/tatami/namespacetatami.html#a4fdae940708614108ad158f0c2590f8d',1,'tatami']]],
-  ['manual_4',['Manual',['../index.html#autotoc_md6',1,'']]],
+  ['manual_4',['Manual',['../index.html#autotoc_md7',1,'']]],
   ['marker_20detection_20for_20groups_20of_20cells_5',['Marker detection for groups of cells',['../index.html',1,'']]],
   ['math_5fhelpers_2ehpp_6',['math_helpers.hpp',['https://tatami-inc.github.io/tatami/math__helpers_8hpp.html',1,'']]],
   ['matrix_7',['Matrix',['https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html',1,'tatami']]],
