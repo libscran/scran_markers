@@ -117,9 +117,10 @@ struct ScoreMarkersSummaryOptions {
 
     /**
      * Whether to preserve ties when computing the minimum rank.
-     * Tied genes with equal effect sizes receive the same rank within each pairwise comparison. 
+     * If `true`, tied genes with equal effect sizes receive the same rank within each pairwise comparison. 
+     * Otherwise, ties are broken in a stable manner, i.e., genes in earlier rows will receive a higher rank.
      */
-    bool min_rank_preserve_ties = false; // TODO: set this to TRUE.
+    bool min_rank_preserve_ties = false;
 
     /**
      * Policy to use for weighting blocks when computing average statistics/effect sizes across blocks.

@@ -125,9 +125,9 @@ struct ScoreMarkersBestOptions {
     std::optional<double> threshold_delta_detected = 0;
 
     /**
-     * Whether to keep genes with effect sizes that are tied with the `top`-th gene.
+     * Whether to report genes with effect sizes that are tied with the `top`-th gene.
      */
-    bool keep_ties = true;
+    bool keep_ties = false;
 
     /**
      * Policy to use for weighting blocks when computing average statistics/effect sizes across blocks.
