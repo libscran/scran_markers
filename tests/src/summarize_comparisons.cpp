@@ -171,7 +171,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 /*********************************************/
 
-class ComputeMinRankTest : public ::testing::TestWithParam<int> {
+class ComputeMinRankTest : public ::testing::TestWithParam<std::tuple<int, int> > {
 protected:
     static void configure(int ngenes, int ngroups, std::vector<int>& output, std::vector<scran_markers::SummaryBuffers<double, int> >& ptrs) {
         output.resize(ngroups * ngenes);
@@ -200,10 +200,42 @@ TEST_P(ComputeMinRankTest, Basic) {
     std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
     configure(ngenes, ngroups, output, ptrs);
 
-    auto threads = GetParam();
-    scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ptrs, threads);
+    const auto params = GetParam();
+    const auto preserve_ties = std::get<0>(params);
+    const auto threads = std::get<1>(params);
+
+    scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ptrs, preserve_ties, threads);
     for (size_t i = 0; i < ngroups; ++i) {
         compare_vectors({4, 3, 2, 1}, ptrs[i].min_rank); // reversed, for maximum effect sizes.
+    }
+}
+
+TEST_P(ComputeMinRankTest, Tied) {
+    size_t ngenes = 4, ngroups = 3;
+    std::vector<double> effects { // rows are genes, columns are group * group of pairwise effects.
+        0, 1, 1, 1, 0, 1, 1, 1, 0,
+        0, 4, 4, 4, 0, 4, 4, 4, 0,
+        0, 1, 1, 1, 0, 1, 1, 1, 0,
+        0, 4, 4, 4, 0, 4, 4, 4, 0
+    };
+
+    std::vector<int> output;
+    std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
+    configure(ngenes, ngroups, output, ptrs);
+
+    const auto params = GetParam();
+    const auto preserve_ties = std::get<0>(params);
+    const auto threads = std::get<1>(params);
+    scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ptrs, preserve_ties, threads);
+
+    if (preserve_ties) {
+        for (size_t i = 0; i < ngroups; ++i) {
+            compare_vectors({3, 1, 3, 1}, ptrs[i].min_rank);
+        }
+    } else {
+        for (size_t i = 0; i < ngroups; ++i) {
+            compare_vectors({3, 1, 4, 2}, ptrs[i].min_rank);
+        }
     }
 }
 
@@ -222,8 +254,11 @@ TEST_P(ComputeMinRankTest, LessBasic) {
     std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
     configure(ngenes, ngroups, output, ptrs);
 
-    auto threads = GetParam();
-    scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ptrs, threads);
+    const auto params = GetParam();
+    const auto preserve_ties = std::get<0>(params);
+    const auto threads = std::get<1>(params);
+
+    scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ptrs, preserve_ties, threads);
     compare_vectors({1, 2, 1, 3}, ptrs[0].min_rank);
     compare_vectors({2, 3, 1, 1}, ptrs[1].min_rank);
     compare_vectors({1, 1, 2, 4}, ptrs[2].min_rank);
@@ -253,8 +288,11 @@ TEST_P(ComputeMinRankTest, Missing) {
     std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
     configure(ngenes, ngroups, output, ptrs);
 
-    auto threads = GetParam();
-    scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ptrs, threads);
+    const auto params = GetParam();
+    const auto preserve_ties = std::get<0>(params);
+    const auto threads = std::get<1>(params);
+
+    scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ptrs, preserve_ties, threads);
     compare_vectors({1, 4, 2, 1}, ptrs[0].min_rank);
     compare_vectors({2, 1, 3, 1}, ptrs[1].min_rank);
     compare_vectors({1, 2, 3, 4}, ptrs[2].min_rank);
@@ -263,7 +301,10 @@ TEST_P(ComputeMinRankTest, Missing) {
 INSTANTIATE_TEST_SUITE_P(
     ComputeMinRank,
     ComputeMinRankTest,
-    ::testing::Values(1, 3) // number of threads
+    ::testing::Combine(
+        ::testing::Values(false, true), // consider ties
+        ::testing::Values(1, 3) // number of threads
+    )
 );
 
 // Also checking that our multiple min_rank variants are consistent
@@ -299,37 +340,32 @@ TEST_P(ComputeMinRankTestThreaded, Consistency) {
         }
     }
 
-    std::vector<int> ref_output;
     {
+        std::vector<int> ref_output;
         std::vector<scran_markers::SummaryBuffers<double, int> > ref_ptrs;
         configure(ngenes, ngroups, ref_output, ref_ptrs);
-        scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ref_ptrs, 1);
-    }
+        scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ref_ptrs, false, 1);
 
-    {
         std::vector<int> threaded_output;
         std::vector<scran_markers::SummaryBuffers<double, int> > threaded_ptrs;
         configure(ngenes, ngroups, threaded_output, threaded_ptrs);
-        scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), threaded_ptrs, 3);
+        scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), threaded_ptrs, false, 3);
         EXPECT_EQ(threaded_output, ref_output);
     }
 
-    std::vector<int> pergroup_output(ngroups * ngenes);
-    std::vector<int> threaded_pergroup_output(ngroups * ngenes);
+    // Testing the tied logic.
+    {
+        std::vector<int> ref_output;
+        std::vector<scran_markers::SummaryBuffers<double, int> > ref_ptrs;
+        configure(ngenes, ngroups, ref_output, ref_ptrs);
+        scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), ref_ptrs, true, 1);
 
-    for (size_t g = 0; g < ngroups; ++g) {
-        std::vector<double> copy(ngroups * ngenes);
-        for (size_t i = 0; i < ngenes; ++i) {
-            auto base = effects.data() + i * ngroups * ngroups + g * ngroups;
-            std::copy_n(base, ngroups, copy.data() + i * ngroups);
-        }
-
-        scran_markers::internal::compute_min_rank_for_group(ngenes, ngroups, g, copy.data(), pergroup_output.data() + g * ngenes, 1);
-        scran_markers::internal::compute_min_rank_for_group(ngenes, ngroups, g, copy.data(), threaded_pergroup_output.data() + g * ngenes, 3);
+        std::vector<int> threaded_output;
+        std::vector<scran_markers::SummaryBuffers<double, int> > threaded_ptrs;
+        configure(ngenes, ngroups, threaded_output, threaded_ptrs);
+        scran_markers::internal::compute_min_rank_pairwise(ngenes, ngroups, effects.data(), threaded_ptrs, true, 3);
+        EXPECT_EQ(threaded_output, ref_output);
     }
-
-    EXPECT_EQ(pergroup_output, ref_output);
-    EXPECT_EQ(threaded_pergroup_output, ref_output);
 }
 
 INSTANTIATE_TEST_SUITE_P(

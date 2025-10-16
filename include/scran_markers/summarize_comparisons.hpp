@@ -207,65 +207,16 @@ Gene_ fill_and_sort_rank_buffer(const Stat_* const effects, const std::size_t st
 }
 
 template<typename Stat_, typename Gene_, typename Rank_>
-void compute_min_rank_internal(const Gene_ use, const std::vector<std::pair<Stat_, Gene_> >& buffer, Rank_* const output) {
-    Rank_ counter = 1;
-    for (Gene_ i = 0; i < use; ++i) {
-        auto& current = output[buffer[i].second];
-        if (counter < current) {
-            current = counter;
-        }
-        ++counter;
-    }
-}
-
-template<typename Stat_, typename Gene_, typename Rank_>
-void compute_min_rank_for_group(const Gene_ ngenes, const std::size_t ngroups, const std::size_t group, const Stat_* const effects, Rank_* const output, const int threads) {
-    std::vector<std::vector<Rank_> > stores(threads - 1);
-    const auto maxrank_placeholder = ngenes; // using the maximum possible rank (i.e., 'ngenes') as the default.
-    std::fill_n(output, ngenes, maxrank_placeholder);
-
-    tatami::parallelize([&](const int t, const std::size_t start, const std::size_t length) -> void {
-        Rank_* curoutput;
-        if (t == 0) {
-            curoutput = output;
-        } else {
-            auto& curstore = stores[t - 1];
-            if (curstore.empty()) {
-                sanisizer::resize(curstore, ngenes, maxrank_placeholder);
-            }
-            curoutput = curstore.data();
-        }
-
-        auto buffer = sanisizer::create<std::vector<std::pair<Stat_, Gene_> > >(ngenes);
-        for (decltype(I(start)) g = start, end = start + length; g < end; ++g) {
-            if (g == group) {
-                continue;
-            }
-            const auto used = fill_and_sort_rank_buffer(effects + g, ngroups, buffer);
-            compute_min_rank_internal(used, buffer, curoutput);
-        }
-    }, ngroups, threads);
-
-    for (const auto& curstore : stores) {
-        auto copy = output;
-        for (auto x : curstore) {
-            if (x < *copy) {
-                *copy = x;
-            }
-            ++copy;
-        }
-    }
-}
-
-template<typename Stat_, typename Gene_, typename Rank_>
 void compute_min_rank_pairwise(
     const Gene_ ngenes,
     const std::size_t ngroups,
     const Stat_* const effects,
     const std::vector<SummaryBuffers<Stat_, Rank_> >& output,
-    const int threads)
-{
+    const bool preserve_ties, 
+    const int threads
+) {
     const auto ngroups2 = sanisizer::product_unsafe<std::size_t>(ngroups, ngroups);
+    const auto maxrank_placeholder = sanisizer::cast<Rank_>(ngenes); // using the maximum possible rank (i.e., 'ngenes') as the default.
 
     tatami::parallelize([&](const int, const std::size_t start, const std::size_t length) -> void {
         auto buffer = sanisizer::create<std::vector<std::pair<Stat_, Gene_> > >(ngenes);
@@ -274,8 +225,7 @@ void compute_min_rank_pairwise(
             if (target == NULL) {
                 continue;
             }
-
-            std::fill_n(target, ngenes, ngenes); // using the maximum rank as the default.
+            std::fill_n(target, ngenes, maxrank_placeholder);
 
             for (decltype(I(ngroups)) g2 = 0; g2 < ngroups; ++g2) {
                 if (g == g2) {
@@ -283,7 +233,38 @@ void compute_min_rank_pairwise(
                 }
                 const auto offset = sanisizer::nd_offset<std::size_t>(g2, ngroups, g);
                 const auto used = fill_and_sort_rank_buffer(effects + offset, ngroups2, buffer);
-                compute_min_rank_internal(used, buffer, target);
+
+                if (!preserve_ties) {
+                    Rank_ counter = 1;
+                    for (Gene_ i = 0; i < used; ++i) {
+                        auto& current = target[buffer[i].second];
+                        if (counter < current) {
+                            current = counter;
+                        }
+                        ++counter;
+                    }
+                } else {
+                    Rank_ counter = 1;
+                    Gene_ i = 0;
+                    while (i < used) {
+                        const auto original = i;
+                        const auto val = buffer[i].first;
+
+                        auto& current = target[buffer[i].second];
+                        if (counter < current) {
+                            current = counter;
+                        }
+
+                        while (++i < used && buffer[i].first == val) {
+                            auto& current = target[buffer[i].second];
+                            if (counter < current) {
+                                current = counter;
+                            }
+                        }
+
+                        counter += i - original;
+                    }
+                }
             }
         }
     }, ngroups, threads);

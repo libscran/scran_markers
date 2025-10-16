@@ -53,6 +53,13 @@ struct SummarizeEffectsOptions {
      * Only affects the `summarize_effects()` overload that returns a vector of `SummaryResults`.
      */
     bool compute_min_rank = true;
+
+    /**
+     * Whether to preserve ties when computing the minimum rank.
+     * If `true`, tied genes with equal effect sizes receive the same rank within each pairwise comparison. 
+     * Otherwise, ties are broken in a stable manner, i.e., genes in earlier rows will receive a higher rank.
+     */
+    bool min_rank_preserve_ties = false;
 };
 
 /**
@@ -118,9 +125,9 @@ void summarize_effects(
     const std::size_t ngroups,
     const Stat_* const effects,
     const std::vector<SummaryBuffers<Stat_, Rank_> >& summaries,
-    const SummarizeEffectsOptions& options)
-{
-    internal::compute_min_rank_pairwise(ngenes, ngroups, effects, summaries, options.num_threads);
+    const SummarizeEffectsOptions& options
+) {
+    internal::compute_min_rank_pairwise(ngenes, ngroups, effects, summaries, options.min_rank_preserve_ties, options.num_threads);
     internal::summarize_comparisons(ngenes, ngroups, effects, summaries, options.num_threads); 
 }
 
