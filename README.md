@@ -60,7 +60,11 @@ auto block_res = scran_markers::score_markers_summary_blocked(
 );
 ```
 
-If more detail is necessary, we can obtain effect sizes from all pairwise comparisons using the `score_markers_pairwise()` function.
+Check out the [reference documentation](https://libscran.github.io/scran_markers) for more details.
+
+## Computing pairwise effects
+
+We can compute effect sizes from all pairwise comparisons using the `score_markers_pairwise()` function.
 
 ```cpp
 scran_markers::ScoreMarkersPairwiseOptions popt;
@@ -76,7 +80,7 @@ pair_res.cohens_d;
 pair_res.auc; 
 ```
 
-Alternatively, if we already have an array effect sizes, we can use the `summarize_effects()` function to obtain summaries for each group.
+Once we have an array of effect sizes, we can use the `summarize_effects()` function to obtain summaries for each group.
 In fact, `score_markers_summary()` is just a more memory-efficient version of `score_markers_pairwise()` followed by `summarize_effects()`.
 
 ```cpp
@@ -87,7 +91,21 @@ auto cohen_summary = scran_markers::summarize_effects(
 );
 ```
 
-Check out the [reference documentation](https://libscran.github.io/scran_markers) for more details.
+If we just want the top genes from each pairwise comparison, we can use the `score_markers_best()` function to save memory:
+
+```cpp
+scran_markers::ScoreMarkersPairwiseOptions popt;
+
+auto best_res = scran_markers::score_markers_best(
+    matrix,
+    groupings.data(),
+    10,
+    popt
+);
+
+// Vector of the top 10 genes when comparing group 0 to group 1.
+best_res.cohens_d[0][1];
+```
 
 ## Building projects
 
