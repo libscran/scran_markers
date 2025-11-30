@@ -25,33 +25,61 @@ std::vector<Weight_> compute_total_weight_per_group(const std::size_t ngroups, c
 }
 
 template<typename Gene_, typename Stat_, typename Weight_>
-void average_group_stats(
+void average_group_stats_blockmean(
     const Gene_ gene,
     const std::size_t ngroups,
     const std::size_t nblocks,
-    const Stat_* const tmp_stats,
+    const Stat_* const stats,
     const Weight_* const combo_weights,
     const Weight_* const total_weights,
     const std::vector<Stat_*>& out_stats 
 ) {
     for (decltype(I(ngroups)) g = 0; g < ngroups; ++g) {
+        auto& output = out_stats[g][gene];
+
         const auto total_weight = total_weights[g];
         if (total_weight == 0) {
-            out_stats[g][gene] = std::numeric_limits<Stat_>::quiet_NaN();
+            output = std::numeric_limits<Stat_>::quiet_NaN();
             continue;
         }
 
-        Stat_ output = 0;
+        Stat_ sum = 0;
         for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
             // Remember, blocks are the slower changing dimension, so we need to jump by 'ngroups'.
             const auto offset = sanisizer::nd_offset<std::size_t>(g, ngroups, b);
             const auto& curweight = combo_weights[offset];
-            if (curweight) { // check if this is zero, in which case tmp_stats could be NaN.
-                output += curweight * tmp_stats[offset];
+            if (curweight) { // check if this is zero and skip it explicitly, as the value would probably be NaN. 
+                sum += curweight * tmp_stats[offset];
             }
         }
 
-        out_stats[g][gene] = output / total_weight;
+        output = sum / total_weight;
+    }
+}
+
+template<typename Gene_, typename Stat_, typename Weight_>
+void average_group_stats_blockquantile(
+    const Gene_ gene,
+    const std::size_t ngroups,
+    const std::size_t nblocks,
+    const Stat_* const tmp_stats,
+    std::vector<Stat_>& buffer,
+    QuantileCalculator<Stat_>& qcalc,
+    const std::vector<Stat_*>& out_stats 
+) {
+    for (decltype(I(ngroups)) g = 0; g < ngroups; ++g) {
+        buffer.clear();
+
+        for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
+            // Remember, blocks are the slower changing dimension, so we need to jump by 'ngroups'.
+            const auto offset = sanisizer::nd_offset<std::size_t>(g, ngroups, b);
+            const auto val = stats[offset];
+            if (!std::isnan(val)) {
+                buffer.push_back(val);
+            }
+        }
+
+        out_stats[g][gene] = qcalc.compute(buffer);
     }
 }
 

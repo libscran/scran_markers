@@ -1,14 +1,17 @@
-#ifndef SCRAN_MARKERS_PRECOMPUTED_PAIRWISE_WEIGHTS_HPP
-#define SCRAN_MARKERS_PRECOMPUTED_PAIRWISE_WEIGHTS_HPP
+#ifndef SCRAN_MARKERS_BLOCK_AVERAGES_HPP
+#define SCRAN_MARKERS_BLOCK_AVERAGES_HPP
 
 #include <vector>
 #include <cstddef>
+#include <optional>
 
 #include "sanisizer/sanisizer.hpp"
 
 #include "utils.hpp"
 
 namespace scran_markers {
+
+enum class AveragePolicy : unsigned char { MEAN, QUANTILE };
 
 namespace internal {
 
@@ -65,7 +68,45 @@ private:
     std::size_t my_ngroups, my_nblocks;
 };
 
-}
+template<typename Stat_>
+class QuantileCalculator {
+public:
+    QuantileWorkspace(const std::size_t max_nblocks, double quantile) : my_quantile(quantile) {
+        if (max_nblocks >= 2) {
+            sanisizer::resize(my_calculators, max_nblocks - 1);
+        }
+    }
+
+private:
+    typedef std::vector<Stat_> Buffer;
+    std::vector<std::optional<scran_blocks::SingleQuantile<Stat_, decltype(std::declval<Buffer>().begin())> > > my_calculators;
+    double my_quantile;
+
+public:
+    Stat_ compute(const Buffer& buffer) const {
+        if (buffer.empty()) {
+            return std::numeric_limits<Stat_>::quiet_NaN();
+        } else if (buffer.size() == 1) {
+            return buffer.front();
+        } else {
+            auto& current = work.calculators[buffer.size() - 2];
+            if (!current.has_value()) {
+                current = scran_blocks::SingleQuantile<Stat_, decltype(buffer.begin())>(buffer.size(), my_quantile);
+            }
+            return (*current)(buffer.begin(), buffer.end());
+        }
+    }
+};
+
+struct BlockAverageInfo {
+    BlockAverageInfo() = default;
+    BlockAverageInfo(std::vector<Stat_> combo_weights) : use_mean(true), combo_weights(std::move(combo_weights)) {}
+    BlockAverageInfo(const double quantile) : use_mean(false), quantile(quantile) {}
+public:
+    bool use_mean;
+    std::optional<std::vector<Stat_> > combo_weights;
+    double quantile;
+};
 
 }
 
