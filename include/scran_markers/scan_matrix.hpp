@@ -96,18 +96,20 @@ AucScanWorkspace<Value_, Group_, Stat_, Index_> initialize_workspace_for_auc(
 
             for (decltype(I(ngroups)) g1 = 1; g1 < ngroups; ++g1) {
                 const auto w1 = combo_weights[sanisizer::nd_offset<std::size_t>(g1, ngroups, b)];
-                Stat_ denom1 = cur_totals[g1];
+                const Stat_ denom1 = cur_totals[g1];
+                if (denom1 == 0) {
+                    continue;
+                }
 
                 for (decltype(I(g1)) g2 = 0; g2 < g1; ++g2) {
-                    Stat_ block_denom = denom1 * static_cast<Stat_>(cur_totals[g2]);
-                    if (block_denom == 0) {
-                        // Leaving the relevant entries of block_scale[b] as zero,
-                        // which will cause them to be skipped in process_auc_for_rows().
+                    const Stat_ denom2 = cur_totals[g2];
+                    if (denom2 == 0) {
                         continue;
                     }
 
+                    const Stat_ block_denom = denom1 * denom2;
                     const Stat_ block_weight = w1 * combo_weights[sanisizer::nd_offset<std::size_t>(g2, ngroups, b)];
-                    const Stat_ block_scaling = block_weight / block_denom;
+                    const Stat_ block_scaling = block_denom / block_weight;
 
                     const auto pair_offset1 = sanisizer::nd_offset<std::size_t>(g2, ngroups, g1);
                     cur_scale[pair_offset1] = block_scaling;
@@ -169,10 +171,12 @@ void process_auc_for_rows(
         if (work.use_mean) {
             const auto& block_scale = (*work.block_scale)[b];
             for (decltype(I(ngroups2)) g = 0; g < ngroups2; ++g) {
-                if (block_scale[g]) {
-                    output[g] += auc_buffer[g] * block_scale[g];
+                const auto scale = block_scale[g];
+                if (scale) {
+                    output[g] += auc_buffer[g] / scale;
                 }
             }
+
         } else {
             for (decltype(I(ngroups)) g1 = 0; g1 < ngroups; ++g1) {
                 auto& curbuffers = (*work.pairwise_buffers)[g1];

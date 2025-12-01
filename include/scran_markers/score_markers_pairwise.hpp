@@ -269,7 +269,7 @@ void process_simple_pairwise_effects(
     std::optional<PrecomputedPairwiseWeights<Stat_> > preweights;
     if (average_info.use_mean()) {
         if (output.cohens_d != NULL || output.delta_mean != NULL || output.delta_detected != NULL) {
-            preweights = PrecomputedPairwiseWeights<Stat_>(ngroups, nblocks, average_info.combo_weights().data());
+            preweights.emplace(ngroups, nblocks, average_info.combo_weights().data());
         }
     }
 
