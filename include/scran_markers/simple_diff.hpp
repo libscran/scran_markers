@@ -5,6 +5,7 @@
 #include <cstddef>
 
 #include "sanisizer/sanisizer.hpp"
+#include "scran_blocks/scran_blocks.hpp"
 
 #include "block_averages.hpp"
 #include "utils.hpp"
@@ -76,7 +77,10 @@ std::pair<Stat_, Stat_> compute_simple_diff_blockquantile(
     for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
         const auto left = values[sanisizer::nd_offset<std::size_t>(g1, ngroups, b)]; 
         const auto right = values[sanisizer::nd_offset<std::size_t>(g2, ngroups, b)];
-        buffer.push_back(left - right);
+        const auto effect = left - right;
+        if (!std::isnan(effect)) {
+            buffer.push_back(left - right);
+        }
     }
 
     std::pair<Stat_, Stat_> output;

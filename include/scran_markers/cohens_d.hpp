@@ -8,6 +8,7 @@
 #include <cstddef>
 
 #include "sanisizer/sanisizer.hpp"
+#include "scran_blocks/scran_blocks.hpp"
 
 #include "block_averages.hpp"
 #include "utils.hpp"
@@ -162,7 +163,12 @@ std::pair<Stat_, Stat_> compute_cohens_d_blockquantile(
 
         const auto left_mean = means[offset1];
         const auto right_mean = means[offset2]; 
-        buffer.push_back(compute_cohens_d(left_mean, right_mean, denom, threshold));
+        const auto effect = compute_cohens_d(left_mean, right_mean, denom, threshold);
+        if (std::isnan(effect)) {
+            continue;
+        }
+
+        buffer.push_back(effect);
         if (threshold) {
             rev_buffer.push_back(compute_cohens_d(right_mean, left_mean, denom, threshold));
         }
