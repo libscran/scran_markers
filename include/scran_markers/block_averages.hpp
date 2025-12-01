@@ -15,14 +15,12 @@ enum class AveragePolicy : unsigned char { MEAN, QUANTILE };
 
 namespace internal {
 
-template<typename Weight_>
+template<typename Stat_>
 class PrecomputedPairwiseWeights {
 public:
-    PrecomputedPairwiseWeights() = default;
-
     // 'combo_weights' are expected to be 'ngroups * nblocks' arrays where
     // groups are the faster-changing dimension and the blocks are slower.
-    PrecomputedPairwiseWeights(const std::size_t ngroups, const std::size_t nblocks, const Weight_* const combo_weights) :
+    PrecomputedPairwiseWeights(const std::size_t ngroups, const std::size_t nblocks, const Stat_* const combo_weights) :
         my_total(sanisizer::product<decltype(I(my_total.size()))>(ngroups, ngroups)),
         my_by_block(sanisizer::product<decltype(I(my_by_block.size()))>(my_total.size(), nblocks)),
         my_ngroups(ngroups),
@@ -32,7 +30,7 @@ public:
             for (decltype(I(ngroups)) g1 = 1; g1 < ngroups; ++g1) {
                 const auto w1 = combo_weights[sanisizer::nd_offset<std::size_t>(g1, ngroups, b)];
                 for (decltype(I(g1)) g2 = 0; g2 < g1; ++g2) {
-                    const Weight_ combined = w1 * combo_weights[sanisizer::nd_offset<std::size_t>(g2, ngroups, b)];
+                    const Stat_ combined = w1 * combo_weights[sanisizer::nd_offset<std::size_t>(g2, ngroups, b)];
 
                     // Storing it as a 3D array where the blocks are the fastest changing, 
                     // and then the two groups are the next fastest changing.
@@ -54,7 +52,7 @@ public:
     }
 
 public:
-    std::pair<const Weight_*, Weight_> get(const std::size_t g1, const std::size_t g2) const {
+    std::pair<const Stat_*, Stat_> get(const std::size_t g1, const std::size_t g2) const {
         const auto offset = sanisizer::nd_offset<std::size_t>(g2, my_ngroups, g1);
         return std::make_pair(
             my_by_block.data() + offset * my_nblocks,
@@ -63,50 +61,37 @@ public:
     }
 
 private:
-    std::vector<Weight_> my_total;
-    std::vector<Weight_> my_by_block;
+    std::vector<Stat_> my_total;
+    std::vector<Stat_> my_by_block;
     std::size_t my_ngroups, my_nblocks;
 };
 
 template<typename Stat_>
-class QuantileCalculator {
+class BlockAverageInfo {
 public:
-    QuantileWorkspace(const std::size_t max_nblocks, double quantile) : my_quantile(quantile) {
-        if (max_nblocks >= 2) {
-            sanisizer::resize(my_calculators, max_nblocks - 1);
-        }
-    }
+    BlockAverageInfo() = default;
+    BlockAverageInfo(std::vector<Stat_> combo_weights) : my_combo_weights(std::move(combo_weights)) {}
+    BlockAverageInfo(const double quantile) : my_quantile(quantile) {}
 
 private:
-    typedef std::vector<Stat_> Buffer;
-    std::vector<std::optional<scran_blocks::SingleQuantile<Stat_, decltype(std::declval<Buffer>().begin())> > > my_calculators;
-    double my_quantile;
+    std::optional<std::vector<Stat_> > my_combo_weights;
+    double my_quantile = 0;
 
 public:
-    Stat_ compute(const Buffer& buffer) const {
-        if (buffer.empty()) {
-            return std::numeric_limits<Stat_>::quiet_NaN();
-        } else if (buffer.size() == 1) {
-            return buffer.front();
-        } else {
-            auto& current = work.calculators[buffer.size() - 2];
-            if (!current.has_value()) {
-                current = scran_blocks::SingleQuantile<Stat_, decltype(buffer.begin())>(buffer.size(), my_quantile);
-            }
-            return (*current)(buffer.begin(), buffer.end());
-        }
+    bool use_mean() const {
+        return my_combo_weights.has_value();
+    }
+
+    const std::vector<Stat_>& combo_weights() const {
+        return *my_combo_weights;
+    }
+
+    double quantile() const {
+        return my_quantile;
     }
 };
 
-struct BlockAverageInfo {
-    BlockAverageInfo() = default;
-    BlockAverageInfo(std::vector<Stat_> combo_weights) : use_mean(true), combo_weights(std::move(combo_weights)) {}
-    BlockAverageInfo(const double quantile) : use_mean(false), quantile(quantile) {}
-public:
-    bool use_mean;
-    std::optional<std::vector<Stat_> > combo_weights;
-    double quantile;
-};
+}
 
 }
 

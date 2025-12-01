@@ -6,8 +6,7 @@
 
 #include "sanisizer/sanisizer.hpp"
 
-#include "PrecomputedPairwiseWeights.hpp"
-#include "QuantileWorkspace.hpp"
+#include "block_averages.hpp"
 #include "utils.hpp"
 
 namespace scran_markers {
@@ -16,19 +15,18 @@ namespace internal {
 
 // 'values' is expected to be an 'ngroups * nblocks' array where groups are the
 // faster-changing dimension and the blocks are slower.
-template<typename Stat_, typename Weight_>
+template<typename Stat_>
 Stat_ compute_simple_diff_blockmean(
     const std::size_t g1,
     const std::size_t g2,
     const Stat_* const values,
     const std::size_t ngroups,
     const std::size_t nblocks,
-    const PrecomputedPairwiseWeights<Weight_>& preweights
+    const PrecomputedPairwiseWeights<Stat_>& preweights
 ) {
     const auto winfo = preweights.get(g1, g2);
     if (winfo.second == 0) {
-        constexpr auto nan = std::numeric_limits<Stat_>::quiet_NaN();
-        return std::make_pair(nan, nan);
+        return std::numeric_limits<Stat_>::quiet_NaN();
     }
 
     Stat_ output = 0;
@@ -46,12 +44,12 @@ Stat_ compute_simple_diff_blockmean(
     return output / winfo.second;
 }
 
-template<typename Stat_, typename Weight_>
+template<typename Stat_>
 void compute_pairwise_simple_diff_blockmean(
     const Stat_* const values,
     const std::size_t ngroups,
     const std::size_t nblocks,
-    const PrecomputedPairwiseWeights<Weight_>& preweights,
+    const PrecomputedPairwiseWeights<Stat_>& preweights,
     Stat_* const output
 ) {
     for (decltype(I(ngroups)) g1 = 0; g1 < ngroups; ++g1) {
@@ -65,17 +63,16 @@ void compute_pairwise_simple_diff_blockmean(
 }
 
 template<typename Stat_>
-Stat_ compute_simple_diff_blockquantile(
+std::pair<Stat_, Stat_> compute_simple_diff_blockquantile(
     const std::size_t g1,
     const std::size_t g2,
     const Stat_* const values,
     const std::size_t ngroups,
     const std::size_t nblocks,
     std::vector<Stat_>& buffer,
-    QuantileCalculator<Stat_>& qcalc,
-    QuantileWorkspace<Stat_>& work
+    scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator>& qcalc
 ) {
-    work.buffer.clear();
+    buffer.clear();
     for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
         const auto left = values[sanisizer::nd_offset<std::size_t>(g1, ngroups, b)]; 
         const auto right = values[sanisizer::nd_offset<std::size_t>(g2, ngroups, b)];
@@ -83,11 +80,11 @@ Stat_ compute_simple_diff_blockquantile(
     }
 
     std::pair<Stat_, Stat_> output;
-    output.first = qcalc.compute(buffer);
+    output.first = qcalc(buffer.size(), buffer.begin(), buffer.end());
     for (auto& x : buffer) {
         x *= -1;
     }
-    output.second = qcalc.compute(buffer);
+    output.second = qcalc(buffer.size(), buffer.begin(), buffer.end());
 
     return output;
 }
@@ -97,9 +94,8 @@ void compute_pairwise_simple_diff_blockquantile(
     const Stat_* const values,
     const std::size_t ngroups,
     const std::size_t nblocks,
-    const double quantile,
     std::vector<Stat_>& buffer,
-    QuantileCalculator<Stat_>& qcalc,
+    scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator>& qcalc,
     Stat_* const output
 ) {
     for (decltype(I(ngroups)) g1 = 0; g1 < ngroups; ++g1) {

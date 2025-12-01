@@ -12,7 +12,7 @@
 
 #include "scan_matrix.hpp"
 #include "average_group_stats.hpp"
-#include "PrecomputedPairwiseWeights.hpp"
+#include "block_averages.hpp"
 #include "create_combinations.hpp"
 #include "cohens_d.hpp"
 #include "simple_diff.hpp"
@@ -129,6 +129,8 @@ struct ScoreMarkersBestOptions {
      */
     bool keep_ties = false;
 
+    AveragePolicy block_average_policy = AveragePolicy::MEAN;
+
     /**
      * Policy to use for weighting blocks when computing average statistics/effect sizes across blocks.
      *
@@ -146,6 +148,8 @@ struct ScoreMarkersBestOptions {
      * Only used when `ScoreMarkersBestOptions::block_weight_policy = scran_blocks::WeightPolicy::VARIABLE`.
      */
     scran_blocks::VariableWeightParameters variable_block_weight_parameters;
+
+    double block_quantile = 0.5;
 };
 
 /**
@@ -326,13 +330,13 @@ void find_best_simple_best_effects(
 ) {
     std::optional<std::vector<Stat_> > total_weights_per_group;
     const Stat_* total_weights_ptr = NULL;
-    if (average_info.use_mean) {
+    if (average_info.use_mean()) {
         if (options.compute_group_mean || options.compute_group_detected) {
             if (nblocks > 1) {
-                total_weights_per_group = compute_total_weight_per_group(ngroups, nblocks, combo_weights.data());
-                total_weights_ptr = total_weights_per_group.data();
+                total_weights_per_group = compute_total_weight_per_group(ngroups, nblocks, average_info.combo_weights().data());
+                total_weights_ptr = total_weights_per_group->data();
             } else {
-                total_weights_ptr = combo_weights.data();
+                total_weights_ptr = average_info.combo_weights().data();
             }
         }
     }
@@ -358,9 +362,9 @@ void find_best_simple_best_effects(
     }
 
     std::optional<PrecomputedPairwiseWeights<Stat_> > preweights;
-    if (average_info.use_mean) {
+    if (average_info.use_mean()) {
         if (!output.cohens_d.empty() || !output.delta_mean.empty() || !output.delta_detected.empty()) {
-            preweights = PrecomputedPairwiseWeights<Stat_>(ngroups, nblocks, average_info.combo_weights.data());
+            preweights = PrecomputedPairwiseWeights<Stat_>(ngroups, nblocks, average_info.combo_weights().data());
         }
     }
 
@@ -394,11 +398,11 @@ void find_best_simple_best_effects(
         }
 
         std::optional<std::vector<Stat_> > qbuffer, qrevbuffer;
-        std::optional<QuantileCalculators<Stat_> > qcalc;
-        if (!average_info.use_mean) {
+        std::optional<scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator> > qcalc;
+        if (!average_info.use_mean()) {
             qbuffer.emplace();
             qrevbuffer.emplace();
-            qcalc = QuantileCalculators<Stat_>(nblocks);
+            qcalc.emplace(nblocks, average_info.quantile());
         }
 
         for (Index_ gene = start, end = start + length; gene < end; ++gene) {
@@ -406,8 +410,8 @@ void find_best_simple_best_effects(
 
             if (options.compute_group_mean) {
                 const auto tmp_means = combo_means.data() + in_offset;
-                if (average_info.use_mean) {
-                    average_group_stats_blockmean(gene, ngroups, nblocks, tmp_means, average_info.combo_weights.data(), total_weights_ptr, mptrs);
+                if (average_info.use_mean()) {
+                    average_group_stats_blockmean(gene, ngroups, nblocks, tmp_means, average_info.combo_weights().data(), total_weights_ptr, mptrs);
                 } else {
                     average_group_stats_blockquantile(gene, ngroups, nblocks, tmp_means, *qbuffer, *qcalc, mptrs);
                 }
@@ -415,8 +419,8 @@ void find_best_simple_best_effects(
 
             if (options.compute_group_detected) {
                 const auto tmp_detected = combo_detected.data() + in_offset;
-                if (average_info.use_mean) {
-                    average_group_stats_blockmean(gene, ngroups, nblocks, tmp_detected, combo_weights.data(), total_weights_ptr, dptrs);
+                if (average_info.use_mean()) {
+                    average_group_stats_blockmean(gene, ngroups, nblocks, tmp_detected, average_info.combo_weights().data(), total_weights_ptr, dptrs);
                 } else {
                     average_group_stats_blockquantile(gene, ngroups, nblocks, tmp_detected, *qbuffer, *qcalc, dptrs);
                 }
@@ -426,7 +430,7 @@ void find_best_simple_best_effects(
             if (options.compute_cohens_d) {
                 const auto tmp_means = combo_means.data() + in_offset;
                 const auto tmp_variances = combo_vars.data() + in_offset;
-                if (average_info.use_mean) {
+                if (average_info.use_mean()) {
                     compute_pairwise_cohens_d_blockmean(tmp_means, tmp_variances, ngroups, nblocks, *preweights, options.threshold, buffer.data());
                 } else {
                     compute_pairwise_cohens_d_blockquantile(tmp_means, tmp_variances, ngroups, nblocks, options.threshold, *qbuffer, *qrevbuffer, *qcalc, buffer.data());
@@ -436,7 +440,7 @@ void find_best_simple_best_effects(
 
             if (options.compute_delta_mean) {
                 const auto tmp_means = combo_means.data() + in_offset;
-                if (average_info.use_mean) {
+                if (average_info.use_mean()) {
                     compute_pairwise_simple_diff_blockmean(tmp_means, ngroups, nblocks, *preweights, buffer.data());
                 } else {
                     compute_pairwise_simple_diff_blockquantile(tmp_means, ngroups, nblocks, *qbuffer, *qcalc, buffer.data());
@@ -446,7 +450,7 @@ void find_best_simple_best_effects(
 
             if (options.compute_delta_detected) {
                 const auto tmp_detected = combo_detected.data() + in_offset;
-                if (average_info.use_mean) {
+                if (average_info.use_mean()) {
                     compute_pairwise_simple_diff_blockmean(tmp_detected, ngroups, nblocks, *preweights, buffer.data());
                 } else {
                     compute_pairwise_simple_diff_blockquantile(tmp_detected, ngroups, nblocks, *qbuffer, *qcalc, buffer.data());
@@ -506,7 +510,7 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
     // For a single block, this usually doesn't really matter, but we do it for consistency with the multi-block case,
     // and to account for variable weighting where non-zero block sizes get zero weight.
     BlockAverageInfo<Stat_> average_info;
-    if (options.average_policy == AveragePolicy::MEAN) {
+    if (options.block_average_policy == AveragePolicy::MEAN) {
         average_info = BlockAverageInfo<Stat_>(
             scran_blocks::compute_weights<Stat_>(
                 combo_sizes,
@@ -515,7 +519,7 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
             )
         );
     } else {
-        average_info = BlockAverageInfo<Stat_>(options.quantile);
+        average_info = BlockAverageInfo<Stat_>(options.block_quantile);
     }
 
     ScoreMarkersBestResults<Stat_, Index_> output;
@@ -524,7 +528,6 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
         auto auc_queues = sanisizer::create<std::vector<PairwiseTopQueues<Stat_, Index_> > >(options.num_threads);
 
         struct AucResultWorkspace {
-            AucResultWorkspace() = default;
             AucResultWorkspace(const std::size_t ngroups, PairwiseTopQueues<Stat_, Index_>& pqueue) :
                 pairwise_buffer(sanisizer::product<typename std::vector<Stat_>::size_type>(ngroups, ngroups)),
                 queue_ptr(&pqueue)
@@ -551,7 +554,7 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
                 allocate_best_top_queues(auc_queues[t], ngroups, top, options.largest_auc, options.keep_ties, options.threshold_auc);
                 return AucResultWorkspace(ngroups, auc_queues[t]);
             },
-            /* auc_result_process = */ [&](const Index_ gene, AucScanWorkspace<Value_, Group_, Index_, Stat_>& auc_work, AucResultWorkspace& res_work) -> void {
+            /* auc_result_process = */ [&](const Index_ gene, AucScanWorkspace<Value_, Group_, Stat_, Index_>& auc_work, AucResultWorkspace& res_work) -> void {
                 process_auc_for_rows(auc_work, ngroups, nblocks, options.threshold, res_work.pairwise_buffer.data());
                 add_best_top_queues(*(res_work.queue_ptr), gene, ngroups, res_work.pairwise_buffer);
             },
@@ -596,10 +599,10 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
                     return combo;
                 }
             }(),
+            combo_sizes,
             combo_means,
             combo_vars,
             combo_detected,
-            combo_sizes,
             options.num_threads
         );
     }

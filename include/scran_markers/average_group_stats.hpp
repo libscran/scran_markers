@@ -13,9 +13,9 @@ namespace scran_markers {
 
 namespace internal {
 
-template<typename Weight_>
-std::vector<Weight_> compute_total_weight_per_group(const std::size_t ngroups, const std::size_t nblocks, const Weight_* const combo_weights) {
-    auto output = sanisizer::create<std::vector<Weight_> >(ngroups);
+template<typename Stat_>
+std::vector<Stat_> compute_total_weight_per_group(const std::size_t ngroups, const std::size_t nblocks, const Stat_* const combo_weights) {
+    auto output = sanisizer::create<std::vector<Stat_> >(ngroups);
     for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
         for (decltype(I(ngroups)) g = 0; g < ngroups; ++g) {
             output[g] += combo_weights[sanisizer::nd_offset<std::size_t>(g, ngroups, b)];
@@ -24,14 +24,14 @@ std::vector<Weight_> compute_total_weight_per_group(const std::size_t ngroups, c
     return output;
 }
 
-template<typename Gene_, typename Stat_, typename Weight_>
+template<typename Gene_, typename Stat_>
 void average_group_stats_blockmean(
     const Gene_ gene,
     const std::size_t ngroups,
     const std::size_t nblocks,
     const Stat_* const stats,
-    const Weight_* const combo_weights,
-    const Weight_* const total_weights,
+    const Stat_* const combo_weights,
+    const Stat_* const total_weights,
     const std::vector<Stat_*>& out_stats 
 ) {
     for (decltype(I(ngroups)) g = 0; g < ngroups; ++g) {
@@ -49,7 +49,7 @@ void average_group_stats_blockmean(
             const auto offset = sanisizer::nd_offset<std::size_t>(g, ngroups, b);
             const auto& curweight = combo_weights[offset];
             if (curweight) { // check if this is zero and skip it explicitly, as the value would probably be NaN. 
-                sum += curweight * tmp_stats[offset];
+                sum += curweight * stats[offset];
             }
         }
 
@@ -57,14 +57,14 @@ void average_group_stats_blockmean(
     }
 }
 
-template<typename Gene_, typename Stat_, typename Weight_>
+template<typename Gene_, typename Stat_>
 void average_group_stats_blockquantile(
     const Gene_ gene,
     const std::size_t ngroups,
     const std::size_t nblocks,
-    const Stat_* const tmp_stats,
+    const Stat_* const stats,
     std::vector<Stat_>& buffer,
-    QuantileCalculator<Stat_>& qcalc,
+    scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator>& qcalc,
     const std::vector<Stat_*>& out_stats 
 ) {
     for (decltype(I(ngroups)) g = 0; g < ngroups; ++g) {
@@ -79,7 +79,7 @@ void average_group_stats_blockquantile(
             }
         }
 
-        out_stats[g][gene] = qcalc.compute(buffer);
+        out_stats[g][gene] = qcalc(buffer.size(), buffer.begin(), buffer.end());
     }
 }
 

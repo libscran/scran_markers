@@ -12,7 +12,7 @@
 
 #include "scan_matrix.hpp"
 #include "average_group_stats.hpp"
-#include "PrecomputedPairwiseWeights.hpp"
+#include "block_averages.hpp"
 #include "create_combinations.hpp"
 #include "cohens_d.hpp"
 #include "simple_diff.hpp"
@@ -78,7 +78,7 @@ struct ScoreMarkersPairwiseOptions {
      */
     bool compute_delta_detected = true;
 
-    AveragePolicy block_average_strategy = AveragePolicy::MEAN;
+    AveragePolicy block_average_policy = AveragePolicy::MEAN;
 
     /**
      * Policy to use for weighting blocks when computing average statistics/effect sizes across blocks.
@@ -255,29 +255,31 @@ void process_simple_pairwise_effects(
 ) {
     const Stat_* total_weights_ptr = NULL;
     std::optional<std::vector<Stat_> > total_weights_per_group;
-    if (average_info.use_mean) {
+    if (average_info.use_mean()) {
         if (!output.mean.empty() || !output.detected.empty()) {
             if (nblocks > 1) {
-                total_weights_per_group = compute_total_weight_per_group(ngroups, nblocks, average_info.combo_weights.data());
+                total_weights_per_group = compute_total_weight_per_group(ngroups, nblocks, average_info.combo_weights().data());
                 total_weights_ptr = total_weights_per_group->data();
             } else {
-                total_weights_ptr = average_info.combo_weights.data();
+                total_weights_ptr = average_info.combo_weights().data();
             }
         }
     }
 
     std::optional<PrecomputedPairwiseWeights<Stat_> > preweights;
-    if (average_info.use_mean) {
-        preweights = PrecomputedPairwiseWeights<Stat_>(ngroups, nblocks, average_info.combo_weights.data());
+    if (average_info.use_mean()) {
+        if (output.cohens_d != NULL || output.delta_mean != NULL || output.delta_detected != NULL) {
+            preweights = PrecomputedPairwiseWeights<Stat_>(ngroups, nblocks, average_info.combo_weights().data());
+        }
     }
 
     tatami::parallelize([&](const int, const Index_ start, const Index_ length) -> void {
         std::optional<std::vector<Stat_> > qbuffer, qrevbuffer;
-        std::optional<QuantileCalculators<Stat_> > qcalc;
-        if (!average_info.use_mean) {
+        std::optional<scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator> > qcalc;
+        if (!average_info.use_mean()) {
             qbuffer.emplace();
             qrevbuffer.emplace();
-            qcalc = QuantileCalculators<Stat_>(nblocks);
+            qcalc.emplace(nblocks, average_info.quantile());
         }
 
         for (Index_ gene = start, end = start + length; gene < end; ++gene) {
@@ -285,8 +287,8 @@ void process_simple_pairwise_effects(
 
             if (!output.mean.empty()) {
                 const auto tmp_means = combo_means.data() + in_offset;
-                if (average_info.use_mean) {
-                    average_group_stats_blockmean(gene, ngroups, nblocks, tmp_means, average_info.combo_weights.data(), total_weights_ptr, output.mean);
+                if (average_info.use_mean()) {
+                    average_group_stats_blockmean(gene, ngroups, nblocks, tmp_means, average_info.combo_weights().data(), total_weights_ptr, output.mean);
                 } else {
                     average_group_stats_blockquantile(gene, ngroups, nblocks, tmp_means, *qbuffer, *qcalc, output.mean);
                 }
@@ -294,8 +296,8 @@ void process_simple_pairwise_effects(
 
             if (!output.detected.empty()) {
                 const auto tmp_detected = combo_detected.data() + in_offset;
-                if (average_info.use_mean) {
-                    average_group_stats_blockmean(gene, ngroups, nblocks, tmp_detected, average_info.combo_weights.data(), total_weights_ptr, output.detected);
+                if (average_info.use_mean()) {
+                    average_group_stats_blockmean(gene, ngroups, nblocks, tmp_detected, average_info.combo_weights().data(), total_weights_ptr, output.detected);
                 } else {
                     average_group_stats_blockquantile(gene, ngroups, nblocks, tmp_detected, *qbuffer, *qcalc, output.detected);
                 }
@@ -308,7 +310,7 @@ void process_simple_pairwise_effects(
                 const auto tmp_means = combo_means.data() + in_offset;
                 const auto tmp_variances = combo_vars.data() + in_offset;
                 const auto outptr = output.cohens_d + out_offset;
-                if (average_info.use_mean) {
+                if (average_info.use_mean()) {
                     compute_pairwise_cohens_d_blockmean(tmp_means, tmp_variances, ngroups, nblocks, threshold, *preweights, outptr);
                 } else {
                     compute_pairwise_cohens_d_blockquantile(tmp_means, tmp_variances, ngroups, nblocks, threshold, *qbuffer, *qrevbuffer, *qcalc, outptr);
@@ -318,7 +320,7 @@ void process_simple_pairwise_effects(
             if (output.delta_detected != NULL) {
                 const auto tmp_detected = combo_detected.data() + in_offset;
                 const auto outptr = output.delta_detected + out_offset;
-                if (average_info.use_mean) {
+                if (average_info.use_mean()) {
                     compute_pairwise_simple_diff_blockmean(tmp_detected, ngroups, nblocks, *preweights, outptr);
                 } else {
                     compute_pairwise_simple_diff_blockquantile(tmp_detected, ngroups, nblocks, *qbuffer, *qcalc, outptr);
@@ -328,7 +330,7 @@ void process_simple_pairwise_effects(
             if (output.delta_mean != NULL) {
                 const auto tmp_means = combo_means.data() + in_offset;
                 const auto outptr = output.delta_mean + out_offset;
-                if (average_info.use_mean) {
+                if (average_info.use_mean()) {
                     compute_pairwise_simple_diff_blockmean(tmp_means, ngroups, nblocks, *preweights, outptr);
                 } else {
                     compute_pairwise_simple_diff_blockquantile(tmp_means, ngroups, nblocks, *qbuffer, *qcalc, outptr);
@@ -428,7 +430,7 @@ void score_markers_pairwise(
     // For a single block, this usually doesn't really matter, but we do it for consistency with the multi-block case,
     // and to account for variable weighting where non-zero block sizes get zero weight.
     BlockAverageInfo<Stat_> average_info;
-    if (options.average_policy == AveragePolicy::MEAN) {
+    if (options.block_average_policy == AveragePolicy::MEAN) {
         average_info = BlockAverageInfo<Stat_>(
             scran_blocks::compute_weights<Stat_>(
                 combo_sizes,
@@ -437,7 +439,7 @@ void score_markers_pairwise(
             )
         );
     } else {
-        average_info = BlockAverageInfo<Stat_>(options.quantile);
+        average_info = BlockAverageInfo<Stat_>(options.block_quantile);
     }
 
     if (output.auc != NULL || matrix.prefer_rows()) {

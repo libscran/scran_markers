@@ -9,8 +9,7 @@
 
 #include "sanisizer/sanisizer.hpp"
 
-#include "PrecomputedPairwiseWeights.hpp"
-#include "QuantileWorkspace.hpp"
+#include "block_averages.hpp"
 #include "utils.hpp"
 
 namespace scran_markers {
@@ -57,7 +56,7 @@ Stat_ cohen_denominator(const Stat_ left_var, const Stat_ right_var) {
 
 // 'means' and 'vars' are expected to be 'ngroups * nblocks' arrays
 // where groups are the faster-changing dimension and the blocks are slower.
-template<typename Stat_, typename Weight_>
+template<typename Stat_>
 std::pair<Stat_, Stat_> compute_cohens_d_blockmean(
     const std::size_t g1,
     const std::size_t g2,
@@ -65,7 +64,7 @@ std::pair<Stat_, Stat_> compute_cohens_d_blockmean(
     const Stat_* const vars,
     const std::size_t ngroups,
     const std::size_t nblocks,
-    const Stat_ threshold
+    const Stat_ threshold,
     const PrecomputedPairwiseWeights<Stat_>& preweights 
 ) {
     const auto winfo = preweights.get(g1, g2);
@@ -115,19 +114,19 @@ std::pair<Stat_, Stat_> compute_cohens_d_blockmean(
     return output;
 }
 
-template<typename Stat_, typename Weight_>
+template<typename Stat_>
 void compute_pairwise_cohens_d_blockmean(
     const Stat_* const means,
     const Stat_* const vars,
     const std::size_t ngroups,
     const std::size_t nblocks,
     const Stat_ threshold,
-    const PrecomputedPairwiseWeights<Weight_>& preweights,
+    const PrecomputedPairwiseWeights<Stat_>& preweights,
     Stat_* const output)
 {
     for (decltype(I(ngroups)) g1 = 0; g1 < ngroups; ++g1) {
         for (decltype(I(g1)) g2 = 0; g2 < g1; ++g2) {
-            const auto tmp = compute_cohens_d_mean(g1, g2, means, vars, ngroups, nblocks, threshold, preweights);
+            const auto tmp = compute_cohens_d_blockmean(g1, g2, means, vars, ngroups, nblocks, threshold, preweights);
             output[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1)] = tmp.first;
             output[sanisizer::nd_offset<std::size_t>(g1, ngroups, g2)] = tmp.second;
         }
@@ -146,7 +145,7 @@ std::pair<Stat_, Stat_> compute_cohens_d_blockquantile(
     const Stat_ threshold,
     std::vector<Stat_>& buffer,
     std::vector<Stat_>& rev_buffer,
-    QuantileCalculator<Stat_>& qcalc
+    scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator>& qcalc
 ) {
     buffer.clear();
     rev_buffer.clear();
@@ -170,14 +169,14 @@ std::pair<Stat_, Stat_> compute_cohens_d_blockquantile(
     }
 
     std::pair<Stat_, Stat_> output;
-    output.first = qcalc.compute(buffer);
+    output.first = qcalc(buffer.size(), buffer.begin(), buffer.end());
     if (threshold) {
-        output.second = qcalc.compute(rev_buffer);
+        output.second = qcalc(rev_buffer.size(), rev_buffer.begin(), rev_buffer.end());
     } else {
         for (auto& x : buffer) {
             x *= -1;
         }
-        output.second = qcalc.compute(buffer);
+        output.second = qcalc(buffer.size(), buffer.begin(), buffer.end());
     }
 
     return output;
@@ -192,12 +191,12 @@ void compute_pairwise_cohens_d_blockquantile(
     const Stat_ threshold,
     std::vector<Stat_>& buffer,
     std::vector<Stat_>& rev_buffer,
-    QuantileCalculator<Stat_>& qcalc,
+    scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator>& qcalc,
     Stat_* const output
 ) {
     for (decltype(I(ngroups)) g1 = 0; g1 < ngroups; ++g1) {
         for (decltype(I(g1)) g2 = 0; g2 < g1; ++g2) {
-            const auto tmp = compute_pairwise_cohens_d_blockquantile(g1, g2, means, vars, ngroups, nblocks, threshold, quantile, buffer, rev_buffer, qcalc);
+            const auto tmp = compute_cohens_d_blockquantile(g1, g2, means, vars, ngroups, nblocks, threshold, buffer, rev_buffer, qcalc);
             output[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1)] = tmp.first;
             output[sanisizer::nd_offset<std::size_t>(g1, ngroups, g2)] = tmp.second;
         }
