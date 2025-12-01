@@ -124,7 +124,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.15;
                         sparam.seed = 4242;
                         return sparam;
@@ -297,7 +297,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.18;
                         sparam.seed = 666 ;
                         return sparam;
@@ -493,7 +493,7 @@ TEST_F(ScoreMarkersSummaryScenariosTest, Thresholds) {
         scran_tests::simulate_vector(
             nrows * ncols,
             []{
-                scran_tests::SimulationParameters sparam;
+                scran_tests::SimulateVectorParameters sparam;
                 sparam.seed = 696969;
                 return sparam;
             }()
@@ -552,7 +552,7 @@ TEST_F(ScoreMarkersSummaryScenariosTest, BlockConfounded) {
         scran_tests::simulate_vector(
             nrows * ncols,
             []{
-                scran_tests::SimulationParameters sparam;
+                scran_tests::SimulateVectorParameters sparam;
                 sparam.seed = 696969;
                 return sparam;
             }()
@@ -766,7 +766,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.2;
                         sparam.seed = 96;
                         return sparam;

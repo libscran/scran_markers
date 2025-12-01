@@ -55,7 +55,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.1;
                         sparam.seed = 99998;
                         return sparam;
@@ -219,7 +219,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.1;
                         sparam.seed = 999998;
                         return sparam;
@@ -533,7 +533,7 @@ TEST_F(ScoreMarkersPairwiseScenariosTest, Self) {
             scran_tests::simulate_vector(
                 nrows * ncols,
                 []{
-                    scran_tests::SimulationParameters sparam;
+                    scran_tests::SimulateVectorParameters sparam;
                     sparam.seed = 69;
                     return sparam;
                 }()
@@ -630,7 +630,7 @@ TEST_F(ScoreMarkersPairwiseScenariosTest, Thresholds) {
         scran_tests::simulate_vector(
             nrows * ncols,
             []{
-                scran_tests::SimulationParameters sparam;
+                scran_tests::SimulateVectorParameters sparam;
                 sparam.seed = 696969;
                 return sparam;
             }()
@@ -682,7 +682,7 @@ TEST_F(ScoreMarkersPairwiseScenariosTest, Missing) {
         scran_tests::simulate_vector(
             nrows * ncols,
             []{
-                scran_tests::SimulationParameters sparam;
+                scran_tests::SimulateVectorParameters sparam;
                 sparam.seed = 696969;
                 return sparam;
             }()
@@ -755,7 +755,7 @@ TEST_F(ScoreMarkersPairwiseScenariosTest, BlockConfounded) {
             scran_tests::simulate_vector(
                 nrows * ncols,
                 []{
-                    scran_tests::SimulationParameters sparam;
+                    scran_tests::SimulateVectorParameters sparam;
                     sparam.seed = 69696969;
                     return sparam;
                 }()
@@ -847,7 +847,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.2;
                         sparam.seed = 96;
                         return sparam;

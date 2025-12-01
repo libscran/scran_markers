@@ -10,13 +10,13 @@ protected:
 
     static void SetUpTestSuite() {
         means = scran_tests::simulate_vector(ngenes * ngroups * nblocks, []{ 
-            scran_tests::SimulationParameters sparam;
+            scran_tests::SimulateVectorParameters sparam;
             sparam.seed = 43210;
             return sparam;
         }());
 
         weights = scran_tests::simulate_vector(ngroups * nblocks, []{ 
-            scran_tests::SimulationParameters sparam;
+            scran_tests::SimulateVectorParameters sparam;
             sparam.lower = 0.1;
             sparam.upper = 1;
             sparam.seed = 69;

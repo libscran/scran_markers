@@ -118,7 +118,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.2;
                         sparam.seed = 6900;
                         return sparam;
@@ -261,7 +261,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.3;
                         sparam.seed = 4200;
                         return sparam;
@@ -454,7 +454,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.2;
                         sparam.seed = 96;
                         return sparam;
