@@ -363,8 +363,8 @@ void find_best_simple_best_effects(
 
     std::optional<PrecomputedPairwiseWeights<Stat_> > preweights;
     if (average_info.use_mean()) {
-        if (!output.cohens_d.empty() || !output.delta_mean.empty() || !output.delta_detected.empty()) {
-            preweights = PrecomputedPairwiseWeights<Stat_>(ngroups, nblocks, average_info.combo_weights().data());
+        if (options.compute_cohens_d || options.compute_delta_mean || options.compute_delta_detected) {
+            preweights.emplace(ngroups, nblocks, average_info.combo_weights().data());
         }
     }
 
@@ -431,7 +431,7 @@ void find_best_simple_best_effects(
                 const auto tmp_means = combo_means.data() + in_offset;
                 const auto tmp_variances = combo_vars.data() + in_offset;
                 if (average_info.use_mean()) {
-                    compute_pairwise_cohens_d_blockmean(tmp_means, tmp_variances, ngroups, nblocks, *preweights, options.threshold, buffer.data());
+                    compute_pairwise_cohens_d_blockmean(tmp_means, tmp_variances, ngroups, nblocks, options.threshold, *preweights, buffer.data());
                 } else {
                     compute_pairwise_cohens_d_blockquantile(tmp_means, tmp_variances, ngroups, nblocks, options.threshold, *qbuffer, *qrevbuffer, *qcalc, buffer.data());
                 }

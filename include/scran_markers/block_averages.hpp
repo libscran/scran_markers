@@ -26,24 +26,53 @@ public:
         my_ngroups(ngroups),
         my_nblocks(nblocks)
     {
+        auto blocks_in_use = sanisizer::create<std::vector<std::size_t> >(my_total.size());
         for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
             for (decltype(I(ngroups)) g1 = 1; g1 < ngroups; ++g1) {
                 const auto w1 = combo_weights[sanisizer::nd_offset<std::size_t>(g1, ngroups, b)];
+                if (w1 == 0) {
+                    continue;
+                }
+
                 for (decltype(I(g1)) g2 = 0; g2 < g1; ++g2) {
-                    const Stat_ combined = w1 * combo_weights[sanisizer::nd_offset<std::size_t>(g2, ngroups, b)];
+                    const auto w2 = combo_weights[sanisizer::nd_offset<std::size_t>(g2, ngroups, b)];
+                    if (w2 == 0) {
+                        continue;
+                    }
 
                     // Storing it as a 3D array where the blocks are the fastest changing, 
                     // and then the two groups are the next fastest changing.
+                    const Stat_ combined = w1 * w2;
                     const auto out_offset1 = sanisizer::nd_offset<std::size_t>(g2, ngroups, g1);
                     my_by_block[sanisizer::nd_offset<std::size_t>(b, nblocks, out_offset1)] = combined;
                     my_by_block[sanisizer::nd_offset<std::size_t>(b, nblocks, g1, ngroups, g2)] = combined;
-
                     my_total[out_offset1] += combined;
+                    blocks_in_use[out_offset1] += (combined > 0);
                 }
             }
         }
 
-        // Filling the other side, for completeness.
+        // If we have exactly one block that contributes to the weighted mean, the magnitude of the weight doesn't matter.
+        // So, we set the weight to 1 to ensure that the weighted mean calculation is a no-op,
+        // i.e., there won't be any introduction of floating-point errors from a mult/div by the weight. 
+        // Zero weights do need to be preserved, though, as mult/div by zero gives NaN.
+        for (decltype(I(ngroups)) g1 = 1; g1 < ngroups; ++g1) {
+            for (decltype(I(g1)) g2 = 0; g2 < g1; ++g2) {
+                const auto out_offset1 = sanisizer::nd_offset<std::size_t>(g2, ngroups, g1);
+                if (blocks_in_use[out_offset1] != 1) {
+                    continue;
+                }
+
+                my_total[out_offset1] = 1;
+                for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
+                    auto& curweight = my_by_block[sanisizer::nd_offset<std::size_t>(b, nblocks, out_offset1)];
+                    curweight = (curweight > 0);
+                    my_by_block[sanisizer::nd_offset<std::size_t>(b, nblocks, g1, ngroups, g2)] = curweight;
+                }
+            }
+        }
+
+        // Filling the other side of my_totals, for completeness.
         for (decltype(I(ngroups)) g1 = 1; g1 < ngroups; ++g1) {
             for (decltype(I(g1)) g2 = 0; g2 < g1; ++g2) {
                 my_total[sanisizer::nd_offset<std::size_t>(g1, ngroups, g2)] = my_total[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1)];

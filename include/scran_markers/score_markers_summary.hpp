@@ -432,7 +432,7 @@ void process_simple_summary_effects(
                 total_weights_per_group = compute_total_weight_per_group(ngroups, nblocks, average_info.combo_weights().data());
                 total_weights_ptr = total_weights_per_group->data();
             } else {
-                average_info.combo_weights().data();
+                total_weights_ptr = average_info.combo_weights().data();
             }
         }
     }
