@@ -129,6 +129,11 @@ struct ScoreMarkersBestOptions {
      */
     bool keep_ties = false;
 
+    /**
+     * Policy to use for averaging statistics across blocks into a single value.
+     * This can either be `AveragePolicy::MEAN` (weighted mean) or `AveragePolicy::QUANTILE` (quantile).
+     * Only used in `score_markers_best_blocked()`.
+     */
     AveragePolicy block_average_policy = AveragePolicy::MEAN;
 
     /**
@@ -140,15 +145,22 @@ struct ScoreMarkersBestOptions {
      *
      * Other options include `scran_blocks::WeightPolicy::EQUAL`, where all blocks are equally weighted regardless of size;
      * and `scran_blocks::WeightPolicy::NONE`, where the contribution of each block is proportional to its size.
+     *
+     * Only used in `score_markers_best_blocked()` when `ScoreMarkersBestOptions::block_average_policy = AveragePolicy::MEAN`.
      */
     scran_blocks::WeightPolicy block_weight_policy = scran_blocks::WeightPolicy::VARIABLE;
 
     /**
      * Parameters for the variable block weights, including the threshold at which blocks are considered to be large enough to have equal weight.
-     * Only used when `ScoreMarkersBestOptions::block_weight_policy = scran_blocks::WeightPolicy::VARIABLE`.
+     * Only used in `score_markers_best_blocked()` when `ScoreMarkersBestOptions::block_average_policy = AveragePolicy::MEAN`
+     * and `ScoreMarkersBestOptions::block_weight_policy = scran_blocks::WeightPolicy::VARIABLE`.
      */
     scran_blocks::VariableWeightParameters variable_block_weight_parameters;
 
+    /**
+     * Quantile probability for summarizing statistics across blocks. 
+     * Only used in `score_markers_best_blocked()` when `ScoreMarkersPairwiseOptions::block_average_policy = AveragePolicy::QUANTILE`.
+     */
     double block_quantile = 0.5;
 };
 

@@ -210,7 +210,6 @@ void compute_pairwise_cohens_d_blockquantile(
     }
 }
 
-
 }
 
 }

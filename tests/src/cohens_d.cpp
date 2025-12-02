@@ -204,11 +204,11 @@ TEST(CohensD, Blocked) {
 }
 
 TEST(CohensD, BlockedMissing) {
-    double nan = std::numeric_limits<double>::quiet_NaN();
+    constexpr double nan = std::numeric_limits<double>::quiet_NaN();
     int nblocks = 2, ngroups = 4;
     std::vector<double> means{nan, 0.2, nan, nan, 0.5, 0.6, 0.7, 0.8 };
-    std::vector<double> variances{nan, nan, nan, nan, 0.1, 1.2, 0.4, 0.5 };
-    std::vector<double> combo_sizes{ 0, 1, 0, 0, 15, 2, 3, 6 }; 
+    std::vector<double> variances{nan, 2.4, nan, nan, 0.1, 1.2, 0.4, 0.5 };
+    std::vector<double> combo_sizes{ 0, 5, 0, 0, 15, 2, 3, 6 }; 
 
     std::vector<double> output(ngroups * ngroups
 #ifdef SCRAN_MARKERS_TEST_INIT
@@ -242,3 +242,53 @@ TEST(CohensD, BlockedMissing) {
         EXPECT_EQ(output, q_output);
     }
 }
+
+TEST(CohensD, MeanOnly) {
+    // Check that we can calculate cohen's correctly when we have mean-only groups.
+    // This checks a few things:
+    // - that we skip invalid pairings between two mean-only groups, even if the weights are non-zero.
+    // - that we can still compute a pairing between a mean-only group and a group with a variance.
+    constexpr double nan = std::numeric_limits<double>::quiet_NaN();
+    int ngroups = 3;
+    std::vector<double> means{0.1, 0.2, 0.3};
+    std::vector<double> variances{nan, nan, 1.2};
+    std::vector<double> combo_sizes{1, 1, 2};
+
+    std::vector<double> output(ngroups * ngroups
+#ifdef SCRAN_MARKERS_TEST_INIT
+        , SCRAN_MARKERS_TEST_INIT
+#endif
+    );
+    {
+        scran_markers::internal::PrecomputedPairwiseWeights preweights(ngroups, 1, combo_sizes.data());
+        scran_markers::internal::compute_pairwise_cohens_d_blockmean(means.data(), variances.data(), ngroups, 1, 0.0, preweights, output.data());
+
+        EXPECT_EQ(output[0], 0);
+        for (int g1 = 1; g1 < ngroups; ++g1) {
+            for (int g2 = 0; g2 < g1; ++g2) {
+                if (g1 == 2) {
+                    const double expected = (0.3 - means[g2]) / std::sqrt(1.2);
+                    EXPECT_DOUBLE_EQ(output[g1 * ngroups + g2], expected);;
+                    EXPECT_DOUBLE_EQ(output[g2 * ngroups + g1], -expected);
+                } else {
+                    EXPECT_TRUE(std::isnan(output[g1 * ngroups + g2]));
+                    EXPECT_TRUE(std::isnan(output[g2 * ngroups + g1]));
+                }
+            }
+            EXPECT_EQ(output[g1 * ngroups + g1], 0);
+        }
+    }
+
+    {
+        std::vector<double> q_output(ngroups * ngroups
+#ifdef SCRAN_MARKERS_TEST_INIT
+            , SCRAN_MARKERS_TEST_INIT
+#endif
+        );
+        std::vector<double> buffer, rev_buffer;
+        scran_blocks::SingleQuantileVariable<double, typename std::vector<double>::iterator> qcalc(1, 0.5);
+        scran_markers::internal::compute_pairwise_cohens_d_blockquantile(means.data(), variances.data(), ngroups, 1, 0.0, buffer, rev_buffer, qcalc, q_output.data());
+        scran_tests::compare_almost_equal_containers(output, q_output, {});
+    }
+}
+

@@ -912,6 +912,7 @@ INPUT                  = ../README.md  \
                          ../include/scran_markers/summarize_effects.hpp \
                          ../include/scran_markers/summarize_comparisons.hpp \
                          ../include/scran_markers/score_markers_summary.hpp \
+                         ../include/scran_markers/block_averages.hpp \
                          ../include/scran_markers/scran_markers.hpp
 
 # This tag can be used to specify the character encoding of the source files

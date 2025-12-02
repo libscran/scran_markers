@@ -9,10 +9,25 @@
 
 #include "utils.hpp"
 
+/**
+ * @file block_averages.hpp
+ * @brief Averaging statistics over blocks.
+ */
+
 namespace scran_markers {
 
+/**
+ * Policy for averaging statistics across blocks.
+ *
+ * - `MEAN`: computes a weighted mean of per-block statistics.
+ *   Weights are based on the size of the block.
+ * - `QUANTILE`: computes a quantile of the per-block statistics.
+ */
 enum class AveragePolicy : unsigned char { MEAN, QUANTILE };
 
+/**
+ * @cond
+ */
 namespace internal {
 
 template<typename Stat_>
@@ -121,6 +136,9 @@ public:
 };
 
 }
+/**
+ * @endcond
+ */
 
 }
 

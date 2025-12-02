@@ -143,7 +143,7 @@ TEST(SimpleDiff, Blocked) {
 }
 
 TEST(SimpleDiff, BlockedMissing) {
-    double nan = std::numeric_limits<double>::quiet_NaN();
+    constexpr double nan = std::numeric_limits<double>::quiet_NaN();
     int nblocks = 2, ngroups = 4;
     std::vector<double> means{ 0.0, nan, nan, nan, 0.2, 0.4, 0.6, 0.8 };
     std::vector<double> combo_weights{ 0, 1, 0, 0, 34, 23, 6, 55 }; // exactly one group in the first block with non-zero size.
