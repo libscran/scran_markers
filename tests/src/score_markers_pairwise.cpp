@@ -55,7 +55,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.1;
                         sparam.seed = 99998;
                         return sparam;
@@ -98,7 +98,9 @@ protected:
             }
         }
 
-        scran_markers::internal::PrecomputedPairwiseWeights preweights(ngroups, 1, group_sizes.data());
+        std::vector<double> combo_weights(group_sizes.begin(), group_sizes.end());
+        scran_markers::internal::PrecomputedPairwiseWeights preweights(ngroups, 1, combo_weights.data());
+
         std::vector<double> means(ngroups), variances(ngroups), detected(ngroups);
         for (size_t r = 0; r < ngenes; ++r) {
             for (size_t g = 0; g < ngroups; ++g) {
@@ -108,9 +110,9 @@ protected:
             }
 
             size_t out_offset = r * ngroups * ngroups;
-            scran_markers::internal::compute_pairwise_cohens_d(means.data(), variances.data(), ngroups, 1, preweights, threshold, output.cohens_d.data() + out_offset);
-            scran_markers::internal::compute_pairwise_simple_diff(means.data(), ngroups, 1, preweights, output.delta_mean.data() + out_offset);
-            scran_markers::internal::compute_pairwise_simple_diff(detected.data(), ngroups, 1, preweights, output.delta_detected.data() + out_offset);
+            scran_markers::internal::compute_pairwise_cohens_d_blockmean(means.data(), variances.data(), ngroups, 1, threshold, preweights, output.cohens_d.data() + out_offset);
+            scran_markers::internal::compute_pairwise_simple_diff_blockmean(means.data(), ngroups, 1, preweights, output.delta_mean.data() + out_offset);
+            scran_markers::internal::compute_pairwise_simple_diff_blockmean(detected.data(), ngroups, 1, preweights, output.delta_detected.data() + out_offset);
         }
 
         return output;
@@ -158,14 +160,34 @@ TEST_P(ScoreMarkersPairwiseUnblockedTest, Reference) {
         compare_results(ref, drres, auc);
     }
 
-    auto dcres = scran_markers::score_markers_pairwise(*dense_column, groupings.data(), opt);
-    compare_results(ref, dcres, auc);
+    // Testing the other matrix representations.
+    {
+        auto dcres = scran_markers::score_markers_pairwise(*dense_column, groupings.data(), opt);
+        compare_results(ref, dcres, auc);
 
-    auto srres = scran_markers::score_markers_pairwise(*sparse_row, groupings.data(), opt);
-    compare_results(ref, srres, auc);
+        auto srres = scran_markers::score_markers_pairwise(*sparse_row, groupings.data(), opt);
+        compare_results(ref, srres, auc);
 
-    auto scres = scran_markers::score_markers_pairwise(*sparse_column, groupings.data(), opt);
-    compare_results(ref, scres, auc);
+        auto scres = scran_markers::score_markers_pairwise(*sparse_column, groupings.data(), opt);
+        compare_results(ref, scres, auc);
+    }
+
+    // Should be the same with quantile calculations when there's only one block.
+    {
+        auto qopt = opt;
+        qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+        auto qdrgres = scran_markers::score_markers_pairwise(*dense_row, groupings.data(), qopt);
+        compare_results(ref, qdrgres, auc);
+
+        auto qdcres = scran_markers::score_markers_pairwise(*dense_column, groupings.data(), qopt);
+        compare_results(ref, qdcres, auc);
+
+        auto qsrres = scran_markers::score_markers_pairwise(*sparse_row, groupings.data(), qopt);
+        compare_results(ref, qsrres, auc);
+
+        auto qscres = scran_markers::score_markers_pairwise(*sparse_column, groupings.data(), qopt);
+        compare_results(ref, qscres, auc);
+    }
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -197,7 +219,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.1;
                         sparam.seed = 999998;
                         return sparam;
@@ -211,33 +233,40 @@ protected:
         sparse_column = tatami::convert_to_compressed_sparse(dense_row.get(), false);
     }
 
-    static auto blocked_reference(const tatami::Matrix<double, int>& mat, const int* group, const int* blocks, const scran_markers::ScoreMarkersPairwiseOptions& opt) {
+private:
+    static scran_markers::ScoreMarkersPairwiseResults<double> allocate_output(std::size_t ngenes, std::size_t ngroups, bool do_auc) {
         scran_markers::ScoreMarkersPairwiseResults<double> output;
-
-        size_t ngenes = mat.nrow();
-        size_t ngroups = tatami_stats::total_groups(group, mat.ncol());
         output.mean.reserve(ngroups);
         output.detected.reserve(ngroups);
-        for (size_t g = 0; g < ngroups; ++g) {
+        for (std::size_t g = 0; g < ngroups; ++g) {
             output.mean.emplace_back(ngenes);
             output.detected.emplace_back(ngenes);
         }
 
-        output.cohens_d.resize(ngroups * ngroups * ngenes);
-        output.delta_mean = output.cohens_d;
-        output.delta_detected = output.cohens_d;
-        if (opt.compute_auc) {
-            output.auc = output.cohens_d;
+        const std::size_t full_size = ngroups * ngroups * ngenes;
+        output.cohens_d.resize(full_size);
+        output.delta_mean.resize(full_size);
+        output.delta_detected.resize(full_size);
+        if (do_auc) {
+            output.auc.resize(full_size);
         }
 
+        return output;
+    }
+
+protected:
+    static auto blocked_reference_mean(const tatami::Matrix<double, int>& mat, const int* group, const int* blocks, const scran_markers::ScoreMarkersPairwiseOptions& opt) {
+        size_t ngenes = mat.nrow();
+        size_t ngroups = tatami_stats::total_groups(group, mat.ncol());
         int nblocks = tatami_stats::total_groups(blocks, mat.ncol());
+        auto output = allocate_output(ngenes, ngroups, opt.compute_auc);
+
         std::vector<double> total_group_weights(ngroups);
         std::vector<double> total_product_weights(ngroups * ngroups);
 
         for (int b = 0; b < nblocks; ++b) {
             // Slicing the matrix.
-            std::vector<int> subset;
-            std::vector<int> subgroups;
+            std::vector<int> subset, subgroups;
             int ncols = mat.ncol();
             for (int i = 0; i < ncols; ++i) {
                 if (blocks[i] == b) {
@@ -249,7 +278,7 @@ protected:
             auto sub = tatami::make_DelayedSubset(dense_row, std::move(subset), false);
             auto res = scran_markers::score_markers_pairwise(*sub, subgroups.data(), opt);
             auto subcount = tatami_stats::tabulate_groups(subgroups.data(), subgroups.size());
-            std::vector<double> subweights = scran_blocks::compute_weights(subcount, opt.block_weight_policy, opt.variable_block_weight_parameters);
+            auto subweights = scran_blocks::compute_weights(subcount, opt.block_weight_policy, opt.variable_block_weight_parameters);
 
             for (size_t i = 0; i < ngenes; ++i) {
                 for (size_t g1 = 0; g1 < ngroups; ++g1) {
@@ -281,7 +310,6 @@ protected:
 
         for (size_t i = 0; i < ngenes; ++i) {
             auto offset = i * ngroups * ngroups;
-
             for (size_t g1 = 0; g1 < ngroups; ++g1) {
                 for (size_t g2 = 0; g2 < ngroups; ++g2) {
                     size_t from = g1 * ngroups + g2;
@@ -303,9 +331,106 @@ protected:
 
         return output;
     }
+
+    static auto blocked_reference_quantile(const tatami::Matrix<double, int>& mat, const int* group, const int* blocks, const scran_markers::ScoreMarkersPairwiseOptions& opt) {
+        size_t ngenes = mat.nrow();
+        size_t ngroups = tatami_stats::total_groups(group, mat.ncol());
+        int nblocks = tatami_stats::total_groups(blocks, mat.ncol());
+        auto output = allocate_output(ngenes, ngroups, opt.compute_auc);
+
+        // Indexing goes: group, gene, blocks.
+        std::vector<std::vector<std::vector<double> > > qbuffers_mean(ngroups), qbuffers_det(ngroups);
+        for (size_t g = 0; g < ngroups; ++g) {
+            qbuffers_mean[g].resize(ngenes);
+            qbuffers_det[g].resize(ngenes);
+        }
+
+        // Indexing goes: group 1, group 2, gene, blocks.
+        std::vector<std::vector<std::vector<std::vector<double> > > > qbuffers_cohen(ngroups), qbuffers_dmean(ngroups), qbuffers_ddet(ngroups), qbuffers_auc;
+        if (opt.compute_auc) {
+            qbuffers_auc.resize(ngroups);
+        }
+
+        for (size_t g1 = 0; g1 < ngroups; ++g1) {
+            qbuffers_cohen[g1].resize(ngroups);
+            qbuffers_dmean[g1].resize(ngroups);
+            qbuffers_ddet[g1].resize(ngroups);
+            if (opt.compute_auc) {
+                qbuffers_auc[g1].resize(ngroups);
+            }
+
+            for (size_t g2 = 0; g2 < ngroups; ++g2) {
+                qbuffers_cohen[g1][g2].resize(ngenes);
+                qbuffers_dmean[g1][g2].resize(ngenes);
+                qbuffers_ddet[g1][g2].resize(ngenes);
+                if (opt.compute_auc) {
+                    qbuffers_auc[g1][g2].resize(ngenes);
+                }
+            }
+        }
+
+        for (int b = 0; b < nblocks; ++b) {
+            // Slicing the matrix.
+            std::vector<int> subset, subgroups;
+            const int ncols = mat.ncol();
+            for (int i = 0; i < ncols; ++i) {
+                if (blocks[i] == b) {
+                    subset.push_back(i);
+                    subgroups.push_back(group[i]);
+                }
+            }
+
+            auto sub = tatami::make_DelayedSubset(dense_row, std::move(subset), false);
+            auto res = scran_markers::score_markers_pairwise(*sub, subgroups.data(), opt);
+
+            for (size_t i = 0; i < ngenes; ++i) {
+                for (size_t g1 = 0; g1 < ngroups; ++g1) {
+                    for (size_t g2 = 0; g2 < ngroups; ++g2) {
+                        size_t offset = i * ngroups * ngroups + g1 * ngroups + g2;
+                        qbuffers_cohen[g1][g2][i].push_back(res.cohens_d[offset]);
+                        qbuffers_dmean[g1][g2][i].push_back(res.delta_mean[offset]);
+                        qbuffers_ddet[g1][g2][i].push_back(res.delta_detected[offset]);
+                        if (opt.compute_auc) {
+                            qbuffers_auc[g1][g2][i].push_back(res.auc[offset]);
+                        }
+                    }
+                }
+
+                for (size_t g = 0; g < ngroups; ++g) {
+                    qbuffers_mean[g][i].push_back(res.mean[g][i]);
+                    qbuffers_det[g][i].push_back(res.detected[g][i]);
+                }
+            }
+        }
+
+        scran_blocks::SingleQuantile<double, typename std::vector<double>::iterator> qcalc(nblocks, opt.block_quantile);
+        for (size_t i = 0; i < ngenes; ++i) {
+            auto offset = i * ngroups * ngroups;
+
+            for (size_t g1 = 0; g1 < ngroups; ++g1) {
+                for (size_t g2 = 0; g2 < ngroups; ++g2) {
+                    size_t from = g1 * ngroups + g2;
+                    size_t to = offset + from;
+                    output.cohens_d[to] = qcalc(qbuffers_cohen[g1][g2][i].begin(), qbuffers_cohen[g1][g2][i].end());
+                    output.delta_mean[to] = qcalc(qbuffers_dmean[g1][g2][i].begin(), qbuffers_dmean[g1][g2][i].end());
+                    output.delta_detected[to] = qcalc(qbuffers_ddet[g1][g2][i].begin(), qbuffers_ddet[g1][g2][i].end());
+                    if (opt.compute_auc) {
+                        output.auc[to] = qcalc(qbuffers_auc[g1][g2][i].begin(), qbuffers_auc[g1][g2][i].end());
+                    }
+                }
+            }
+
+            for (size_t g = 0; g < ngroups; ++g) {
+                output.mean[g][i] = qcalc(qbuffers_mean[g][i].begin(), qbuffers_mean[g][i].end());
+                output.detected[g][i] = qcalc(qbuffers_det[g][i].begin(), qbuffers_det[g][i].end());
+            }
+        }
+
+        return output;
+    }
 };
 
-TEST_P(ScoreMarkersPairwiseBlockedTest, VersusReference) {
+TEST_P(ScoreMarkersPairwiseBlockedTest, VersusReferenceMean) {
     auto param = GetParam();
     auto ngroups = std::get<0>(param);
     auto nblocks = std::get<1>(param);
@@ -323,12 +448,54 @@ TEST_P(ScoreMarkersPairwiseBlockedTest, VersusReference) {
     auto ref = scran_markers::score_markers_pairwise_blocked(*dense_row, groups.data(), blocks.data(), opt);
 
     if (nthreads == 1) {
-        auto simple = blocked_reference(*dense_row, groups.data(), blocks.data(), opt);
+        auto simple = blocked_reference_mean(*dense_row, groups.data(), blocks.data(), opt);
         compare_results(ref, simple, auc);
     } else {
         opt.num_threads = nthreads;
         auto drres = scran_markers::score_markers_pairwise_blocked(*dense_row, groups.data(), blocks.data(), opt);
         compare_results(ref, drres, auc);
+    }
+
+    auto dcres = scran_markers::score_markers_pairwise_blocked(*dense_column, groups.data(), blocks.data(), opt);
+    compare_results(ref, dcres, auc);
+
+    auto srres = scran_markers::score_markers_pairwise_blocked(*sparse_row, groups.data(), blocks.data(), opt);
+    compare_results(ref, srres, auc);
+
+    auto scres = scran_markers::score_markers_pairwise_blocked(*sparse_column, groups.data(), blocks.data(), opt);
+    compare_results(ref, scres, auc);
+}
+
+TEST_P(ScoreMarkersPairwiseBlockedTest, VersusReferenceQuantile) {
+    auto param = GetParam();
+    auto ngroups = std::get<0>(param);
+    auto nblocks = std::get<1>(param);
+    auto auc = std::get<2>(param);
+    auto policy = std::get<3>(param);
+    auto nthreads = std::get<4>(param);
+
+    // Block weighting has no effect here, so we'll just short-circuit.
+    if (policy == scran_blocks::WeightPolicy::EQUAL) {
+        return;
+    }
+
+    auto ncols = dense_row->ncol();
+    auto groups = create_groupings(ncols, ngroups);
+    auto blocks = create_blocks(ncols, nblocks);
+
+    scran_markers::ScoreMarkersPairwiseOptions opt;
+    opt.block_weight_policy = policy;
+    opt.compute_auc = auc;
+    opt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    auto ref = scran_markers::score_markers_pairwise_blocked(*dense_row, groups.data(), blocks.data(), opt);
+
+    if (nthreads == 1) {
+        auto simple = blocked_reference_quantile(*dense_row, groups.data(), blocks.data(), opt);
+        compare_results(ref, simple, auc);
+    } else {
+        opt.num_threads = nthreads;
+        auto rres = scran_markers::score_markers_pairwise_blocked(*dense_row, groups.data(), blocks.data(), opt);
+        compare_results(ref, rres, auc);
     }
 
     auto dcres = scran_markers::score_markers_pairwise_blocked(*dense_column, groups.data(), blocks.data(), opt);
@@ -355,7 +522,9 @@ INSTANTIATE_TEST_SUITE_P(
 
 /*********************************************/
 
-TEST(ScoreMarkersPairwiseScenarios, Self) {
+class ScoreMarkersPairwiseScenariosTest : public ScoreMarkersPairwiseTestCore, public ::testing::Test {};
+
+TEST_F(ScoreMarkersPairwiseScenariosTest, Self) {
     int nrows = 132, ncols = 97;
     std::shared_ptr<tatami::NumericMatrix> mat(
         new tatami::DenseRowMatrix<double, int>(
@@ -364,7 +533,7 @@ TEST(ScoreMarkersPairwiseScenarios, Self) {
             scran_tests::simulate_vector(
                 nrows * ncols,
                 []{
-                    scran_tests::SimulationParameters sparam;
+                    scran_tests::SimulateVectorParameters sparam;
                     sparam.seed = 69;
                     return sparam;
                 }()
@@ -380,8 +549,8 @@ TEST(ScoreMarkersPairwiseScenarios, Self) {
     }
     auto combined = tatami::make_DelayedBind(std::move(stuff), false);
 
-    // Creating two groups; second group can be larger than the first, to check
-    // for correct behavior w.r.t. imbalanced groups.
+    // Creating two groups where the second group is larger than the first.
+    // This aims to check correct behavior w.r.t. imbalanced groups.
     std::vector<int> groupings(ncols * copies);
     std::fill(groupings.begin(), groupings.begin() + ncols, 0);
     std::fill(groupings.begin() + ncols, groupings.end(), 1); 
@@ -406,9 +575,15 @@ TEST(ScoreMarkersPairwiseScenarios, Self) {
     scran_tests::compare_almost_equal(auc, res.auc);
     scran_tests::compare_almost_equal(lfc, res.delta_mean);
     scran_tests::compare_almost_equal(delta_detected, res.delta_detected);
+
+    // Quantile should give the same results for a single block.
+    auto qopt = opt;
+    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    auto qres = scran_markers::score_markers_pairwise(*combined, groupings.data(), qopt);
+    compare_results(res, qres, true);
 }
 
-TEST(ScoreMarkersPairwiseScenarios, Perfect) {
+TEST_F(ScoreMarkersPairwiseScenariosTest, Perfect) {
     int ngroups = 5;
     int ncols = 71;
     std::vector<int> groupings = create_groupings(ncols, ngroups);
@@ -439,9 +614,15 @@ TEST(ScoreMarkersPairwiseScenarios, Perfect) {
             }
         }
     }
+
+    // Quantile should give the same results for a single block.
+    auto qopt = opt;
+    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    auto qres = scran_markers::score_markers_pairwise(mat, groupings.data(), qopt);
+    compare_results(res, qres, true);
 }
 
-TEST(ScoreMarkersPairwiseScenarios, Thresholds) {
+TEST_F(ScoreMarkersPairwiseScenariosTest, Thresholds) {
     int nrows = 67, ncols = 91;
     tatami::DenseRowMatrix<double, int> mat(
         nrows,
@@ -449,7 +630,7 @@ TEST(ScoreMarkersPairwiseScenarios, Thresholds) {
         scran_tests::simulate_vector(
             nrows * ncols,
             []{
-                scran_tests::SimulationParameters sparam;
+                scran_tests::SimulateVectorParameters sparam;
                 sparam.seed = 696969;
                 return sparam;
             }()
@@ -485,9 +666,15 @@ TEST(ScoreMarkersPairwiseScenarios, Thresholds) {
 
     // There should be at least some difference here.
     EXPECT_NE(ref.auc, out.auc);
+
+    // Quantile should give the same results for a single block.
+    auto qopt = opt;
+    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    auto qout = scran_markers::score_markers_pairwise(mat, groupings.data(), qopt);
+    compare_results(out, qout, true);
 }
 
-TEST(ScoreMarkersPairwiseScenarios, Missing) {
+TEST_F(ScoreMarkersPairwiseScenariosTest, Missing) {
     int nrows = 144, ncols = 109;
     tatami::DenseRowMatrix<double, int> mat(
         nrows,
@@ -495,7 +682,7 @@ TEST(ScoreMarkersPairwiseScenarios, Missing) {
         scran_tests::simulate_vector(
             nrows * ncols,
             []{
-                scran_tests::SimulationParameters sparam;
+                scran_tests::SimulateVectorParameters sparam;
                 sparam.seed = 696969;
                 return sparam;
             }()
@@ -516,6 +703,9 @@ TEST(ScoreMarkersPairwiseScenarios, Missing) {
     // Everything should be NaN.
     int ngroups_p1 = ngroups + 1;
     for (int g = 0; g < nrows; ++g) {
+        EXPECT_TRUE(std::isnan(lost.mean[0][g]));
+        EXPECT_TRUE(std::isnan(lost.detected[0][g]));
+
         for (int l2 = 1; l2 < ngroups_p1; ++l2) {
             // For the comparisons from group 0 to the others.
             size_t offset = g * ngroups_p1 * ngroups_p1 + l2;  
@@ -536,6 +726,9 @@ TEST(ScoreMarkersPairwiseScenarios, Missing) {
     // Other metrics should be the same as usual.
     for (int g = 0; g < nrows; ++g) {
         for (int l = 0; l < ngroups; ++l) {
+            EXPECT_EQ(ref.mean[l][g], lost.mean[l + 1][g]);
+            EXPECT_EQ(ref.detected[l][g], lost.detected[l + 1][g]);
+
             size_t ref_offset = g * ngroups * ngroups + l * ngroups;  
             size_t lost_offset = g * ngroups_p1 * ngroups_p1 + (l + 1) * ngroups_p1 + 1; // skip group 0, and also the NaN in the comparison against group 0.
 
@@ -545,9 +738,15 @@ TEST(ScoreMarkersPairwiseScenarios, Missing) {
             EXPECT_EQ(scran_tests::vector_n(ref.delta_detected.data() + ref_offset, ngroups), scran_tests::vector_n(lost.delta_detected.data() + lost_offset, ngroups));
         }
     }
+
+    // Quantile should give the same results for a single block.
+    auto qopt = opt;
+    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    auto qlost = scran_markers::score_markers_pairwise(mat, groupings.data(), qopt);
+    compare_results(lost, qlost, true);
 }
 
-TEST(ScoreMarkersPairwiseScenarios, BlockConfounded) {
+TEST_F(ScoreMarkersPairwiseScenariosTest, BlockConfounded) {
     int nrows = 198, ncols = 99;
     std::shared_ptr<tatami::Matrix<double, int> > mat(
         new tatami::DenseRowMatrix<double, int>(
@@ -556,7 +755,7 @@ TEST(ScoreMarkersPairwiseScenarios, BlockConfounded) {
             scran_tests::simulate_vector(
                 nrows * ncols,
                 []{
-                    scran_tests::SimulationParameters sparam;
+                    scran_tests::SimulateVectorParameters sparam;
                     sparam.seed = 69696969;
                     return sparam;
                 }()
@@ -570,7 +769,7 @@ TEST(ScoreMarkersPairwiseScenarios, BlockConfounded) {
     // Block is fully confounded with one group.
     std::vector<int> blocks(ncols);
     for (int c = 0; c < ncols; ++c) {
-        blocks[c] = groupings[c] == 0;
+        blocks[c] = (groupings[c] == 0);
     }
 
     scran_markers::ScoreMarkersPairwiseOptions opt;
@@ -621,6 +820,13 @@ TEST(ScoreMarkersPairwiseScenarios, BlockConfounded) {
             EXPECT_EQ(scran_tests::vector_n(ref.auc.data() + ref_offset, ngroups_m1), scran_tests::vector_n(comres.auc.data() + comres_offset, ngroups_m1));
         }
     }
+
+    // Quantile should give the same results, as there's basically only one block;
+    // the second block is fully confounded.
+    auto qopt = opt;
+    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    auto qcomres = scran_markers::score_markers_pairwise_blocked(*mat, groupings.data(), blocks.data(), qopt);
+    compare_results(comres, qcomres, true);
 }
 
 /*********************************************/
@@ -641,7 +847,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.2;
                         sparam.seed = 96;
                         return sparam;

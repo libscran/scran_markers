@@ -37,6 +37,7 @@ set(LIST_FILES
     src/auc.cpp
     src/cohens_d.cpp
     src/simple_diff.cpp
+    src/block_averages.cpp
     src/summarize_comparisons.cpp
     src/summarize_effects.cpp
     src/score_markers_pairwise.cpp

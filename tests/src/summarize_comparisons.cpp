@@ -327,7 +327,7 @@ TEST_P(ComputeMinRankTestThreaded, Consistency) {
     size_t ngroups = std::get<0>(param);
     bool add_nans = std::get<1>(param);
 
-    scran_tests::SimulationParameters sparams;
+    scran_tests::SimulateVectorParameters sparams;
     sparams.seed = ngroups * 10 + add_nans * 100;
     auto effects = scran_tests::simulate_vector(ngenes * ngroups * ngroups, sparams);
     if (add_nans) {

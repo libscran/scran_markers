@@ -7,7 +7,7 @@
 
 TEST(SummarizeEffects, Basic) {
     size_t ngenes = 111, ngroups = 3;
-    std::vector<double> stuff = scran_tests::simulate_vector(ngroups * ngroups * ngenes, scran_tests::SimulationParameters());
+    std::vector<double> stuff = scran_tests::simulate_vector(ngroups * ngroups * ngenes, scran_tests::SimulateVectorParameters());
 
     scran_markers::SummarizeEffectsOptions opts;
     auto res = scran_markers::summarize_effects(ngenes, ngroups, stuff.data(), opts);

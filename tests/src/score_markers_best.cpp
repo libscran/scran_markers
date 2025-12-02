@@ -27,9 +27,10 @@ protected:
         for (int g1 = 0; g1 < ngroups; ++g1) {
             ASSERT_EQ(left[g1].size(), right[g1].size());
             for (int g2 = 0; g2 < ngroups; ++g2) {
-                const int n = left[g1][g2].size();
+                const auto n = left[g1][g2].size();
                 ASSERT_EQ(n, right[g1][g2].size());
-                for (int i = 0; i < n; ++i) {
+
+                for (std::size_t i = 0; i < n; ++i) {
                     const auto& lval = left[g1][g2][i];
                     const auto& rval = right[g1][g2][i];
                     EXPECT_EQ(lval.first, rval.first);
@@ -117,7 +118,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.2;
                         sparam.seed = 6900;
                         return sparam;
@@ -203,6 +204,32 @@ TEST_P(ScoreMarkersBestTest, Basic) {
         compare_averages(ref.detected, sc.detected);
         compare_best(ref, sc);
     }
+
+    // Comparing to quantile best; should be the same for 1 block.
+    {
+        auto qopt = opt;
+        qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+
+        auto qdr = scran_markers::score_markers_best<double>(*dense_row, groupings.data(), top, qopt);
+        compare_averages(ref.mean, qdr.mean);
+        compare_averages(ref.detected, qdr.detected);
+        compare_best(ref, qdr);
+
+        auto qdc = scran_markers::score_markers_best<double>(*dense_column, groupings.data(), top, qopt);
+        compare_averages(ref.mean, qdc.mean);
+        compare_averages(ref.detected, qdc.detected);
+        compare_best(ref, qdc);
+
+        auto qsr = scran_markers::score_markers_best<double>(*sparse_row, groupings.data(), top, qopt);
+        compare_averages(ref.mean, qsr.mean);
+        compare_averages(ref.detected, qsr.detected);
+        compare_best(ref, qsr);
+
+        auto qsc = scran_markers::score_markers_best<double>(*sparse_column, groupings.data(), top, qopt);
+        compare_averages(ref.mean, qsc.mean);
+        compare_averages(ref.detected, qsc.detected);
+        compare_best(ref, qsc);
+    }
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -234,7 +261,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.3;
                         sparam.seed = 4200;
                         return sparam;
@@ -249,7 +276,7 @@ protected:
     }
 };
 
-TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwise) {
+TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseMean) {
     auto param = GetParam();
     auto ngroups = std::get<0>(param);
     bool do_auc = std::get<1>(param);
@@ -321,6 +348,83 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwise) {
     }
 }
 
+TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseQuantile) {
+    auto param = GetParam();
+    auto ngroups = std::get<0>(param);
+    bool do_auc = std::get<1>(param);
+    auto policy = std::get<2>(param);
+    int top = std::get<3>(param);
+    bool larger = std::get<4>(param);
+    bool use_bound = std::get<5>(param);
+    bool keep_ties = std::get<6>(param);
+
+    // Block weighting has no effect here, so we'll just short-circuit.
+    if (policy == scran_blocks::WeightPolicy::EQUAL) {
+        return;
+    }
+
+    auto NC = dense_row->ncol();
+    std::vector<int> groupings = create_groupings(NC, ngroups);
+    std::vector<int> blocks = create_blocks(NC, 3);
+    auto ngenes = dense_row->nrow();
+
+    scran_markers::ScoreMarkersBestOptions opt;
+    opt.largest_cohens_d = larger;
+    opt.largest_delta_detected = larger;
+    opt.largest_delta_mean = larger;
+    opt.largest_auc = larger;
+
+    if (!use_bound) {
+        opt.threshold_cohens_d.reset();
+        opt.threshold_delta_detected.reset();
+        opt.threshold_delta_mean.reset();
+        opt.threshold_auc.reset();
+    }
+
+    opt.keep_ties = keep_ties;
+    opt.compute_auc = do_auc; // false, if we want to check the running implementations.
+    opt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    auto ref = scran_markers::score_markers_best_blocked<double>(*dense_row, groupings.data(), blocks.data(), top, opt);
+
+    // Comparing score_markers_best_blocked against score_markers_pairwise_blocked + topicks::pick_top_genes.
+    // The latter is less mind-bending but requires holding a large 3D matrix in memory.
+    {
+        scran_markers::ScoreMarkersPairwiseOptions popt;
+        popt.compute_auc = do_auc;
+        popt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+        auto pairres = scran_markers::score_markers_pairwise_blocked(*dense_row, groupings.data(), blocks.data(), popt);
+        compare_averages(ref.mean, pairres.mean);
+        compare_averages(ref.detected, pairres.detected);
+
+        compare_best_to_pairwise(ref.cohens_d, pairres.cohens_d, ngenes, ngroups, top, opt.largest_cohens_d, keep_ties, opt.threshold_cohens_d);
+        compare_best_to_pairwise(ref.delta_mean, pairres.delta_mean, ngenes, ngroups, top, opt.largest_delta_mean, keep_ties, opt.threshold_delta_mean);
+        compare_best_to_pairwise(ref.delta_detected, pairres.delta_detected, ngenes, ngroups, top, opt.largest_delta_detected, keep_ties, opt.threshold_delta_detected);
+        if (do_auc) {
+            compare_best_to_pairwise(ref.auc, pairres.auc, ngenes, ngroups, top, opt.largest_auc, keep_ties, opt.threshold_auc);
+        }
+    }
+
+    // Note: skipping the multi-threaded checks as this is the same as the unblocked case.
+
+    // Comparing to all of the other matrix representations.
+    {
+        auto dc = scran_markers::score_markers_best_blocked<double>(*dense_column, groupings.data(), blocks.data(), top, opt);
+        compare_averages(ref.mean, dc.mean);
+        compare_averages(ref.detected, dc.detected);
+        compare_best(ref, dc);
+
+        auto sr = scran_markers::score_markers_best_blocked<double>(*sparse_row, groupings.data(), blocks.data(), top, opt);
+        compare_averages(ref.mean, sr.mean);
+        compare_averages(ref.detected, sr.detected);
+        compare_best(ref, sr);
+
+        auto sc = scran_markers::score_markers_best_blocked<double>(*sparse_column, groupings.data(), blocks.data(), top, opt);
+        compare_averages(ref.mean, sc.mean);
+        compare_averages(ref.detected, sc.detected);
+        compare_best(ref, sc);
+    }
+}
+
 INSTANTIATE_TEST_SUITE_P(
     ScoreMarkersBest,
     ScoreMarkersBestBlockedTest,
@@ -350,7 +454,7 @@ protected:
                 scran_tests::simulate_vector(
                     nr * nc, 
                     []{
-                        scran_tests::SimulationParameters sparam;
+                        scran_tests::SimulateVectorParameters sparam;
                         sparam.density = 0.2;
                         sparam.seed = 96;
                         return sparam;

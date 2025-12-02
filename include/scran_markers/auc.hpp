@@ -55,7 +55,7 @@ void prepare_auc_workspace(AucWorkspace<Value_, Group_, Output_>& work) {
     std::fill(work.output_start, work.output_end, 0);
 }
 
-template<typename Value_, typename Group_, typename Count_, typename Output_>
+template<typename Value_, typename Group_, typename Output_, typename Count_>
 void compute_pairwise_auc(AucWorkspace<Value_, Group_, Output_>& work, const std::vector<Count_>& num_zeros, const std::vector<Count_>& totals, const bool normalize) {
     prepare_auc_workspace(work);
 
@@ -152,7 +152,7 @@ void compute_pairwise_auc(AucWorkspace<Value_, Group_, Output_>& work, const std
     }
 }
 
-template<typename Value_, typename Group_, typename Count_, typename Output_, typename Threshold_>
+template<typename Value_, typename Group_, typename Output_, typename Count_, typename Threshold_>
 void compute_pairwise_auc(AucWorkspace<Value_, Group_, Output_>& work, const std::vector<Count_>& num_zeros, const std::vector<Count_>& totals, const Threshold_ threshold, const bool normalize) {
     prepare_auc_workspace(work);
 
