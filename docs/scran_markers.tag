@@ -1,9 +1,16 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
 <tagfile doxygen_version="1.12.0">
   <compound kind="file">
+    <name>block_averages.hpp</name>
+    <path>/github/workspace/include/scran_markers/</path>
+    <filename>block__averages_8hpp.html</filename>
+    <namespace>scran_markers</namespace>
+  </compound>
+  <compound kind="file">
     <name>score_markers_best.hpp</name>
     <path>/github/workspace/include/scran_markers/</path>
     <filename>score__markers__best_8hpp.html</filename>
+    <includes id="block__averages_8hpp" name="block_averages.hpp" local="yes" import="no" module="no" objc="no">block_averages.hpp</includes>
     <class kind="struct">scran_markers::ScoreMarkersBestOptions</class>
     <class kind="struct">scran_markers::ScoreMarkersBestResults</class>
     <namespace>scran_markers</namespace>
@@ -12,6 +19,7 @@
     <name>score_markers_pairwise.hpp</name>
     <path>/github/workspace/include/scran_markers/</path>
     <filename>score__markers__pairwise_8hpp.html</filename>
+    <includes id="block__averages_8hpp" name="block_averages.hpp" local="yes" import="no" module="no" objc="no">block_averages.hpp</includes>
     <class kind="struct">scran_markers::ScoreMarkersPairwiseOptions</class>
     <class kind="struct">scran_markers::ScoreMarkersPairwiseBuffers</class>
     <class kind="struct">scran_markers::ScoreMarkersPairwiseResults</class>
@@ -21,6 +29,7 @@
     <name>score_markers_summary.hpp</name>
     <path>/github/workspace/include/scran_markers/</path>
     <filename>score__markers__summary_8hpp.html</filename>
+    <includes id="block__averages_8hpp" name="block_averages.hpp" local="yes" import="no" module="no" objc="no">block_averages.hpp</includes>
     <includes id="summarize__comparisons_8hpp" name="summarize_comparisons.hpp" local="yes" import="no" module="no" objc="no">summarize_comparisons.hpp</includes>
     <class kind="struct">scran_markers::ScoreMarkersSummaryOptions</class>
     <class kind="struct">scran_markers::ScoreMarkersSummaryBuffers</class>
@@ -176,6 +185,13 @@
       <arglist></arglist>
     </member>
     <member kind="variable">
+      <type>AveragePolicy</type>
+      <name>block_average_policy</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>a08f7df5910f2d9ce1c31dd4af9617c3e</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
       <type>scran_blocks::WeightPolicy</type>
       <name>block_weight_policy</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
@@ -187,6 +203,13 @@
       <name>variable_block_weight_parameters</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
       <anchor>ae9155fca6deafc3acc0e4c92de471ea1</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>double</type>
+      <name>block_quantile</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
+      <anchor>a6ce13cd0f7b0f9866b268a665adacb47</anchor>
       <arglist></arglist>
     </member>
   </compound>
@@ -345,6 +368,13 @@
       <arglist></arglist>
     </member>
     <member kind="variable">
+      <type>AveragePolicy</type>
+      <name>block_average_policy</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersPairwiseOptions.html</anchorfile>
+      <anchor>a499778b33f74d45d600dea444c1f10d2</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
       <type>scran_blocks::WeightPolicy</type>
       <name>block_weight_policy</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersPairwiseOptions.html</anchorfile>
@@ -356,6 +386,13 @@
       <name>variable_block_weight_parameters</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersPairwiseOptions.html</anchorfile>
       <anchor>af6ab275bc541e6c0ffe62d9da271f550</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>double</type>
+      <name>block_quantile</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersPairwiseOptions.html</anchorfile>
+      <anchor>a4e6b9812fdbcc6d53819f1c1365b0486</anchor>
       <arglist></arglist>
     </member>
   </compound>
@@ -563,6 +600,13 @@
       <arglist></arglist>
     </member>
     <member kind="variable">
+      <type>AveragePolicy</type>
+      <name>block_average_policy</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>a0e87a7b9ccddada180f133b8d93edc35</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
       <type>scran_blocks::WeightPolicy</type>
       <name>block_weight_policy</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
@@ -574,6 +618,13 @@
       <name>variable_block_weight_parameters</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
       <anchor>ad16d7561289a49c342ed6eb4be6adfbc</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>double</type>
+      <name>block_quantile</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>a4796ff4ea6ebadba4711c92783fd4180</anchor>
       <arglist></arglist>
     </member>
   </compound>
@@ -774,6 +825,15 @@
     <class kind="struct">scran_markers::SummarizeEffectsOptions</class>
     <class kind="struct">scran_markers::SummaryBuffers</class>
     <class kind="struct">scran_markers::SummaryResults</class>
+    <member kind="enumeration">
+      <type></type>
+      <name>AveragePolicy</name>
+      <anchorfile>namespacescran__markers.html</anchorfile>
+      <anchor>a6618123944df0034878e41ba2b70809d</anchor>
+      <arglist></arglist>
+      <enumvalue file="namespacescran__markers.html" anchor="a6618123944df0034878e41ba2b70809da4ea6d1161ea24d7599365f574aff6610">MEAN</enumvalue>
+      <enumvalue file="namespacescran__markers.html" anchor="a6618123944df0034878e41ba2b70809da4ce64f35e5957a6f3ecc9895dc1bb90f">QUANTILE</enumvalue>
+    </member>
     <member kind="function">
       <type>void</type>
       <name>score_markers_pairwise</name>

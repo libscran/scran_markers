@@ -95,6 +95,7 @@ $(function(){ initResizable(false); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">scran_markers Namespace Reference</div></div>
 </div><!--header-->
@@ -139,6 +140,13 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Container for the summary statistics.  <a href="structscran__markers_1_1SummaryResults.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
+Enumerations</h2></td></tr>
+<tr class="memitem:a6618123944df0034878e41ba2b70809d" id="r_a6618123944df0034878e41ba2b70809d"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6618123944df0034878e41ba2b70809d">AveragePolicy</a> : unsigned char { <b>MEAN</b>
+, <b>QUANTILE</b>
+ }</td></tr>
+<tr class="separator:a6618123944df0034878e41ba2b70809d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a6c63a08774d6f2105b68b656f8a3da94" id="r_a6c63a08774d6f2105b68b656f8a3da94"><td class="memTemplParams" colspan="2">template&lt;typename Value_ , typename Index_ , typename Group_ , typename Stat_ &gt; </td></tr>
@@ -180,7 +188,35 @@ Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Marker detection for single-cell data. </p>
-</div><h2 class="groupheader">Function Documentation</h2>
+</div><h2 class="groupheader">Enumeration Type Documentation</h2>
+<a id="a6618123944df0034878e41ba2b70809d" name="a6618123944df0034878e41ba2b70809d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6618123944df0034878e41ba2b70809d">&#9670;&#160;</a></span>AveragePolicy</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="#a6618123944df0034878e41ba2b70809d">scran_markers::AveragePolicy</a> : unsigned char</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Policy for averaging statistics across blocks.</p>
+<ul>
+<li><code>MEAN</code>: computes a weighted mean of per-block statistics. Weights are based on the size of the block.</li>
+<li><code>QUANTILE</code>: computes a quantile of the per-block statistics. </li>
+</ul>
+
+</div>
+</div>
+<h2 class="groupheader">Function Documentation</h2>
 <a id="a3b877db1571dd74a128af35eee5641d3" name="a3b877db1571dd74a128af35eee5641d3"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a3b877db1571dd74a128af35eee5641d3">&#9670;&#160;</a></span>score_markers_best()</h2>
 

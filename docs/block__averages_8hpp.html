@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.12.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>scran_markers: /github/workspace/include/scran_markers/scran_markers.hpp Source File</title>
+<title>scran_markers: /github/workspace/include/scran_markers/block_averages.hpp File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -97,26 +97,39 @@ $(function(){ initResizable(false); });
 </div><!-- top -->
 <div id="doc-content">
 <div class="header">
-  <div class="headertitle"><div class="title">scran_markers.hpp</div></div>
+  <div class="summary">
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#enum-members">Enumerations</a>  </div>
+  <div class="headertitle"><div class="title">block_averages.hpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<a href="scran__markers_8hpp.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#ifndef SCRAN_MARKERS_HPP</span></div>
-<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#define SCRAN_MARKERS_HPP</span></div>
-<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span> </div>
-<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &quot;<a class="code" href="score__markers__pairwise_8hpp.html">score_markers_pairwise.hpp</a>&quot;</span></div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &quot;<a class="code" href="score__markers__summary_8hpp.html">score_markers_summary.hpp</a>&quot;</span></div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &quot;<a class="code" href="score__markers__best_8hpp.html">score_markers_best.hpp</a>&quot;</span></div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &quot;<a class="code" href="summarize__effects_8hpp.html">summarize_effects.hpp</a>&quot;</span></div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespacescran__markers.html">scran_markers</a> {} </div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#endif</span></div>
-<div class="ttc" id="anamespacescran__markers_html"><div class="ttname"><a href="namespacescran__markers.html">scran_markers</a></div><div class="ttdoc">Marker detection for single-cell data.</div><div class="ttdef"><b>Definition</b> score_markers_pairwise.hpp:26</div></div>
-<div class="ttc" id="ascore__markers__best_8hpp_html"><div class="ttname"><a href="score__markers__best_8hpp.html">score_markers_best.hpp</a></div><div class="ttdoc">Find the best markers in each pairwise comparison between groups of cells.</div></div>
-<div class="ttc" id="ascore__markers__pairwise_8hpp_html"><div class="ttname"><a href="score__markers__pairwise_8hpp.html">score_markers_pairwise.hpp</a></div><div class="ttdoc">Score potential markers by pairwise effect sizes between groups of cells.</div></div>
-<div class="ttc" id="ascore__markers__summary_8hpp_html"><div class="ttname"><a href="score__markers__summary_8hpp.html">score_markers_summary.hpp</a></div><div class="ttdoc">Score potential markers by summaries of effect sizes between pairs of groups of cells.</div></div>
-<div class="ttc" id="asummarize__effects_8hpp_html"><div class="ttname"><a href="summarize__effects_8hpp.html">summarize_effects.hpp</a></div><div class="ttdoc">Summarize the effect sizes from pairwise comparisons.</div></div>
-</div><!-- fragment --></div><!-- contents -->
+
+<p>Averaging statistics over blocks.  
+<a href="#details">More...</a></p>
+<div class="textblock"><code>#include &lt;vector&gt;</code><br />
+<code>#include &lt;cstddef&gt;</code><br />
+<code>#include &lt;optional&gt;</code><br />
+<code>#include &quot;sanisizer/sanisizer.hpp&quot;</code><br />
+<code>#include &quot;utils.hpp&quot;</code><br />
+</div>
+<p><a href="block__averages_8hpp_source.html">Go to the source code of this file.</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html">scran_markers</a></td></tr>
+<tr class="memdesc:namespacescran__markers"><td class="mdescLeft">&#160;</td><td class="mdescRight">Marker detection for single-cell data. <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
+Enumerations</h2></td></tr>
+<tr class="memitem:a6618123944df0034878e41ba2b70809d" id="r_a6618123944df0034878e41ba2b70809d"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacescran__markers.html#a6618123944df0034878e41ba2b70809d">scran_markers::AveragePolicy</a> : unsigned char { <b>MEAN</b>
+, <b>QUANTILE</b>
+ }</td></tr>
+<tr class="separator:a6618123944df0034878e41ba2b70809d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Averaging statistics over blocks. </p>
+</div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
 Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.12.0
