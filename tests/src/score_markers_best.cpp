@@ -327,7 +327,8 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseMean) {
         }
     }
 
-    // Note: skipping the multi-threaded checks as this is the same as the unblocked case.
+    // Note: skipping the multi-threaded checks as we've already got too many test cases.
+    // Besides, the multi-threaded code is the same as the unblocked case.
 
     // Comparing to all of the other matrix representations.
     {
@@ -404,7 +405,8 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseQuantile) {
         }
     }
 
-    // Note: skipping the multi-threaded checks as this is the same as the unblocked case.
+    // Note: skipping the multi-threaded checks as we've already got too many test cases.
+    // Besides, the multi-threaded code is the same as the unblocked case.
 
     // Comparing to all of the other matrix representations.
     {
@@ -438,6 +440,221 @@ INSTANTIATE_TEST_SUITE_P(
         ::testing::Values(true, false)  // keep ties or not
     )
 );
+
+/*********************************************/
+
+class ScoreMarkersBestScenariosTest : public ScoreMarkersBestTestCore, public ::testing::Test {};
+
+TEST_F(ScoreMarkersBestScenariosTest, Thresholds) {
+    int nrows = 291, ncols = 91;
+    tatami::DenseRowMatrix<double, int> mat(
+        nrows,
+        ncols,
+        scran_tests::simulate_vector(
+            nrows * ncols,
+            []{
+                scran_tests::SimulateVectorParameters sparam;
+                sparam.seed = 696969;
+                return sparam;
+            }()
+        )
+    );
+
+    int ngroups = 3;
+    std::vector<int> groupings = create_groupings(mat.ncol(), ngroups);
+
+    int top = 10;
+    scran_markers::ScoreMarkersBestOptions sopt;
+    auto ref = scran_markers::score_markers_best<double>(mat, groupings.data(), top, sopt);
+    sopt.threshold = 1;
+    auto out = scran_markers::score_markers_best<double>(mat, groupings.data(), top, sopt);
+
+    int some_diff = 0;
+    for (int l = 0; l < ngroups; ++l) {
+        // Not affected.
+        EXPECT_EQ(ref.mean[l], out.mean[l]);
+        EXPECT_EQ(ref.detected[l], out.detected[l]);
+
+        for (int k = 0; k < ngroups; ++k) {
+            if (k == l) {
+                continue;
+            }
+
+            EXPECT_EQ(ref.delta_mean[l][k], out.delta_mean[l][k]);
+            EXPECT_EQ(ref.delta_detected[l][k], out.delta_detected[l][k]);
+
+            const auto& rcohen = ref.cohens_d[l][k];
+            const auto& ocohen = out.cohens_d[l][k];
+            const std::size_t ncohen = std::min(rcohen.size(), ocohen.size());
+            for (std::size_t i = 0; i < ncohen; ++i) {
+                EXPECT_GT(rcohen[i].second, ocohen[i].second);
+            }
+
+            const auto& rauc = ref.auc[l][k];
+            const auto& oauc = out.auc[l][k];
+            const std::size_t nauc = std::min(rauc.size(), oauc.size());
+            for (std::size_t i = 0; i < nauc; ++i) {
+                // Can't use GT as the ranks might not be affected by the threshold.
+                EXPECT_GE(rauc[i].second, oauc[i].second);
+                some_diff += (rauc[i].second != oauc[i].second);
+            }
+        }
+    }
+
+    EXPECT_GT(some_diff, 0); // though hopefully at least one is changed.
+
+    // Quantile should give the same results for a single block.
+    auto qopt = sopt;
+    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    auto qout = scran_markers::score_markers_best<double>(mat, groupings.data(), top, qopt);
+    compare_averages(out.mean, qout.mean);
+    compare_averages(out.detected, qout.detected);
+    compare_best(out, qout);
+}
+
+TEST_F(ScoreMarkersBestScenariosTest, Missing) {
+    int nrows = 144, ncols = 109;
+    tatami::DenseRowMatrix<double, int> mat(
+        nrows,
+        ncols,
+        scran_tests::simulate_vector(
+            nrows * ncols,
+            []{
+                scran_tests::SimulateVectorParameters sparam;
+                sparam.seed = 696969;
+                return sparam;
+            }()
+        )
+    );
+
+    int ngroups = 4;
+    std::vector<int> groupings = create_groupings(ncols, ngroups);
+
+    int top = 10;
+    scran_markers::ScoreMarkersBestOptions opt;
+    auto ref = scran_markers::score_markers_best<double>(mat, groupings.data(), top, opt);
+
+    // Zero is effectively the missing group here.
+    for (auto& g : groupings) {
+        ++g;
+    }
+    auto lost = scran_markers::score_markers_best<double>(mat, groupings.data(), top, opt);
+
+    // Everything should be empty.
+    for (int g = 1; g <= ngroups; ++g) {
+        EXPECT_TRUE(lost.cohens_d[0][g].empty());
+        EXPECT_TRUE(lost.cohens_d[g][0].empty());
+        EXPECT_TRUE(lost.auc[0][g].empty());
+        EXPECT_TRUE(lost.auc[g][0].empty());
+        EXPECT_TRUE(lost.delta_mean[0][g].empty());
+        EXPECT_TRUE(lost.delta_mean[g][0].empty());
+        EXPECT_TRUE(lost.delta_detected[0][g].empty());
+        EXPECT_TRUE(lost.delta_detected[g][0].empty());
+    }
+    for (int r = 0; r < nrows; ++r) {
+        EXPECT_TRUE(std::isnan(lost.mean[0][r]));
+        EXPECT_TRUE(std::isnan(lost.detected[0][r]));
+    }
+
+    // Other metrics should be the same as usual.
+    for (int g1 = 0; g1 < ngroups; ++g1) {
+        EXPECT_EQ(lost.mean[g1+1], ref.mean[g1]);
+        EXPECT_EQ(lost.detected[g1+1], ref.detected[g1]);
+
+        for (int g2 = 0; g2 < ngroups; ++g2) {
+            EXPECT_EQ(lost.cohens_d[g1 + 1][g2 + 1], ref.cohens_d[g1][g2]);
+            EXPECT_EQ(lost.auc[g1 + 1][g2 + 1], ref.auc[g1][g2]);
+            EXPECT_EQ(lost.delta_mean[g1 + 1][g2 + 1], ref.delta_mean[g1][g2]);
+            EXPECT_EQ(lost.delta_detected[g1 + 1][g2 + 1], ref.delta_detected[g1][g2]);
+        }
+    }
+
+    // Quantile should give the same results for a single block.
+    auto qopt = opt;
+    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    auto qlost = scran_markers::score_markers_best<double>(mat, groupings.data(), top, qopt);
+    compare_averages(lost.mean, qlost.mean);
+    compare_averages(lost.detected, qlost.detected);
+    compare_best(lost, qlost);
+}
+
+TEST_F(ScoreMarkersBestScenariosTest, BlockConfounded) {
+    int nrows = 198, ncols = 99;
+    std::shared_ptr<tatami::Matrix<double, int> > mat(
+        new tatami::DenseRowMatrix<double, int>(
+            nrows,
+            ncols,
+            scran_tests::simulate_vector(
+                nrows * ncols,
+                []{
+                    scran_tests::SimulateVectorParameters sparam;
+                    sparam.seed = 69696969;
+                    return sparam;
+                }()
+            )
+        )
+    );
+
+    int ngroups = 4;
+    std::vector<int> groupings = create_groupings(ncols, ngroups);
+
+    // Block is fully confounded with one group.
+    std::vector<int> blocks(ncols);
+    for (int c = 0; c < ncols; ++c) {
+        blocks[c] = (groupings[c] == 0);
+    }
+
+    int top = 10;
+    scran_markers::ScoreMarkersBestOptions opt;
+    auto comres = scran_markers::score_markers_best_blocked<double>(*mat, groupings.data(), blocks.data(), top, opt);
+
+    // First group should only be NaN's.
+    for (int g = 1; g < ngroups; ++g) {
+        EXPECT_TRUE(comres.cohens_d[0][g].empty());
+        EXPECT_TRUE(comres.cohens_d[g][0].empty());
+        EXPECT_TRUE(comres.auc[0][g].empty());
+        EXPECT_TRUE(comres.auc[g][0].empty());
+        EXPECT_TRUE(comres.delta_mean[0][g].empty());
+        EXPECT_TRUE(comres.delta_mean[g][0].empty());
+        EXPECT_TRUE(comres.delta_detected[0][g].empty());
+        EXPECT_TRUE(comres.delta_detected[g][0].empty());
+    }
+
+    // Excluding the confounded group and running on the remaining samples.
+    std::vector<int> subgroups;
+    std::vector<int> keep;
+    for (int c = 0; c < ncols; ++c) {
+        auto g = groupings[c];
+        if (g != 0) {
+            subgroups.push_back(g - 1);
+            keep.push_back(c);
+        }
+    }
+
+    auto sub = tatami::make_DelayedSubset(mat, std::move(keep), false);
+    auto ref = scran_markers::score_markers_best<double>(*sub, subgroups.data(), top, opt);
+
+    for (int g1 = 1; g1 < ngroups; ++g1) {
+        EXPECT_EQ(comres.mean[g1], ref.mean[g1 - 1]);
+        EXPECT_EQ(comres.detected[g1], ref.detected[g1 - 1]);
+
+        for (int g2 = 1; g2 < ngroups; ++g2) {
+            EXPECT_EQ(comres.cohens_d[g1][g2], ref.cohens_d[g1 - 1][g2 - 1]);
+            EXPECT_EQ(comres.auc[g1][g2], ref.auc[g1 - 1][g2 - 1]);
+            EXPECT_EQ(comres.delta_mean[g1][g2], ref.delta_mean[g1 - 1][g2 - 1]);
+            EXPECT_EQ(comres.delta_detected[g1][g2], ref.delta_detected[g1 - 1][g2 - 1]);
+        }
+    }
+
+    // Quantile should give the same results, as there's basically only one block;
+    // the second block is fully confounded.
+    auto qopt = opt;
+    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    auto qcomres = scran_markers::score_markers_best_blocked<double>(*mat, groupings.data(), blocks.data(), top, qopt);
+    compare_averages(comres.mean, qcomres.mean);
+    compare_averages(comres.detected, qcomres.detected);
+    compare_best(comres, qcomres);
+}
 
 /*********************************************/
 

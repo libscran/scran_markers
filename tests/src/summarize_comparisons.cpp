@@ -120,21 +120,19 @@ TEST_P(SummarizeComparisonsTest, Missing) {
         for (int gene = 0; gene < ngenes; ++ gene) {
             for (int g = 0; g < ngroups; ++g) {
                 if (g == lost) {
-                    for (int i = 0; i < 3; ++i) {
-                        EXPECT_TRUE(std::isnan(ptrs[g].min[gene]));
-                        EXPECT_TRUE(std::isnan(ptrs[g].mean[gene]));
-                        EXPECT_TRUE(std::isnan(ptrs[g].median[gene]));
-                        EXPECT_TRUE(std::isnan(ptrs[g].max[gene]));
-                    }
+                    EXPECT_TRUE(std::isnan(ptrs[g].min[gene]));
+                    EXPECT_TRUE(std::isnan(ptrs[g].mean[gene]));
+                    EXPECT_TRUE(std::isnan(ptrs[g].median[gene]));
+                    EXPECT_TRUE(std::isnan(ptrs[g].max[gene]));
                     continue;
                 }
 
                 // Checking that the minimum is correct.
                 double baseline = g * gene;
                 if ((g==0 && lost==1) || (g==1 && lost==0)) {
-                    baseline += 2;
+                    baseline += 2; // first non-self, non-NaN effect is 2.
                 } else if (g==0 || lost==0) {
-                    baseline += 1;
+                    baseline += 1; // self is NaN, so first non-self, non-NaN effect is 1.
                 }
                 EXPECT_FLOAT_EQ(ptrs[g].min[gene], baseline);
 
@@ -148,11 +146,13 @@ TEST_P(SummarizeComparisonsTest, Missing) {
                 EXPECT_FLOAT_EQ(ptrs[g].mean[gene], baseline);
 
                 // Checking that the maximum is correct.
-                baseline = g * gene + ngroups - 1;
+                baseline = g * gene;
                 if ((g==ngroups - 1 && lost==ngroups - 2) || (g==ngroups - 2  && lost==ngroups - 1)) {
-                    baseline -= 2;
+                    baseline += ngroups - 3; // i.e., the last non-self, non-NaN effect. 
                 } else if (g==ngroups - 1 || lost==ngroups - 1) {
-                    baseline -= 1;
+                    baseline += ngroups - 2; // self is NaN, so we get a different maximum.
+                } else {
+                    baseline += ngroups - 1;
                 }
                 EXPECT_FLOAT_EQ(ptrs[g].max[gene], baseline);
             }

@@ -533,7 +533,7 @@ TEST_F(ScoreMarkersSummaryScenariosTest, Thresholds) {
         EXPECT_EQ(ref.detected[l], out.detected[l]);
     }
 
-    EXPECT_TRUE(some_diff); // (from above)... at least one is '>', hopefully.
+    EXPECT_GT(some_diff, 0); // (from above)... at least one is '>', hopefully.
 
     // Quantile should give the same results for a single block.
     auto qopt = sopt;
@@ -542,6 +542,85 @@ TEST_F(ScoreMarkersSummaryScenariosTest, Thresholds) {
     compare_averages(out.mean, qout.mean);
     compare_averages(out.detected, qout.detected);
     compare_effects(ngroups, out, qout, true);
+}
+
+TEST_F(ScoreMarkersSummaryScenariosTest, Missing) {
+    int nrows = 144, ncols = 109;
+    tatami::DenseRowMatrix<double, int> mat(
+        nrows,
+        ncols,
+        scran_tests::simulate_vector(
+            nrows * ncols,
+            []{
+                scran_tests::SimulateVectorParameters sparam;
+                sparam.seed = 696969;
+                return sparam;
+            }()
+        )
+    );
+
+    int ngroups = 4;
+    std::vector<int> groupings = create_groupings(ncols, ngroups);
+
+    scran_markers::ScoreMarkersSummaryOptions opt;
+    auto ref = scran_markers::score_markers_summary(mat, groupings.data(), opt);
+
+    // Zero is effectively the missing group here.
+    for (auto& g : groupings) {
+        ++g;
+    }
+    auto lost = scran_markers::score_markers_summary(mat, groupings.data(), opt);
+
+    // First group is effectively all-NA.
+    for (int g = 0; g < nrows; ++g) {
+        EXPECT_TRUE(std::isnan(lost.cohens_d[0].min[g]));
+        EXPECT_TRUE(std::isnan(lost.cohens_d[0].max[g]));
+        EXPECT_TRUE(std::isnan(lost.cohens_d[0].mean[g]));
+        EXPECT_TRUE(std::isnan(lost.cohens_d[0].median[g]));
+        EXPECT_EQ(lost.cohens_d[0].min_rank[g], nrows);
+
+        EXPECT_TRUE(std::isnan(lost.auc[0].min[g]));
+        EXPECT_TRUE(std::isnan(lost.auc[0].max[g]));
+        EXPECT_TRUE(std::isnan(lost.auc[0].mean[g]));
+        EXPECT_TRUE(std::isnan(lost.auc[0].median[g]));
+        EXPECT_EQ(lost.auc[0].min_rank[g], nrows);
+
+        EXPECT_TRUE(std::isnan(lost.delta_mean[0].min[g]));
+        EXPECT_TRUE(std::isnan(lost.delta_mean[0].max[g]));
+        EXPECT_TRUE(std::isnan(lost.delta_mean[0].mean[g]));
+        EXPECT_TRUE(std::isnan(lost.delta_mean[0].median[g]));
+        EXPECT_EQ(lost.delta_mean[0].min_rank[g], nrows);
+
+        EXPECT_TRUE(std::isnan(lost.delta_detected[0].min[g]));
+        EXPECT_TRUE(std::isnan(lost.delta_detected[0].max[g]));
+        EXPECT_TRUE(std::isnan(lost.delta_detected[0].mean[g]));
+        EXPECT_TRUE(std::isnan(lost.delta_detected[0].median[g]));
+        EXPECT_EQ(lost.delta_detected[0].min_rank[g], nrows);
+    }
+
+    // Expect all but the first group to give the same results.
+    {
+        auto copy = lost;
+        copy.mean.erase(copy.mean.begin());
+        compare_averages(ref.mean, copy.mean);
+
+        copy.detected.erase(copy.detected.begin());
+        compare_averages(ref.detected, copy.detected);
+
+        copy.cohens_d.erase(copy.cohens_d.begin());
+        copy.auc.erase(copy.auc.begin());
+        copy.delta_mean.erase(copy.delta_mean.begin());
+        copy.delta_detected.erase(copy.delta_detected.begin());
+        compare_effects(ngroups, ref, copy, true);
+    }
+
+    // Quantile should give the same results for a single block.
+    auto qopt = opt;
+    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    auto qlost = scran_markers::score_markers_summary(mat, groupings.data(), qopt);
+    compare_averages(lost.mean, qlost.mean);
+    compare_averages(lost.detected, qlost.detected);
+    compare_effects(ngroups + 1, lost, qlost, true);
 }
 
 TEST_F(ScoreMarkersSummaryScenariosTest, BlockConfounded) {
