@@ -16,8 +16,8 @@ namespace internal {
 template<typename Stat_>
 std::vector<Stat_> compute_total_weight_per_group(const std::size_t ngroups, const std::size_t nblocks, const Stat_* const combo_weights) {
     auto output = sanisizer::create<std::vector<Stat_> >(ngroups);
-    for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
-        for (decltype(I(ngroups)) g = 0; g < ngroups; ++g) {
+    for (I<decltype(nblocks)> b = 0; b < nblocks; ++b) {
+        for (I<decltype(ngroups)> g = 0; g < ngroups; ++g) {
             output[g] += combo_weights[sanisizer::nd_offset<std::size_t>(g, ngroups, b)];
         }
     }
@@ -34,7 +34,7 @@ void average_group_stats_blockmean(
     const Stat_* const total_weights,
     const std::vector<Stat_*>& out_stats 
 ) {
-    for (decltype(I(ngroups)) g = 0; g < ngroups; ++g) {
+    for (I<decltype(ngroups)> g = 0; g < ngroups; ++g) {
         auto& output = out_stats[g][gene];
 
         const auto total_weight = total_weights[g];
@@ -44,7 +44,7 @@ void average_group_stats_blockmean(
         }
 
         Stat_ sum = 0;
-        for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
+        for (I<decltype(nblocks)> b = 0; b < nblocks; ++b) {
             // Remember, blocks are the slower changing dimension, so we need to jump by 'ngroups'.
             const auto offset = sanisizer::nd_offset<std::size_t>(g, ngroups, b);
             const auto& curweight = combo_weights[offset];
@@ -67,10 +67,10 @@ void average_group_stats_blockquantile(
     scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator>& qcalc,
     const std::vector<Stat_*>& out_stats 
 ) {
-    for (decltype(I(ngroups)) g = 0; g < ngroups; ++g) {
+    for (I<decltype(ngroups)> g = 0; g < ngroups; ++g) {
         buffer.clear();
 
-        for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
+        for (I<decltype(nblocks)> b = 0; b < nblocks; ++b) {
             // Remember, blocks are the slower changing dimension, so we need to jump by 'ngroups'.
             const auto offset = sanisizer::nd_offset<std::size_t>(g, ngroups, b);
             const auto val = stats[offset];
@@ -92,9 +92,9 @@ void preallocate_average_results(
 ) {
     res.reserve(ngroups);
     ptrs.reserve(ngroups);
-    for (decltype(I(ngroups)) g = 0; g < ngroups; ++g) {
+    for (I<decltype(ngroups)> g = 0; g < ngroups; ++g) {
         res.emplace_back(
-            sanisizer::cast<decltype(I(res.front().size()))>(ngenes)
+            sanisizer::cast<I<decltype(res.front().size())> >(ngenes)
 #ifdef SCRAN_MARKERS_TEST_INIT
             , SCRAN_MARKERS_TEST_INIT
 #endif

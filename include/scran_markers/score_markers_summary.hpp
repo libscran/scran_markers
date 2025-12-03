@@ -302,12 +302,12 @@ void preallocate_minrank_queues(
     for (int t = 0; t < num_threads; ++t) {
         sanisizer::resize(all_queues[t], ngroups);
 
-        for (decltype(I(ngroups)) g1 = 0; g1 < ngroups; ++g1) {
+        for (I<decltype(ngroups)> g1 = 0; g1 < ngroups; ++g1) {
             if (summaries[g1].min_rank == NULL) {
                 continue;
             }
 
-            for (decltype(I(ngroups)) g2 = 0; g2 < ngroups; ++g2) {
+            for (I<decltype(ngroups)> g2 = 0; g2 < ngroups; ++g2) {
                 all_queues[t][g1].emplace_back(limit, true, qopt);
             }
         }
@@ -323,14 +323,14 @@ void compute_summary_stats_per_gene(
     MinrankTopQueues<Stat_, Index_>& minrank_queues,
     const std::vector<SummaryBuffers<Stat_, Rank_> >& summaries
 ) {
-    for (decltype(I(ngroups)) gr = 0; gr < ngroups; ++gr) {
+    for (I<decltype(ngroups)> gr = 0; gr < ngroups; ++gr) {
         auto& cursummary = summaries[gr];
         const auto in_offset = sanisizer::product_unsafe<std::size_t>(ngroups, gr);
         summarize_comparisons(ngroups, pairwise_buffer_ptr + in_offset, gr, gene, cursummary, summary_buffer);
 
         if (cursummary.min_rank) {
             auto& cur_queues = minrank_queues[gr];
-            for (decltype(I(ngroups)) gr2 = 0; gr2 < ngroups; ++gr2) {
+            for (I<decltype(ngroups)> gr2 = 0; gr2 < ngroups; ++gr2) {
                 if (gr != gr2) {
                     cur_queues[gr2].emplace(pairwise_buffer_ptr[in_offset + gr2], gene);
                 }
@@ -351,7 +351,7 @@ void report_minrank_from_queues(
     tatami::parallelize([&](const int, const std::size_t start, const std::size_t length) -> void {
         std::vector<Index_> tie_buffer;
 
-        for (decltype(I(ngroups)) gr = start, grend = start + length; gr < grend; ++gr) {
+        for (I<decltype(ngroups)> gr = start, grend = start + length; gr < grend; ++gr) {
             const auto mr_out = summaries[gr].min_rank;
             if (mr_out == NULL) {
                 continue;
@@ -361,14 +361,14 @@ void report_minrank_from_queues(
             const auto maxrank_placeholder = sanisizer::cast<Rank_>(ngenes);
             std::fill_n(mr_out, ngenes, maxrank_placeholder);
 
-            for (decltype(I(ngroups)) gr2 = 0; gr2 < ngroups; ++gr2) {
+            for (I<decltype(ngroups)> gr2 = 0; gr2 < ngroups; ++gr2) {
                 if (gr == gr2) {
                     continue;
                 }
                 auto& current_out = all_queues.front()[gr][gr2];
 
                 const auto num_queues = all_queues.size();
-                for (decltype(I(num_queues)) q = 1; q < num_queues; ++q) {
+                for (I<decltype(num_queues)> q = 1; q < num_queues; ++q) {
                     auto& current_in = all_queues[q][gr][gr2];
                     while (!current_in.empty()) {
                         current_out.push(current_in.top());

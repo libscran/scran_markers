@@ -76,7 +76,7 @@ std::pair<Stat_, Stat_> compute_cohens_d_blockmean(
 
     std::pair<Stat_, Stat_> output(0, 0);
     Stat_ total_weight = 0; // need to calculate it dynamically, in case there are NaN variances for non-zero weights (e.g., one observation per block).
-    for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
+    for (I<decltype(nblocks)> b = 0; b < nblocks; ++b) {
         const auto weight = winfo.first[b];
         if (weight == 0) {
             continue;
@@ -125,8 +125,8 @@ void compute_pairwise_cohens_d_blockmean(
     const PrecomputedPairwiseWeights<Stat_>& preweights,
     Stat_* const output)
 {
-    for (decltype(I(ngroups)) g1 = 0; g1 < ngroups; ++g1) {
-        for (decltype(I(g1)) g2 = 0; g2 < g1; ++g2) {
+    for (I<decltype(ngroups)> g1 = 0; g1 < ngroups; ++g1) {
+        for (I<decltype(g1)> g2 = 0; g2 < g1; ++g2) {
             const auto tmp = compute_cohens_d_blockmean(g1, g2, means, vars, ngroups, nblocks, threshold, preweights);
             output[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1)] = tmp.first;
             output[sanisizer::nd_offset<std::size_t>(g1, ngroups, g2)] = tmp.second;
@@ -151,7 +151,7 @@ std::pair<Stat_, Stat_> compute_cohens_d_blockquantile(
     buffer.clear();
     rev_buffer.clear();
 
-    for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
+    for (I<decltype(nblocks)> b = 0; b < nblocks; ++b) {
         const auto offset1 = sanisizer::nd_offset<std::size_t>(g1, ngroups, b); // remember, 'groups' is the faster-changing dimension.
         const auto offset2 = sanisizer::nd_offset<std::size_t>(g2, ngroups, b);
         const auto left_var = vars[offset1];
@@ -200,8 +200,8 @@ void compute_pairwise_cohens_d_blockquantile(
     scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator>& qcalc,
     Stat_* const output
 ) {
-    for (decltype(I(ngroups)) g1 = 0; g1 < ngroups; ++g1) {
-        for (decltype(I(g1)) g2 = 0; g2 < g1; ++g2) {
+    for (I<decltype(ngroups)> g1 = 0; g1 < ngroups; ++g1) {
+        for (I<decltype(g1)> g2 = 0; g2 < g1; ++g2) {
             const auto tmp = compute_cohens_d_blockquantile(g1, g2, means, vars, ngroups, nblocks, threshold, buffer, rev_buffer, qcalc);
             output[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1)] = tmp.first;
             output[sanisizer::nd_offset<std::size_t>(g1, ngroups, g2)] = tmp.second;

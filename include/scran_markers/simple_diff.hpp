@@ -31,7 +31,7 @@ Stat_ compute_simple_diff_blockmean(
     }
 
     Stat_ output = 0;
-    for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
+    for (I<decltype(nblocks)> b = 0; b < nblocks; ++b) {
         const auto weight = winfo.first[b];
         if (weight == 0) {
             continue;
@@ -53,8 +53,8 @@ void compute_pairwise_simple_diff_blockmean(
     const PrecomputedPairwiseWeights<Stat_>& preweights,
     Stat_* const output
 ) {
-    for (decltype(I(ngroups)) g1 = 0; g1 < ngroups; ++g1) {
-        for (decltype(I(g1)) g2 = 0; g2 < g1; ++g2) {
+    for (I<decltype(ngroups)> g1 = 0; g1 < ngroups; ++g1) {
+        for (I<decltype(g1)> g2 = 0; g2 < g1; ++g2) {
             const auto d = compute_simple_diff_blockmean(g1, g2, values, ngroups, nblocks, preweights);
             output[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1)] = d;
             output[sanisizer::nd_offset<std::size_t>(g1, ngroups, g2)] = -d;
@@ -74,7 +74,7 @@ std::pair<Stat_, Stat_> compute_simple_diff_blockquantile(
     scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator>& qcalc
 ) {
     buffer.clear();
-    for (decltype(I(nblocks)) b = 0; b < nblocks; ++b) {
+    for (I<decltype(nblocks)> b = 0; b < nblocks; ++b) {
         const auto left = values[sanisizer::nd_offset<std::size_t>(g1, ngroups, b)]; 
         const auto right = values[sanisizer::nd_offset<std::size_t>(g2, ngroups, b)];
         const auto effect = left - right;
@@ -102,8 +102,8 @@ void compute_pairwise_simple_diff_blockquantile(
     scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator>& qcalc,
     Stat_* const output
 ) {
-    for (decltype(I(ngroups)) g1 = 0; g1 < ngroups; ++g1) {
-        for (decltype(I(g1)) g2 = 0; g2 < g1; ++g2) {
+    for (I<decltype(ngroups)> g1 = 0; g1 < ngroups; ++g1) {
+        for (I<decltype(g1)> g2 = 0; g2 < g1; ++g2) {
             const auto d = compute_simple_diff_blockquantile(g1, g2, values, ngroups, nblocks, buffer, qcalc);
             output[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1)] = d.first;
             output[sanisizer::nd_offset<std::size_t>(g1, ngroups, g2)] = d.second;
