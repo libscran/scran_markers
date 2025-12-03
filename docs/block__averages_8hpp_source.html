@@ -123,20 +123,20 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="comment">// &#39;combo_weights&#39; are expected to be &#39;ngroups * nblocks&#39; arrays where</span></div>
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="comment">// groups are the faster-changing dimension and the blocks are slower.</span></div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    PrecomputedPairwiseWeights(<span class="keyword">const</span> std::size_t ngroups, <span class="keyword">const</span> std::size_t nblocks, <span class="keyword">const</span> Stat_* <span class="keyword">const</span> combo_weights) :</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        my_total(sanisizer::product&lt;decltype(I(my_total.size()))&gt;(ngroups, ngroups)),</div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        my_by_block(sanisizer::product&lt;decltype(I(my_by_block.size()))&gt;(my_total.size(), nblocks)),</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        my_total(sanisizer::product&lt;I&lt;decltype(my_total.size())&gt; &gt;(ngroups, ngroups)),</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        my_by_block(sanisizer::product&lt;I&lt;decltype(my_by_block.size())&gt; &gt;(my_total.size(), nblocks)),</div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>        my_ngroups(ngroups),</div>
 <div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>        my_nblocks(nblocks)</div>
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    {</div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>        <span class="keyword">auto</span> blocks_in_use = sanisizer::create&lt;std::vector&lt;std::size_t&gt; &gt;(my_total.size());</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>        <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(nblocks)) b = 0; b &lt; nblocks; ++b) {</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>            <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(ngroups)) g1 = 1; g1 &lt; ngroups; ++g1) {</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>        <span class="keywordflow">for</span> (I&lt;<span class="keyword">decltype</span>(nblocks)&gt; b = 0; b &lt; nblocks; ++b) {</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>            <span class="keywordflow">for</span> (I&lt;<span class="keyword">decltype</span>(ngroups)&gt; g1 = 1; g1 &lt; ngroups; ++g1) {</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>                <span class="keyword">const</span> <span class="keyword">auto</span> w1 = combo_weights[sanisizer::nd_offset&lt;std::size_t&gt;(g1, ngroups, b)];</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>                <span class="keywordflow">if</span> (w1 == 0) {</div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>                    <span class="keywordflow">continue</span>;</div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>                }</div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>                <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(g1)) g2 = 0; g2 &lt; g1; ++g2) {</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>                <span class="keywordflow">for</span> (I&lt;<span class="keyword">decltype</span>(g1)&gt; g2 = 0; g2 &lt; g1; ++g2) {</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>                    <span class="keyword">const</span> <span class="keyword">auto</span> w2 = combo_weights[sanisizer::nd_offset&lt;std::size_t&gt;(g2, ngroups, b)];</div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>                    <span class="keywordflow">if</span> (w2 == 0) {</div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>                        <span class="keywordflow">continue</span>;</div>
@@ -158,15 +158,15 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>        <span class="comment">// So, we set the weight to 1 to ensure that the weighted mean calculation is a no-op,</span></div>
 <div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>        <span class="comment">// i.e., there won&#39;t be any introduction of floating-point errors from a mult/div by the weight. </span></div>
 <div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>        <span class="comment">// Zero weights do need to be preserved, though, as mult/div by zero gives NaN.</span></div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>        <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(ngroups)) g1 = 1; g1 &lt; ngroups; ++g1) {</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>            <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(g1)) g2 = 0; g2 &lt; g1; ++g2) {</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>        <span class="keywordflow">for</span> (I&lt;<span class="keyword">decltype</span>(ngroups)&gt; g1 = 1; g1 &lt; ngroups; ++g1) {</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>            <span class="keywordflow">for</span> (I&lt;<span class="keyword">decltype</span>(g1)&gt; g2 = 0; g2 &lt; g1; ++g2) {</div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>                <span class="keyword">const</span> <span class="keyword">auto</span> out_offset1 = sanisizer::nd_offset&lt;std::size_t&gt;(g2, ngroups, g1);</div>
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>                <span class="keywordflow">if</span> (blocks_in_use[out_offset1] != 1) {</div>
 <div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>                    <span class="keywordflow">continue</span>;</div>
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>                }</div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span> </div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>                my_total[out_offset1] = 1;</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>                <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(nblocks)) b = 0; b &lt; nblocks; ++b) {</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>                <span class="keywordflow">for</span> (I&lt;<span class="keyword">decltype</span>(nblocks)&gt; b = 0; b &lt; nblocks; ++b) {</div>
 <div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>                    <span class="keyword">auto</span>&amp; curweight = my_by_block[sanisizer::nd_offset&lt;std::size_t&gt;(b, nblocks, out_offset1)];</div>
 <div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>                    curweight = (curweight &gt; 0);</div>
 <div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>                    my_by_block[sanisizer::nd_offset&lt;std::size_t&gt;(b, nblocks, g1, ngroups, g2)] = curweight;</div>
@@ -175,8 +175,8 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>        }</div>
 <div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span> </div>
 <div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>        <span class="comment">// Filling the other side of my_totals, for completeness.</span></div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(ngroups)) g1 = 1; g1 &lt; ngroups; ++g1) {</div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>            <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(g1)) g2 = 0; g2 &lt; g1; ++g2) {</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        <span class="keywordflow">for</span> (I&lt;<span class="keyword">decltype</span>(ngroups)&gt; g1 = 1; g1 &lt; ngroups; ++g1) {</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>            <span class="keywordflow">for</span> (I&lt;<span class="keyword">decltype</span>(g1)&gt; g2 = 0; g2 &lt; g1; ++g2) {</div>
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>                my_total[sanisizer::nd_offset&lt;std::size_t&gt;(g1, ngroups, g2)] = my_total[sanisizer::nd_offset&lt;std::size_t&gt;(g2, ngroups, g1)];</div>
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>            }</div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>        }</div>

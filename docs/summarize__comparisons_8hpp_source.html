@@ -159,7 +159,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>{</div>
 <div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    <span class="comment">// Ignoring the self comparison and pruning out NaNs.</span></div>
 <div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    std::size_t ncomps = 0;</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>    <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(ngroups)) r = 0; r &lt; ngroups; ++r) {</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>    <span class="keywordflow">for</span> (I&lt;<span class="keyword">decltype</span>(ngroups)&gt; r = 0; r &lt; ngroups; ++r) {</div>
 <div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>        <span class="keywordflow">if</span> (r == group || std::isnan(effects[r])) {</div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>            <span class="keywordflow">continue</span>;</div>
 <div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>        }</div>
@@ -210,7 +210,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>    <a class="code hl_functionRef" href="https://tatami-inc.github.io/tatami/namespacetatami.html#a3ea65e5b93eb55c03b00aca301e0396f">tatami::parallelize</a>([&amp;](<span class="keyword">const</span> <span class="keywordtype">int</span>, <span class="keyword">const</span> Gene_ start, <span class="keyword">const</span> Gene_ length) -&gt; <span class="keywordtype">void</span> {</div>
 <div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>        <span class="keyword">auto</span> buffer = sanisizer::create&lt;std::vector&lt;Stat_&gt; &gt;(ngroups);</div>
 <div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>        <span class="keywordflow">for</span> (Gene_ gene = start, end = start + length; gene &lt; end; ++gene) {</div>
-<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>            <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(ngroups)) l = 0; l &lt; ngroups; ++l) {</div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>            <span class="keywordflow">for</span> (I&lt;<span class="keyword">decltype</span>(ngroups)&gt; l = 0; l &lt; ngroups; ++l) {</div>
 <div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>                <span class="keyword">const</span> <span class="keyword">auto</span> current_effects = effects + sanisizer::nd_offset&lt;std::size_t&gt;(0, ngroups, l, ngroups, gene);</div>
 <div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>                summarize_comparisons(ngroups, current_effects, l, gene, output[l], buffer);</div>
 <div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>            }</div>
@@ -261,14 +261,14 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span> </div>
 <div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    <a class="code hl_functionRef" href="https://tatami-inc.github.io/tatami/namespacetatami.html#a3ea65e5b93eb55c03b00aca301e0396f">tatami::parallelize</a>([&amp;](<span class="keyword">const</span> <span class="keywordtype">int</span>, <span class="keyword">const</span> std::size_t start, <span class="keyword">const</span> std::size_t length) -&gt; <span class="keywordtype">void</span> {</div>
 <div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>        <span class="keyword">auto</span> buffer = sanisizer::create&lt;std::vector&lt;std::pair&lt;Stat_, Gene_&gt; &gt; &gt;(ngenes);</div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>        <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(start)) g = start, end = start + length; g &lt; end; ++g) { </div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>        <span class="keywordflow">for</span> (I&lt;<span class="keyword">decltype</span>(start)&gt; g = start, end = start + length; g &lt; end; ++g) { </div>
 <div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>            <span class="keyword">const</span> <span class="keyword">auto</span> target = output[g].<a class="code hl_variable" href="structscran__markers_1_1SummaryBuffers.html#afdf1258e4675f184d9caa7f4b5b283b7">min_rank</a>;</div>
 <div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>            <span class="keywordflow">if</span> (target == NULL) {</div>
 <div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>                <span class="keywordflow">continue</span>;</div>
 <div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>            }</div>
 <div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>            std::fill_n(target, ngenes, maxrank_placeholder);</div>
 <div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span> </div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>            <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(ngroups)) g2 = 0; g2 &lt; ngroups; ++g2) {</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>            <span class="keywordflow">for</span> (I&lt;<span class="keyword">decltype</span>(ngroups)&gt; g2 = 0; g2 &lt; ngroups; ++g2) {</div>
 <div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>                <span class="keywordflow">if</span> (g == g2) {</div>
 <div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>                    <span class="keywordflow">continue</span>;</div>
 <div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>                }</div>
@@ -382,7 +382,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>    sanisizer::resize(outputs, ngroups);</div>
 <div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    std::vector&lt;SummaryBuffers&lt;Stat_, Rank_&gt; &gt; ptrs;</div>
 <div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    ptrs.reserve(ngroups);</div>
-<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>    <span class="keywordflow">for</span> (<span class="keyword">decltype</span>(I(ngroups)) g = 0; g &lt; ngroups; ++g) {</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>    <span class="keywordflow">for</span> (I&lt;<span class="keyword">decltype</span>(ngroups)&gt; g = 0; g &lt; ngroups; ++g) {</div>
 <div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>        ptrs.emplace_back(fill_summary_results(ngenes, outputs[g], compute_min, compute_mean, compute_median, compute_max, compute_min_rank));</div>
 <div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>    }</div>
 <div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>    <span class="keywordflow">return</span> ptrs;</div>
