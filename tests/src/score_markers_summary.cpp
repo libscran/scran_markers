@@ -272,6 +272,48 @@ TEST_P(ScoreMarkersSummaryTest, Basic) {
     }
 }
 
+TEST_P(ScoreMarkersSummaryTest, SummaryQuantile) {
+    auto param = GetParam();
+    auto ngroups = std::get<0>(param);
+    bool do_auc = std::get<1>(param);
+    auto nthreads = std::get<2>(param);
+
+    std::vector<int> groupings = create_groupings(dense_row->ncol(), ngroups);
+    size_t ngenes = dense_row->nrow();
+
+    scran_markers::ScoreMarkersSummaryOptions opt;
+    opt.compute_auc = do_auc; // false, if we want to check the running implementations.
+    opt.num_threads = nthreads;
+    opt.compute_summary_quantiles = std::vector<double>{ 0.0, 0.5, 1.0 };
+    auto out = scran_markers::score_markers_summary(*dense_row, groupings.data(), opt);
+
+    for (int l = 0; l < ngroups; ++l) {
+        for (size_t g = 0; g < ngenes; ++g) {
+            const auto& cq = *(out.cohens_d[l].quantiles);
+            EXPECT_EQ(out.cohens_d[l].min[g], cq[0][g]);
+            scran_tests::compare_almost_equal(out.cohens_d[l].median[g], cq[1][g], scran_tests::CompareAlmostEqualParameters{});
+            EXPECT_EQ(out.cohens_d[l].max[g], cq[2][g]);
+
+            if (do_auc) {
+                const auto& aq = *(out.auc[l].quantiles);
+                EXPECT_EQ(out.auc[l].min[g], aq[0][g]);
+                scran_tests::compare_almost_equal(out.auc[l].median[g], aq[1][g], scran_tests::CompareAlmostEqualParameters{});
+                EXPECT_EQ(out.auc[l].max[g], aq[2][g]);
+            }
+
+            const auto& mq = *(out.delta_mean[l].quantiles);
+            EXPECT_EQ(out.delta_mean[l].min[g], mq[0][g]);
+            scran_tests::compare_almost_equal(out.delta_mean[l].median[g], mq[1][g], scran_tests::CompareAlmostEqualParameters{});
+            EXPECT_EQ(out.delta_mean[l].max[g], mq[2][g]);
+
+            const auto& dq = *(out.delta_detected[l].quantiles);
+            EXPECT_EQ(out.delta_detected[l].min[g], dq[0][g]);
+            scran_tests::compare_almost_equal(out.delta_detected[l].median[g], dq[1][g], scran_tests::CompareAlmostEqualParameters{});
+            EXPECT_EQ(out.delta_detected[l].max[g], dq[2][g]);
+        }
+    }
+}
+
 INSTANTIATE_TEST_SUITE_P(
     ScoreMarkersSummary,
     ScoreMarkersSummaryTest,

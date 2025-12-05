@@ -72,7 +72,7 @@ TEST(SummarizeEffects, Quantile) {
     std::vector<double> stuff = scran_tests::simulate_vector(ngroups * ngroups * ngenes, scran_tests::SimulateVectorParameters());
 
     scran_markers::SummarizeEffectsOptions opts;
-    opts.compute_quantiles.emplace(std::vector<double>{ 0.0, 0.5, 1.0 });
+    opts.compute_quantiles = std::vector<double>{ 0.0, 0.5, 1.0 };
     auto res = scran_markers::summarize_effects(ngenes, ngroups, stuff.data(), opts);
     EXPECT_EQ(res.size(), ngroups);
 
