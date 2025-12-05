@@ -105,6 +105,13 @@ struct ScoreMarkersSummaryOptions {
     bool compute_max = true;
 
     /**
+     * Probabilites of the quantiles of the effect sizes for each group, to be reported.
+     * If set, each entry of the vector should lie in \$f[0, 1]\f$.
+     * If not set, no quantiles are reported.
+     */
+    std::optional<std::vector<double> > compute_summary_quantiles;
+
+    /**
      * Whether to report the minimum rank of the effect sizes for each group.
      * Only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
      */
@@ -320,13 +327,14 @@ void compute_summary_stats_per_gene(
     const std::size_t ngroups,
     const Stat_* const pairwise_buffer_ptr,
     std::vector<Stat_>& summary_buffer,
+    QuantileCalculators<Stat_>& summary_quantile_calcs,
     MinrankTopQueues<Stat_, Index_>& minrank_queues,
     const std::vector<SummaryBuffers<Stat_, Rank_> >& summaries
 ) {
     for (I<decltype(ngroups)> gr = 0; gr < ngroups; ++gr) {
         auto& cursummary = summaries[gr];
         const auto in_offset = sanisizer::product_unsafe<std::size_t>(ngroups, gr);
-        summarize_comparisons(ngroups, pairwise_buffer_ptr + in_offset, gr, gene, cursummary, summary_buffer);
+        summarize_comparisons(ngroups, pairwise_buffer_ptr + in_offset, gr, gene, cursummary, summary_quantile_calcs, summary_buffer);
 
         if (cursummary.min_rank) {
             auto& cur_queues = minrank_queues[gr];
@@ -420,6 +428,7 @@ void process_simple_summary_effects(
     const std::vector<Stat_>& combo_detected,
     const double threshold,
     const BlockAverageInfo<Stat_>& average_info,
+    const std::optional<std::vector<double> >& summary_quantiles,
     const Index_ minrank_limit,
     const bool minrank_keep_ties,
     const ScoreMarkersSummaryBuffers<Stat_, Rank_>& output,
@@ -460,6 +469,7 @@ void process_simple_summary_effects(
     tatami::parallelize([&](const int t, const Index_ start, const Index_ length) -> void {
         std::vector<Stat_> pairwise_buffer(ngroups2);
         std::vector<Stat_> summary_buffer(ngroups);
+        auto summmary_qcalcs = setup_quantile_calculators(summary_quantiles, ngroups);
 
         std::optional<std::vector<Stat_> > qbuffer, qrevbuffer;
         std::optional<scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator> > qcalc;
@@ -498,7 +508,7 @@ void process_simple_summary_effects(
                 } else {
                     compute_pairwise_cohens_d_blockquantile(tmp_means, tmp_variances, ngroups, nblocks, threshold, *qbuffer, *qrevbuffer, *qcalc, pairwise_buffer.data());
                 }
-                compute_summary_stats_per_gene(gene, ngroups, pairwise_buffer.data(), summary_buffer, cohens_d_minrank_all_queues[t], output.cohens_d);
+                compute_summary_stats_per_gene(gene, ngroups, pairwise_buffer.data(), summary_buffer, cohens_d_minrank_all_queues[t], summary_qcalcs, output.cohens_d);
             }
 
             if (output.delta_mean.size()) {
@@ -508,7 +518,7 @@ void process_simple_summary_effects(
                 } else {
                     compute_pairwise_simple_diff_blockquantile(tmp_means, ngroups, nblocks, *qbuffer, *qcalc, pairwise_buffer.data());
                 }
-                compute_summary_stats_per_gene(gene, ngroups, pairwise_buffer.data(), summary_buffer, delta_mean_minrank_all_queues[t], output.delta_mean);
+                compute_summary_stats_per_gene(gene, ngroups, pairwise_buffer.data(), summary_buffer, delta_mean_minrank_all_queues[t], summary_qcalcs, output.delta_mean);
             }
 
             if (output.delta_detected.size()) {
@@ -518,7 +528,7 @@ void process_simple_summary_effects(
                 } else {
                     compute_pairwise_simple_diff_blockquantile(tmp_det, ngroups, nblocks, *qbuffer, *qcalc, pairwise_buffer.data());
                 }
-                compute_summary_stats_per_gene(gene, ngroups, pairwise_buffer.data(), summary_buffer, delta_detected_minrank_all_queues[t], output.delta_detected);
+                compute_summary_stats_per_gene(gene, ngroups, pairwise_buffer.data(), summary_buffer, delta_detected_minrank_all_queues[t], summary_qcalcs, output.delta_detected);
             }
         }
     }, ngenes, num_threads);
@@ -562,6 +572,7 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> preallocate_summary_results(
             options.compute_mean,
             options.compute_median,
             options.compute_max,
+            options.compute_summary_quantiles,
             options.compute_min_rank
         );
     }
@@ -575,6 +586,7 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> preallocate_summary_results(
             options.compute_mean,
             options.compute_median,
             options.compute_max,
+            options.compute_summary_quantiles,
             options.compute_min_rank
         );
     }
@@ -588,6 +600,7 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> preallocate_summary_results(
             options.compute_mean,
             options.compute_median,
             options.compute_max,
+            options.compute_summary_quantiles,
             options.compute_min_rank
         );
     }
@@ -601,6 +614,7 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> preallocate_summary_results(
             options.compute_mean,
             options.compute_median,
             options.compute_max,
+            options.compute_summary_quantiles,
             options.compute_min_rank
         );
     }
@@ -664,14 +678,18 @@ void score_markers_summary(
         preallocate_minrank_queues(ngroups, auc_minrank_all_queues, output.auc, minrank_limit, options.min_rank_preserve_ties, options.num_threads);
 
         struct AucResultWorkspace {
-            AucResultWorkspace(const std::size_t ngroups, MinrankTopQueues<Stat_, Index_>& queues) :
+            AucResultWorkspace(const std::size_t ngroups, MinrankTopQueues<Stat_, Index_>& queues, const std::optional<std::vector<double> >& summary_quantiles) :
                 pairwise_buffer(sanisizer::product<typename std::vector<Stat_>::size_type>(ngroups, ngroups)),
                 summary_buffer(sanisizer::cast<typename std::vector<Stat_>::size_type>(ngroups)),
-                queue_ptr(&queues)
+                queue_ptr(&queues),
+                summary_qcalcs(summary_quantile_calculators(summary_quantiles, ngroups))
             {};
+
+        public:
             std::vector<Stat_> pairwise_buffer;
             std::vector<Stat_> summary_buffer;
             MinrankTopQueues<Stat_, Index_>* queue_ptr;
+            SummaryQuantileCalculators<Stat_> summary_qcalcs;
         };
 
         scan_matrix_by_row_custom_auc<single_block_>(
@@ -689,7 +707,7 @@ void score_markers_summary(
             combo_detected,
             /* do_auc = */ true,
             /* auc_result_initialize = */ [&](const int t) -> AucResultWorkspace {
-                return AucResultWorkspace(ngroups, auc_minrank_all_queues[t]);
+                return AucResultWorkspace(ngroups, auc_minrank_all_queues[t], options.compute_summary_quantiles);
             },
             /* auc_result_process = */ [&](
                 const Index_ gene,
@@ -697,7 +715,7 @@ void score_markers_summary(
                 AucResultWorkspace& res_work
             ) -> void {
                 process_auc_for_rows(auc_work, ngroups, nblocks, options.threshold, res_work.pairwise_buffer.data());
-                compute_summary_stats_per_gene(gene, ngroups, res_work.pairwise_buffer.data(), res_work.summary_buffer, *(res_work.queue_ptr), output.auc);
+                compute_summary_stats_per_gene(gene, ngroups, res_work.pairwise_buffer.data(), res_work.summary_buffer, *(res_work.queue_ptr), res_work.summary_quantile_calcs, output.auc);
             },
             options.num_threads
         );

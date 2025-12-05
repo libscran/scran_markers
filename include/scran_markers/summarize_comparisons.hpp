@@ -6,9 +6,11 @@
 #include <vector>
 #include <cmath>
 #include <cstddef>
+#include <optional>
 
 #include "tatami_stats/tatami_stats.hpp"
 #include "sanisizer/sanisizer.hpp"
+#include "scran_blocks/scran_blocks.hpp"
 
 #include "utils.hpp"
 
@@ -56,6 +58,21 @@ struct SummaryBuffers {
     Stat_* max = NULL;
 
     /**
+     * Optional vector of pointers to arrays of length equal to the number of genes.
+     * Each pointer corresponds to a quantile probability from `SummarizeEffects::compute_quantiles`.
+     * The array is to be filled with the corresponding quantile of effect sizes for each gene.
+     *
+     * If unset, no quantiles will be computed computed.
+     * If set, each pointer should be non-`NULL`, and the length of the vector should be equal to:
+     *
+     * - the vector stored in `SummarizeEffectsOptions::compute_quantiles`, if the `SummaryBuffers` object is to be passed to `summarize_effects()`.
+     *   If no vector was stored, `quantiles` is ignored.
+     * - the vector stored in `ScoreMarkersSummaryOptions::compute_summary_quantiles`, if the `SummaryBuffers` object is to be passed to `score_markers_summary()`.
+     *   If no vector was stored, `quantiles` is ignored.
+     */ 
+    std::optional<std::vector<Stat_*> > quantiles;
+
+    /**
      * Pointer to an array of length equal to the number of genes,
      * to be filled with the minimum rank of the effect sizes for each gene.
      * If `NULL`, the minimum rank is not computed.
@@ -96,6 +113,14 @@ struct SummaryResults {
     std::vector<Stat_> max;
 
     /**
+     * Optional vector of vectors of length equal to the number of genes.
+     * Each inner vector corresponds to a quantile probability from `SummarizeEffects::compute_quantiles`.
+     * Each entry of the inner vector contains the corresponding quantile of effect sizes for each gene.
+     * If not set, no quantiles were computed.
+     */ 
+    std::optional<std::vector<std::vector<Stat_> > > quantiles;
+
+    /**
      * Vector of length equal to the number of genes,
      * to be filled with the minimum rank of the effect sizes for each gene.
      */ 
@@ -107,6 +132,25 @@ struct SummaryResults {
  */
 namespace internal {
 
+template<typename Stat_>
+using SummaryQuantileCalculators = std::optional<std::vector<scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator> > >; 
+
+template<typename Stat_>
+SummaryQuantileCalculators<Stat_> summary_quantile_calculators(const std::optional<std::vector<double> >& requested, std::size_t ngroups) {
+    SummaryQuantileCalculators<Stat_> output;
+    if (!requested.has_value()) {
+        return output;
+    }
+
+    output.emplace();
+    output->reserve(requested.size());
+    for (const auto& req : requested) {
+        output->emplace_back(req, ngroups);
+    }
+
+    return output;
+}
+
 template<typename Stat_, typename Gene_, typename Rank_>
 void summarize_comparisons(
     const std::size_t ngroups,
@@ -114,8 +158,9 @@ void summarize_comparisons(
     const std::size_t group,
     const Gene_ gene,
     const SummaryBuffers<Stat_, Rank_>& output,
-    std::vector<Stat_>& buffer)
-{
+    SummaryQuantileCalculators<Stat_>& quantile_calculators,
+    std::vector<Stat_>& buffer
+) {
     // Ignoring the self comparison and pruning out NaNs.
     std::size_t ncomps = 0;
     for (I<decltype(ngroups)> r = 0; r < ngroups; ++r) {
@@ -140,6 +185,11 @@ void summarize_comparisons(
         if (output.median) {
             output.median[gene] = val;
         }
+        if (output.quantiles.has_value()) {
+            for (const auto& quan : *(output.quantiles)) {
+                quan.second[gene] = val;
+            }
+        }
 
     } else {
         const auto ebegin = buffer.data(), elast = ebegin + ncomps;
@@ -152,8 +202,15 @@ void summarize_comparisons(
         if (output.max) {
             output.max[gene] = *std::max_element(ebegin, elast);
         }
-        if (output.median) { // this mutates the buffer, so we put this last to avoid surprises.
+        // This following calculations mutate the buffer, so we put this last to avoid surprises.
+        if (output.median) {
             output.median[gene] = tatami_stats::medians::direct(ebegin, ncomps, /* skip_nan = */ false); 
+        }
+        if (output.quantiles.has_value()) {
+            const auto nquan = output.quantiles->size();
+            for (I<decltype(nquan)> i = 0; i < nquan; ++i) {
+                (*output.quantiles)[i].second[gene] = (*quantile_calculators)[i](ncomps, ebegin, elast);
+            }
         }
     }
 }
@@ -163,15 +220,18 @@ void summarize_comparisons(
     const Gene_ ngenes,
     const std::size_t ngroups,
     const Stat_* const effects,
+    const std::optional<std::vector<double> >& compute_quantiles,
     const std::vector<SummaryBuffers<Stat_, Rank_> >& output,
-    const int threads)
-{
+    const int threads
+) {
     tatami::parallelize([&](const int, const Gene_ start, const Gene_ length) -> void {
+        auto summary_qcalcs = summary_quantile_calculators(compute_quantiles, ngroups);
         auto buffer = sanisizer::create<std::vector<Stat_> >(ngroups);
+
         for (Gene_ gene = start, end = start + length; gene < end; ++gene) {
             for (I<decltype(ngroups)> l = 0; l < ngroups; ++l) {
                 const auto current_effects = effects + sanisizer::nd_offset<std::size_t>(0, ngroups, l, ngroups, gene);
-                summarize_comparisons(ngroups, current_effects, l, gene, output[l], buffer);
+                summarize_comparisons(ngroups, current_effects, l, gene, output[l], summary_qcalcs, buffer);
             }
         }
     }, ngenes, threads);
@@ -278,8 +338,9 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
     const bool compute_mean,
     const bool compute_median,
     const bool compute_max,
-    const bool compute_min_rank) 
-{
+    const std::optional<std::vector<double> >& compute_quantiles,
+    const bool compute_min_rank
+) {
     SummaryBuffers<Stat_, Rank_> ptr;
     const auto out_len = sanisizer::cast<typename std::vector<Stat_>::size_type>(ngenes);
 
@@ -291,6 +352,7 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
         );
         ptr.min = out.min.data();
     }
+
     if (compute_mean) {
         out.mean.resize(out_len
 #ifdef SCRAN_MARKERS_TEST_INIT
@@ -299,6 +361,7 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
         );
         ptr.mean = out.mean.data();
     }
+
     if (compute_median) {
         out.median.resize(out_len
 #ifdef SCRAN_MARKERS_TEST_INIT
@@ -307,6 +370,7 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
         );
         ptr.median = out.median.data();
     }
+
     if (compute_max) {
         out.max.resize(out_len
 #ifdef SCRAN_MARKERS_TEST_INIT
@@ -315,6 +379,19 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
         );
         ptr.max = out.max.data();
     }
+
+    if (compute_quantiles.has_value()) {
+        out.quantiles.emplace();
+        out.quantiles->reserve(compute_quantiles->size());
+        for (const auto quan : *compute_quantiles) {
+            out.quantiles->emplace_back(out_len
+#ifdef SCRAN_MARKERS_TEST_INIT
+                , SCRAN_MARKERS_TEST_INIT
+#endif
+            );
+        }
+    }
+
     if (compute_min_rank) {
         out.min_rank.resize(out_len
 #ifdef SCRAN_MARKERS_TEST_INIT
@@ -336,13 +413,25 @@ std::vector<SummaryBuffers<Stat_, Rank_> > fill_summary_results(
     const bool compute_mean,
     const bool compute_median,
     const bool compute_max,
-    const bool compute_min_rank) 
-{
+    const std::optional<std::vector<double> >& compute_quantiles,
+    const bool compute_min_rank
+) {
     sanisizer::resize(outputs, ngroups);
     std::vector<SummaryBuffers<Stat_, Rank_> > ptrs;
     ptrs.reserve(ngroups);
     for (I<decltype(ngroups)> g = 0; g < ngroups; ++g) {
-        ptrs.emplace_back(fill_summary_results(ngenes, outputs[g], compute_min, compute_mean, compute_median, compute_max, compute_min_rank));
+        ptrs.emplace_back(
+            fill_summary_results(
+                ngenes,
+                outputs[g],
+                compute_min,
+                compute_mean,
+                compute_median,
+                compute_max,
+                compute_quantile,
+                compute_min_rank
+            )
+        );
     }
     return ptrs;
 }
