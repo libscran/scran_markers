@@ -133,7 +133,7 @@ struct SummaryResults {
 namespace internal {
 
 template<typename Stat_>
-using SummaryQuantileCalculators = std::optional<std::vector<scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator> > >; 
+using SummaryQuantileCalculators = std::optional<std::vector<scran_blocks::SingleQuantileVariable<Stat_, Stat_*> > >; 
 
 template<typename Stat_>
 SummaryQuantileCalculators<Stat_> summary_quantile_calculators(const std::optional<std::vector<double> >& requested, std::size_t ngroups) {
@@ -143,8 +143,8 @@ SummaryQuantileCalculators<Stat_> summary_quantile_calculators(const std::option
     }
 
     output.emplace();
-    output->reserve(requested.size());
-    for (const auto& req : requested) {
+    output->reserve(requested->size());
+    for (const auto req : *requested) {
         output->emplace_back(req, ngroups);
     }
 
@@ -187,7 +187,7 @@ void summarize_comparisons(
         }
         if (output.quantiles.has_value()) {
             for (const auto& quan : *(output.quantiles)) {
-                quan.second[gene] = val;
+                quan[gene] = val;
             }
         }
 
@@ -209,7 +209,7 @@ void summarize_comparisons(
         if (output.quantiles.has_value()) {
             const auto nquan = output.quantiles->size();
             for (I<decltype(nquan)> i = 0; i < nquan; ++i) {
-                (*output.quantiles)[i].second[gene] = (*quantile_calculators)[i](ncomps, ebegin, elast);
+                (*output.quantiles)[i][gene] = (*quantile_calculators)[i](ncomps, ebegin, elast);
             }
         }
     }
@@ -225,7 +225,7 @@ void summarize_comparisons(
     const int threads
 ) {
     tatami::parallelize([&](const int, const Gene_ start, const Gene_ length) -> void {
-        auto summary_qcalcs = summary_quantile_calculators(compute_quantiles, ngroups);
+        auto summary_qcalcs = summary_quantile_calculators<Stat_>(compute_quantiles, ngroups);
         auto buffer = sanisizer::create<std::vector<Stat_> >(ngroups);
 
         for (Gene_ gene = start, end = start + length; gene < end; ++gene) {
@@ -383,7 +383,7 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
     if (compute_quantiles.has_value()) {
         out.quantiles.emplace();
         out.quantiles->reserve(compute_quantiles->size());
-        for (const auto quan : *compute_quantiles) {
+        for ([[maybe_unused]] const auto quan : *compute_quantiles) {
             out.quantiles->emplace_back(out_len
 #ifdef SCRAN_MARKERS_TEST_INIT
                 , SCRAN_MARKERS_TEST_INIT
@@ -428,7 +428,7 @@ std::vector<SummaryBuffers<Stat_, Rank_> > fill_summary_results(
                 compute_mean,
                 compute_median,
                 compute_max,
-                compute_quantile,
+                compute_quantiles,
                 compute_min_rank
             )
         );
