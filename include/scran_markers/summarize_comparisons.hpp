@@ -382,13 +382,16 @@ SummaryBuffers<Stat_, Rank_> fill_summary_results(
 
     if (compute_quantiles.has_value()) {
         out.quantiles.emplace();
+        ptr.quantiles.emplace();
         out.quantiles->reserve(compute_quantiles->size());
+        ptr.quantiles->reserve(compute_quantiles->size());
         for ([[maybe_unused]] const auto quan : *compute_quantiles) {
             out.quantiles->emplace_back(out_len
 #ifdef SCRAN_MARKERS_TEST_INIT
                 , SCRAN_MARKERS_TEST_INIT
 #endif
             );
+            ptr.quantiles->push_back(out.quantiles->back().data());
         }
     }
 

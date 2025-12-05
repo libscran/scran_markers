@@ -67,6 +67,42 @@ TEST(SummarizeEffects, Basic) {
     }
 }
 
+TEST(SummarizeEffects, Quantile) {
+    size_t ngenes = 111, ngroups = 3;
+    std::vector<double> stuff = scran_tests::simulate_vector(ngroups * ngroups * ngenes, scran_tests::SimulateVectorParameters());
+
+    scran_markers::SummarizeEffectsOptions opts;
+    opts.compute_quantiles.emplace(std::vector<double>{ 0.0, 0.5, 1.0 });
+    auto res = scran_markers::summarize_effects(ngenes, ngroups, stuff.data(), opts);
+    EXPECT_EQ(res.size(), ngroups);
+
+    // Check that min, median and max make sense.
+    for (size_t g = 0; g < ngroups; ++g) {
+        const auto& gres = res[g];
+        const auto& gq = *(gres.quantiles);
+        for (size_t i = 0; i < ngenes; ++i) {
+            EXPECT_EQ(gres.min[i], gq[0][i]);
+            scran_tests::compare_almost_equal(gres.median[i], gq[1][i], scran_tests::CompareAlmostEqualParameters{});
+            EXPECT_EQ(gres.max[i], gq[2][i]);
+        }
+    }
+
+    // Same results with multiple threads.
+    opts.num_threads = 3;
+    auto res2 = scran_markers::summarize_effects(ngenes, ngroups, stuff.data(), opts);
+    EXPECT_EQ(res2.size(), ngroups);
+
+    for (size_t g = 0; g < ngroups; ++g) {
+        const auto& gq = *(res[g].quantiles);
+        const auto& gq2 = *(res2[g].quantiles);
+        for (size_t i = 0; i < ngenes; ++i) {
+            EXPECT_EQ(gq[0][i], gq2[0][i]);
+            EXPECT_EQ(gq[1][i], gq2[1][i]);
+            EXPECT_EQ(gq[2][i], gq2[2][i]);
+        }
+    }
+}
+
 TEST(SummarizeEffects, None) {
     size_t ngenes = 10, ngroups = 3;
     std::vector<double> stuff(ngroups * ngroups * ngenes);

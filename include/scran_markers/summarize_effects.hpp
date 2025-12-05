@@ -163,8 +163,8 @@ std::vector<SummaryResults<Stat_, Rank_> > summarize_effects(
     const Gene_ ngenes,
     const std::size_t ngroups,
     const Stat_* const effects,
-    const SummarizeEffectsOptions& options)
-{
+    const SummarizeEffectsOptions& options
+) {
     std::vector<SummaryResults<Stat_, Rank_> > output;
     const auto ptrs = internal::fill_summary_results(
         ngenes,
