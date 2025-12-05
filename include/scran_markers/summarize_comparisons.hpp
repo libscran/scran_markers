@@ -136,7 +136,7 @@ template<typename Stat_>
 using SummaryQuantileCalculators = std::optional<std::vector<scran_blocks::SingleQuantileVariable<Stat_, Stat_*> > >; 
 
 template<typename Stat_>
-SummaryQuantileCalculators<Stat_> summary_quantile_calculators(const std::optional<std::vector<double> >& requested, std::size_t ngroups) {
+SummaryQuantileCalculators<Stat_> summary_quantile_calculators(const std::optional<std::vector<double> >& requested, const std::size_t ngroups) {
     SummaryQuantileCalculators<Stat_> output;
     if (!requested.has_value()) {
         return output;
@@ -145,7 +145,7 @@ SummaryQuantileCalculators<Stat_> summary_quantile_calculators(const std::option
     output.emplace();
     output->reserve(requested->size());
     for (const auto req : *requested) {
-        output->emplace_back(req, ngroups);
+        output->emplace_back(ngroups, req);
     }
 
     return output;

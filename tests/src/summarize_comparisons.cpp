@@ -7,8 +7,15 @@
 
 class SummarizeComparisonsTest : public ::testing::TestWithParam<std::tuple<int, int> > {
 protected:
-    static void create_outputs(int ngenes, int ngroups, std::vector<double>& output, std::vector<scran_markers::SummaryBuffers<double, int> >& ptrs) {
-        output.resize(ngroups * 4 * ngenes
+    static void create_outputs(
+        int ngenes,
+        int ngroups,
+        const std::optional<std::vector<double> >& quantiles,
+        std::vector<double>& output,
+        std::vector<scran_markers::SummaryBuffers<double, int> >& ptrs
+    ) {
+        const auto nquantiles = (quantiles.has_value() ? quantiles->size() : 0);
+        output.resize(ngroups * ngenes * (4 + nquantiles)
 #ifdef SCRAN_MARKERS_TEST_INIT
             , SCRAN_MARKERS_TEST_INIT
 #endif
@@ -26,6 +33,14 @@ protected:
             optr += ngenes;
             current.max = optr;
             optr += ngenes;
+
+            if (quantiles.has_value()) {
+                current.quantiles.emplace();
+                for ([[maybe_unused]] auto q : *quantiles) {
+                    current.quantiles->push_back(optr);
+                    optr += ngenes;
+                }
+            }
         }
     }
 
@@ -70,11 +85,11 @@ TEST_P(SummarizeComparisonsTest, Basic) {
 
     std::vector<double> output;
     std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
-    create_outputs(ngenes, ngroups, output, ptrs);
+    create_outputs(ngenes, ngroups, {}, output, ptrs);
 
     auto values = spawn_simple_values(ngenes, ngroups);
     auto threads = std::get<1>(params);
-    scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), ptrs, threads);
+    scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), {}, ptrs, threads);
 
     for (int gene = 0; gene < ngenes; ++gene) {
         for (int g = 0; g < ngroups; ++g) {
@@ -90,6 +105,9 @@ TEST_P(SummarizeComparisonsTest, Basic) {
 
             // Checking that the maximum is correct.
             EXPECT_FLOAT_EQ(ptrs[g].max[gene], g * gene + ngroups - 1 - (g == ngroups - 1));
+
+            // Check that quantiles are not set.
+            EXPECT_FALSE(ptrs[g].quantiles.has_value());
         }
     }
 
@@ -97,7 +115,39 @@ TEST_P(SummarizeComparisonsTest, Basic) {
     if (threads > 1) {
         auto parallelized = output;
         std::fill(output.begin(), output.end(), 0);
-        scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), ptrs, 1); 
+        scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), {}, ptrs, 1); 
+        EXPECT_EQ(parallelized, output);
+    }
+}
+
+TEST_P(SummarizeComparisonsTest, Quantile) {
+    auto params = GetParam();
+    int ngenes = 100;
+    int ngroups = std::get<0>(params);
+    std::vector<double> quantiles{ 0, 0.5, 1.0 };
+
+    std::vector<double> output;
+    std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
+    create_outputs(ngenes, ngroups, quantiles, output, ptrs);
+
+    auto values = spawn_simple_values(ngenes, ngroups);
+    auto threads = std::get<1>(params);
+    scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), quantiles, ptrs, threads);
+
+    for (int gene = 0; gene < ngenes; ++gene) {
+        for (int g = 0; g < ngroups; ++g) {
+            const auto& Q = *(ptrs[g].quantiles);
+            EXPECT_EQ(ptrs[g].min[gene], Q[0][gene]);
+            EXPECT_EQ(ptrs[g].median[gene], Q[1][gene]);
+            EXPECT_EQ(ptrs[g].max[gene], Q[2][gene]);
+        }
+    }
+
+    // Checking the serial version for consistency.
+    if (threads > 1) {
+        auto parallelized = output;
+        std::fill(output.begin(), output.end(), 0);
+        scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), quantiles, ptrs, 1); 
         EXPECT_EQ(parallelized, output);
     }
 }
@@ -109,17 +159,17 @@ TEST_P(SummarizeComparisonsTest, Missing) {
 
     std::vector<double> output;
     std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
-    create_outputs(ngenes, ngroups, output, ptrs);
+    create_outputs(ngenes, ngroups, {}, output, ptrs);
 
     auto threads = std::get<1>(GetParam());
 
     for (int lost = 0; lost < ngroups; ++lost) {
         auto values = spawn_missing_values(ngenes, ngroups, lost);
-        scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), ptrs, threads);
+        scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), {}, ptrs, threads);
 
         for (int gene = 0; gene < ngenes; ++ gene) {
             for (int g = 0; g < ngroups; ++g) {
-                if (g == lost) {
+                if (g == lost || ngroups == 2) {
                     EXPECT_TRUE(std::isnan(ptrs[g].min[gene]));
                     EXPECT_TRUE(std::isnan(ptrs[g].mean[gene]));
                     EXPECT_TRUE(std::isnan(ptrs[g].median[gene]));
@@ -160,11 +210,43 @@ TEST_P(SummarizeComparisonsTest, Missing) {
     }
 }
 
+TEST_P(SummarizeComparisonsTest, MissingQuantile) {
+    auto params = GetParam();
+    int ngenes = 100;
+    int ngroups = std::get<0>(params);
+    std::vector<double> quantiles{ 0, 0.5, 1.0 };
+
+    std::vector<double> output;
+    std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
+    create_outputs(ngenes, ngroups, quantiles, output, ptrs);
+
+    auto threads = std::get<1>(GetParam());
+    for (int lost = 0; lost < ngroups; ++lost) {
+        auto values = spawn_missing_values(ngenes, ngroups, lost);
+        scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), quantiles, ptrs, threads);
+
+        for (int gene = 0; gene < ngenes; ++ gene) {
+            for (int g = 0; g < ngroups; ++g) {
+                const auto& Q = *(ptrs[g].quantiles);
+                if (g == lost || ngroups == 2) {
+                    EXPECT_TRUE(std::isnan(Q[0][gene]));
+                    EXPECT_TRUE(std::isnan(Q[1][gene]));
+                    EXPECT_TRUE(std::isnan(Q[2][gene]));
+                } else {
+                    EXPECT_EQ(ptrs[g].min[gene], Q[0][gene]);
+                    EXPECT_EQ(ptrs[g].median[gene], Q[1][gene]);
+                    EXPECT_EQ(ptrs[g].max[gene], Q[2][gene]);
+                }
+            }
+        }
+    }
+}
+
 INSTANTIATE_TEST_SUITE_P(
     SummarizeComparisons,
     SummarizeComparisonsTest,
     ::testing::Combine(
-        ::testing::Values(3, 5, 7), // number of groups
+        ::testing::Values(2, 3, 5, 7), // number of groups
         ::testing::Values(1, 3) // number of threads
     )
 );
