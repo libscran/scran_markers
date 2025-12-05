@@ -327,14 +327,14 @@ void compute_summary_stats_per_gene(
     const std::size_t ngroups,
     const Stat_* const pairwise_buffer_ptr,
     std::vector<Stat_>& summary_buffer,
-    SummaryQuantileCalculators<Stat_>& summary_quantile_calcs,
+    MaybeMultipleQuantiles<Stat_>& summary_qcalcs,
     MinrankTopQueues<Stat_, Index_>& minrank_queues,
     const std::vector<SummaryBuffers<Stat_, Rank_> >& summaries
 ) {
     for (I<decltype(ngroups)> gr = 0; gr < ngroups; ++gr) {
         auto& cursummary = summaries[gr];
         const auto in_offset = sanisizer::product_unsafe<std::size_t>(ngroups, gr);
-        summarize_comparisons(ngroups, pairwise_buffer_ptr + in_offset, gr, gene, cursummary, summary_quantile_calcs, summary_buffer);
+        summarize_comparisons(ngroups, pairwise_buffer_ptr + in_offset, gr, gene, cursummary, summary_qcalcs, summary_buffer);
 
         if (cursummary.min_rank) {
             auto& cur_queues = minrank_queues[gr];
@@ -469,7 +469,7 @@ void process_simple_summary_effects(
     tatami::parallelize([&](const int t, const Index_ start, const Index_ length) -> void {
         std::vector<Stat_> pairwise_buffer(ngroups2);
         std::vector<Stat_> summary_buffer(ngroups);
-        auto summary_qcalcs = summary_quantile_calculators<Stat_>(summary_quantiles, ngroups);
+        auto summary_qcalcs = setup_multiple_quantiles<Stat_>(summary_quantiles, ngroups);
 
         std::optional<std::vector<Stat_> > qbuffer, qrevbuffer;
         std::optional<scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator> > qcalc;
@@ -682,14 +682,14 @@ void score_markers_summary(
                 pairwise_buffer(sanisizer::product<typename std::vector<Stat_>::size_type>(ngroups, ngroups)),
                 summary_buffer(sanisizer::cast<typename std::vector<Stat_>::size_type>(ngroups)),
                 queue_ptr(&queues),
-                summary_qcalcs(summary_quantile_calculators<Stat_>(summary_quantiles, ngroups))
+                summary_qcalcs(setup_multiple_quantiles<Stat_>(summary_quantiles, ngroups))
             {};
 
         public:
             std::vector<Stat_> pairwise_buffer;
             std::vector<Stat_> summary_buffer;
             MinrankTopQueues<Stat_, Index_>* queue_ptr;
-            SummaryQuantileCalculators<Stat_> summary_qcalcs;
+            MaybeMultipleQuantiles<Stat_> summary_qcalcs;
         };
 
         scan_matrix_by_row_custom_auc<single_block_>(

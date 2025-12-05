@@ -132,22 +132,126 @@ struct SummaryResults {
  */
 namespace internal {
 
-template<typename Stat_>
-using SummaryQuantileCalculators = std::optional<std::vector<scran_blocks::SingleQuantileVariable<Stat_, Stat_*> > >; 
-
-template<typename Stat_>
-SummaryQuantileCalculators<Stat_> summary_quantile_calculators(const std::optional<std::vector<double> >& requested, const std::size_t ngroups) {
-    SummaryQuantileCalculators<Stat_> output;
-    if (!requested.has_value()) {
-        return output;
+inline void validate_quantiles(const std::optional<std::vector<double> >& probs) {
+    if (!probs.has_value()) { 
+        return;
     }
 
-    output.emplace();
-    output->reserve(requested->size());
-    for (const auto req : *requested) {
-        output->emplace_back(ngroups, req);
+    const auto val = probs->front();
+    if (val < 0 || val > 1) {
+        throw std::runtime_error("quantile probabilities should be in [0, 1]");
     }
 
+    const auto nprobs = probs->size();
+    for (I<decltype(nprobs)> i = 1; i < nprobs; ++i) {
+        const auto val = (*probs)[i];
+        if (val < 0 || val > 1) {
+            throw std::runtime_error("quantile probabilities should be in [0, 1]");
+        }
+        if (val < (*probs)[i - 1]) {
+            throw std::runtime_error("quantile probabilities should be in increasing order");
+        }
+    }
+}
+
+template<typename Stat_, class Iterator_>
+class MultipleQuantiles {
+public:
+    MultipleQuantiles(const std::vector<double>& probs, const std::size_t max_len) :
+        my_stacks(sanisizer::cast<I<decltype(my_stacks.size())> >(max_len)),
+        my_probs(&probs)
+    {
+        sanisizer::can_ptrdiff<Iterator_>(max_len);
+    }
+
+    struct Details { 
+        std::vector<std::size_t> index;
+        std::vector<double> lower_fraction;
+        std::vector<double> upper_fraction;
+    };
+
+private:
+    std::vector<std::optional<Details> > my_stacks;
+    const std::vector<double>* my_probs; // avoid unnecessary copies of the quantile probabilities.
+
+private:
+    Details& initialize_stack(const std::size_t len) {
+        // len is guaranteed to be > 1 from summarize_comparisons(). 
+        auto& raw_stack = my_stacks[len - 1];
+        if (raw_stack.has_value()) {
+            return *raw_stack;
+        }
+
+        raw_stack.emplace();
+        auto& stack = *raw_stack;
+        const auto nprobs = my_probs->size();
+        stack.index.reserve(nprobs);
+        stack.lower_fraction.reserve(nprobs);
+        stack.upper_fraction.reserve(nprobs);
+
+        for (const auto prob : *my_probs) {
+            const double frac = static_cast<double>(len - 1) * static_cast<double>(prob);
+            const double base = std::floor(frac);
+            stack.index.push_back(base); // cast is known-safe if can_ptrdiff passes and 0 <= quantile <= 1.
+            stack.upper_fraction.push_back(frac - base);
+            stack.lower_fraction.push_back(static_cast<double>(1) - stack.upper_fraction.back());
+        }
+
+        return stack;
+    }
+
+public:
+    template<class OutputFun_>
+    void compute(const std::size_t len, Iterator_ begin, Iterator_ end, OutputFun_ output) {
+        // len is assumed to be > 1 and equal to 'end - begin'.
+        // We just accept it as an argument to avoid recomputing it.
+        auto& stack = initialize_stack(len);
+
+        // Here, the assumption is that we're computing quantiles by increasing probability.
+        // We keep track of how much we've already sorted so that we don't have to call
+        // nth_element for a given index if we already computed for a previous probability.
+        // This allows us to avoid near-redundant sorts for similar probabilities.
+        std::size_t sorted_up_to = 0;
+
+        const auto nprobs = stack.index.size();
+        for (I<decltype(nprobs)> p = 0; p < nprobs; ++p) {
+            const auto curindex = stack.index[p];
+            const auto curlower = stack.lower_fraction[p];
+            const auto curupper = stack.upper_fraction[p];
+
+            const auto target = begin + curindex;
+            if (curindex >= sorted_up_to) { // avoid re-searching for the nth element if we already found what we wanted for a lower probability.
+                std::nth_element(begin + sorted_up_to, target, end);
+                sorted_up_to = curindex + 1;
+            }
+            const auto lower_val = *target;
+
+            if (curupper != 0) {
+                const auto curindex_p1 = curindex + 1;
+                const auto target_p1 = begin + curindex_p1;
+                if (curindex_p1 >= sorted_up_to) {
+                    // Basically mimics nth_element(target_p1, target_p1, end).
+                    std::swap(*target_p1, *std::min_element(target_p1, end));
+                    sorted_up_to = curindex_p1 + 1;
+                }
+                const auto upper_val = *target_p1;
+                output(p, lower_val * curlower + upper_val * curupper);
+            } else {
+                output(p, lower_val);
+            }
+        }
+    }
+};
+
+template<typename Stat_>
+using MaybeMultipleQuantiles = std::optional<MultipleQuantiles<Stat_, Stat_*> >;
+
+template<typename Stat_>
+MaybeMultipleQuantiles<Stat_> setup_multiple_quantiles(const std::optional<std::vector<double> >& requested, const std::size_t ngroups) {
+    MaybeMultipleQuantiles<Stat_> output;
+    if (requested.has_value()) {
+        output.emplace(*requested, ngroups);
+    }
     return output;
 }
 
@@ -158,7 +262,7 @@ void summarize_comparisons(
     const std::size_t group,
     const Gene_ gene,
     const SummaryBuffers<Stat_, Rank_>& output,
-    SummaryQuantileCalculators<Stat_>& quantile_calculators,
+    MaybeMultipleQuantiles<Stat_>& quantile_calculators,
     std::vector<Stat_>& buffer
 ) {
     // Ignoring the self comparison and pruning out NaNs.
@@ -207,10 +311,14 @@ void summarize_comparisons(
             output.median[gene] = tatami_stats::medians::direct(ebegin, ncomps, /* skip_nan = */ false); 
         }
         if (output.quantiles.has_value()) {
-            const auto nquan = output.quantiles->size();
-            for (I<decltype(nquan)> i = 0; i < nquan; ++i) {
-                (*output.quantiles)[i][gene] = (*quantile_calculators)[i](ncomps, ebegin, elast);
-            }
+            quantile_calculators->compute(
+                ncomps,
+                ebegin,
+                elast, 
+                [&](const std::size_t i, const Stat_ value) -> void {
+                    (*output.quantiles)[i][gene] = value;
+                }
+            );
         }
     }
 }
@@ -225,7 +333,7 @@ void summarize_comparisons(
     const int threads
 ) {
     tatami::parallelize([&](const int, const Gene_ start, const Gene_ length) -> void {
-        auto summary_qcalcs = summary_quantile_calculators<Stat_>(compute_quantiles, ngroups);
+        auto summary_qcalcs = setup_multiple_quantiles<Stat_>(compute_quantiles, ngroups);
         auto buffer = sanisizer::create<std::vector<Stat_> >(ngroups);
 
         for (Gene_ gene = start, end = start + length; gene < end; ++gene) {
