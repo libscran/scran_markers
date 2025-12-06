@@ -119,6 +119,8 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a553f2a6628c8e5ce7a063a94b2be39fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aca9447a330e31fb89a04c00843a65a76" id="r_aca9447a330e31fb89a04c00843a65a76"><td class="memItemLeft" align="right" valign="top">std::vector&lt; Stat_ &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aca9447a330e31fb89a04c00843a65a76">max</a></td></tr>
 <tr class="separator:aca9447a330e31fb89a04c00843a65a76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9df91addb273e866fc9d8d48ea0df302" id="r_a9df91addb273e866fc9d8d48ea0df302"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::vector&lt; std::vector&lt; Stat_ &gt; &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9df91addb273e866fc9d8d48ea0df302">quantiles</a></td></tr>
+<tr class="separator:a9df91addb273e866fc9d8d48ea0df302"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab7ba8d989f18a8cc939f5c9435876800" id="r_ab7ba8d989f18a8cc939f5c9435876800"><td class="memItemLeft" align="right" valign="top">std::vector&lt; Rank_ &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab7ba8d989f18a8cc939f5c9435876800">min_rank</a></td></tr>
 <tr class="separator:ab7ba8d989f18a8cc939f5c9435876800"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -215,6 +217,23 @@ template&lt;typename Stat_  = double, typename Rank_  = int&gt; </div>
       </table>
 </div><div class="memdoc">
 <p>Vector of length equal to the number of genes, to be filled with the minimum rank of the effect sizes for each gene. </p>
+
+</div>
+</div>
+<a id="a9df91addb273e866fc9d8d48ea0df302" name="a9df91addb273e866fc9d8d48ea0df302"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9df91addb273e866fc9d8d48ea0df302">&#9670;&#160;</a></span>quantiles</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename Stat_  = double, typename Rank_  = int&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt;std::vector&lt;std::vector&lt;Stat_&gt; &gt; &gt; <a class="el" href="structscran__markers_1_1SummaryResults.html">scran_markers::SummaryResults</a>&lt; Stat_, Rank_ &gt;::quantiles</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Optional vector of vectors of length equal to the number of genes. Each inner vector corresponds to a quantile probability from <code>SummarizeEffects::compute_quantiles</code>. Each entry of the inner vector contains the corresponding quantile of effect sizes for each gene. If not set, no quantiles were computed. </p>
 
 </div>
 </div>

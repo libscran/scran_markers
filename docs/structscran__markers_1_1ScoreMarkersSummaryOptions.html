@@ -135,72 +135,10 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a660ccf44e64c70b72817ac3031b5c26b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a20a322581c10b9963c6ca639cd898cb0" id="r_a20a322581c10b9963c6ca639cd898cb0"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a20a322581c10b9963c6ca639cd898cb0">compute_max</a> = true</td></tr>
 <tr class="separator:a20a322581c10b9963c6ca639cd898cb0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abe5423cc6df71b83a0d6633979357f26" id="r_abe5423cc6df71b83a0d6633979357f26"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abe5423cc6df71b83a0d6633979357f26">compute_min_rank</a> = true</td></tr>
-<tr class="separator:abe5423cc6df71b83a0d6633979357f26"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af717200fc00125d5427c6f050fd50c89" id="r_af717200fc00125d5427c6f050fd50c89"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af717200fc00125d5427c6f050fd50c89">min_rank_limit</a> = 500</td></tr>
-<tr class="separator:af717200fc00125d5427c6f050fd50c89"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a865440ea066ee6a6cd81bfbbd9a8f426" id="r_a865440ea066ee6a6cd81bfbbd9a8f426"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a865440ea066ee6a6cd81bfbbd9a8f426">min_rank_preserve_ties</a> = false</td></tr>
-<tr class="separator:a865440ea066ee6a6cd81bfbbd9a8f426"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0e87a7b9ccddada180f133b8d93edc35" id="r_a0e87a7b9ccddada180f133b8d93edc35"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacescran__markers.html#a6618123944df0034878e41ba2b70809d">AveragePolicy</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0e87a7b9ccddada180f133b8d93edc35">block_average_policy</a> = AveragePolicy::MEAN</td></tr>
-<tr class="separator:a0e87a7b9ccddada180f133b8d93edc35"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9581052b53623da99d9b1e6498d55430" id="r_a9581052b53623da99d9b1e6498d55430"><td class="memItemLeft" align="right" valign="top"><a class="elRef" href="https://libscran.github.io/scran_blocks/namespacescran__blocks.html#ac2412948da94055ff438267ba089ba97">scran_blocks::WeightPolicy</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9581052b53623da99d9b1e6498d55430">block_weight_policy</a> = scran_blocks::WeightPolicy::VARIABLE</td></tr>
-<tr class="separator:a9581052b53623da99d9b1e6498d55430"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad16d7561289a49c342ed6eb4be6adfbc" id="r_ad16d7561289a49c342ed6eb4be6adfbc"><td class="memItemLeft" align="right" valign="top"><a class="elRef" href="https://libscran.github.io/scran_blocks/structscran__blocks_1_1VariableWeightParameters.html">scran_blocks::VariableWeightParameters</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad16d7561289a49c342ed6eb4be6adfbc">variable_block_weight_parameters</a></td></tr>
-<tr class="separator:ad16d7561289a49c342ed6eb4be6adfbc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4796ff4ea6ebadba4711c92783fd4180" id="r_a4796ff4ea6ebadba4711c92783fd4180"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4796ff4ea6ebadba4711c92783fd4180">block_quantile</a> = 0.5</td></tr>
-<tr class="separator:a4796ff4ea6ebadba4711c92783fd4180"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Options for <code><a class="el" href="namespacescran__markers.html#a92c28687f963fbe5535e3fc0c4a60a80">score_markers_summary()</a></code> and friends. </p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
-<a id="a0e87a7b9ccddada180f133b8d93edc35" name="a0e87a7b9ccddada180f133b8d93edc35"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0e87a7b9ccddada180f133b8d93edc35">&#9670;&#160;</a></span>block_average_policy</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="namespacescran__markers.html#a6618123944df0034878e41ba2b70809d">AveragePolicy</a> scran_markers::ScoreMarkersSummaryOptions::block_average_policy = AveragePolicy::MEAN</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Policy to use for averaging statistics across blocks into a single value. This can either be <code>AveragePolicy::MEAN</code> (weighted mean) or <code>AveragePolicy::QUANTILE</code> (quantile). Only used in <code><a class="el" href="namespacescran__markers.html#ab817d3509bf11224c5841cee6eb19d26">score_markers_summary_blocked()</a></code>. </p>
-
-</div>
-</div>
-<a id="a4796ff4ea6ebadba4711c92783fd4180" name="a4796ff4ea6ebadba4711c92783fd4180"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4796ff4ea6ebadba4711c92783fd4180">&#9670;&#160;</a></span>block_quantile</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">double scran_markers::ScoreMarkersSummaryOptions::block_quantile = 0.5</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Quantile probability for summarizing statistics across blocks. Only used in <code><a class="el" href="namespacescran__markers.html#ab817d3509bf11224c5841cee6eb19d26">score_markers_summary_blocked()</a></code> when <code><a class="el" href="#a0e87a7b9ccddada180f133b8d93edc35">ScoreMarkersSummaryOptions::block_average_policy</a> = AveragePolicy::QUANTILE</code>. </p>
-
-</div>
-</div>
-<a id="a9581052b53623da99d9b1e6498d55430" name="a9581052b53623da99d9b1e6498d55430"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9581052b53623da99d9b1e6498d55430">&#9670;&#160;</a></span>block_weight_policy</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="elRef" href="https://libscran.github.io/scran_blocks/namespacescran__blocks.html#ac2412948da94055ff438267ba089ba97">scran_blocks::WeightPolicy</a> scran_markers::ScoreMarkersSummaryOptions::block_weight_policy = scran_blocks::WeightPolicy::VARIABLE</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Policy to use for weighting blocks when computing average statistics/effect sizes across blocks.</p>
-<p>The default of <code>scran_blocks::WeightPolicy::VARIABLE</code> is to define equal weights for blocks once they reach a certain size (see <code><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html#af6ab275bc541e6c0ffe62d9da271f550">ScoreMarkersPairwiseOptions::variable_block_weight_parameters</a></code>). For smaller blocks, the weight is linearly proportional to its size to avoid outsized contributions from very small blocks.</p>
-<p>Other options include <code>scran_blocks::WeightPolicy::EQUAL</code>, where all blocks are equally weighted regardless of size; and <code>scran_blocks::WeightPolicy::NONE</code>, where the contribution of each block is proportional to its size.</p>
-<p>Only used in <code><a class="el" href="namespacescran__markers.html#ab817d3509bf11224c5841cee6eb19d26">score_markers_summary_blocked()</a></code> when <code><a class="el" href="#a0e87a7b9ccddada180f133b8d93edc35">ScoreMarkersSummaryOptions::block_average_policy</a> = AveragePolicy::MEAN</code>. </p>
-
-</div>
-</div>
 <a id="a4d614cc8e81337b5c5880a7adecdba7f" name="a4d614cc8e81337b5c5880a7adecdba7f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a4d614cc8e81337b5c5880a7adecdba7f">&#9670;&#160;</a></span>compute_auc</h2>
 
@@ -351,51 +289,6 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="abe5423cc6df71b83a0d6633979357f26" name="abe5423cc6df71b83a0d6633979357f26"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abe5423cc6df71b83a0d6633979357f26">&#9670;&#160;</a></span>compute_min_rank</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool scran_markers::ScoreMarkersSummaryOptions::compute_min_rank = true</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Whether to report the minimum rank of the effect sizes for each group. Only affects the <code><a class="el" href="namespacescran__markers.html#a92c28687f963fbe5535e3fc0c4a60a80">score_markers_summary()</a></code> overload that returns a <code><a class="el" href="structscran__markers_1_1ScoreMarkersSummaryResults.html" title="Results for score_markers_summary() and friends.">ScoreMarkersSummaryResults</a></code>. </p>
-
-</div>
-</div>
-<a id="af717200fc00125d5427c6f050fd50c89" name="af717200fc00125d5427c6f050fd50c89"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af717200fc00125d5427c6f050fd50c89">&#9670;&#160;</a></span>min_rank_limit</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::size_t scran_markers::ScoreMarkersSummaryOptions::min_rank_limit = 500</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Limit on the reported minimum rank. If a gene has a minimum rank greater than <code>min_rank_limit</code>, its reported minimum rank will be set to the number of genes. Lower values improve memory efficiency but discard all ranking information beyond <code>min_rank_limit</code>. </p>
-
-</div>
-</div>
-<a id="a865440ea066ee6a6cd81bfbbd9a8f426" name="a865440ea066ee6a6cd81bfbbd9a8f426"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a865440ea066ee6a6cd81bfbbd9a8f426">&#9670;&#160;</a></span>min_rank_preserve_ties</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool scran_markers::ScoreMarkersSummaryOptions::min_rank_preserve_ties = false</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Whether to preserve ties when computing the minimum rank. If <code>true</code>, tied genes with equal effect sizes receive the same rank within each pairwise comparison. Otherwise, ties are broken in a stable manner, i.e., genes in earlier rows will receive a higher rank. </p>
-
-</div>
-</div>
 <a id="acd9fd70b56bf779527de7a6068423bf6" name="acd9fd70b56bf779527de7a6068423bf6"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acd9fd70b56bf779527de7a6068423bf6">&#9670;&#160;</a></span>num_threads</h2>
 
@@ -423,21 +316,6 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Threshold on the differences in expression values, used to adjust the Cohen's d and AUC calculations. This should be non-negative. Higher thresholds will favor genes with large differences at the expense of those with low variance. </p>
-
-</div>
-</div>
-<a id="ad16d7561289a49c342ed6eb4be6adfbc" name="ad16d7561289a49c342ed6eb4be6adfbc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad16d7561289a49c342ed6eb4be6adfbc">&#9670;&#160;</a></span>variable_block_weight_parameters</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="elRef" href="https://libscran.github.io/scran_blocks/structscran__blocks_1_1VariableWeightParameters.html">scran_blocks::VariableWeightParameters</a> scran_markers::ScoreMarkersSummaryOptions::variable_block_weight_parameters</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Parameters for the variable block weights, including the threshold at which blocks are considered to be large enough to have equal weight. Only used in <code><a class="el" href="namespacescran__markers.html#ab817d3509bf11224c5841cee6eb19d26">score_markers_summary_blocked()</a></code> when <code><a class="el" href="#a0e87a7b9ccddada180f133b8d93edc35">ScoreMarkersSummaryOptions::block_average_policy</a> = AveragePolicy::QUANTILE</code> and <code><a class="el" href="#a9581052b53623da99d9b1e6498d55430">ScoreMarkersSummaryOptions::block_weight_policy</a> = scran_blocks::WeightPolicy::VARIABLE</code>. </p>
 
 </div>
 </div>

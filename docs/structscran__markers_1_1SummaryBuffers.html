@@ -119,6 +119,8 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a8b9461e76a8d534bcf2cd53057c90d43"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af471dad037118be3eda771d5a6b85b3e" id="r_af471dad037118be3eda771d5a6b85b3e"><td class="memItemLeft" align="right" valign="top">Stat_ *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af471dad037118be3eda771d5a6b85b3e">max</a> = NULL</td></tr>
 <tr class="separator:af471dad037118be3eda771d5a6b85b3e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:affee2e865a23be0ae31635514935c12c" id="r_affee2e865a23be0ae31635514935c12c"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::vector&lt; Stat_ * &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#affee2e865a23be0ae31635514935c12c">quantiles</a></td></tr>
+<tr class="separator:affee2e865a23be0ae31635514935c12c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afdf1258e4675f184d9caa7f4b5b283b7" id="r_afdf1258e4675f184d9caa7f4b5b283b7"><td class="memItemLeft" align="right" valign="top">Rank_ *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afdf1258e4675f184d9caa7f4b5b283b7">min_rank</a> = NULL</td></tr>
 <tr class="separator:afdf1258e4675f184d9caa7f4b5b283b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -215,6 +217,28 @@ template&lt;typename Stat_  = double, typename Rank_  = int&gt; </div>
       </table>
 </div><div class="memdoc">
 <p>Pointer to an array of length equal to the number of genes, to be filled with the minimum rank of the effect sizes for each gene. If <code>NULL</code>, the minimum rank is not computed. </p>
+
+</div>
+</div>
+<a id="affee2e865a23be0ae31635514935c12c" name="affee2e865a23be0ae31635514935c12c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#affee2e865a23be0ae31635514935c12c">&#9670;&#160;</a></span>quantiles</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename Stat_  = double, typename Rank_  = int&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt;std::vector&lt;Stat_*&gt; &gt; <a class="el" href="structscran__markers_1_1SummaryBuffers.html">scran_markers::SummaryBuffers</a>&lt; Stat_, Rank_ &gt;::quantiles</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Optional vector of pointers to arrays of length equal to the number of genes. Each pointer corresponds to a quantile probability from <code>SummarizeEffects::compute_quantiles</code>. The array is to be filled with the corresponding quantile of effect sizes for each gene.</p>
+<p>If unset, no quantiles will be computed computed. If set, each pointer should be non-<code>NULL</code>, and the length of the vector should be equal to:</p>
+<ul>
+<li>the vector stored in <code>SummarizeEffectsOptions::compute_quantiles</code>, if the <code><a class="el" href="structscran__markers_1_1SummaryBuffers.html" title="Pointers to arrays to hold the summary statistics.">SummaryBuffers</a></code> object is to be passed to <code><a class="el" href="namespacescran__markers.html#aefddf4357cc7de227c5242b3861d5a27">summarize_effects()</a></code>. If no vector was stored, <code>quantiles</code> is ignored.</li>
+<li>the vector stored in <code>ScoreMarkersSummaryOptions::compute_summary_quantiles</code>, if the <code><a class="el" href="structscran__markers_1_1SummaryBuffers.html" title="Pointers to arrays to hold the summary statistics.">SummaryBuffers</a></code> object is to be passed to <code><a class="el" href="namespacescran__markers.html#a92c28687f963fbe5535e3fc0c4a60a80">score_markers_summary()</a></code>. If no vector was stored, <code>quantiles</code> is ignored. </li>
+</ul>
 
 </div>
 </div>
