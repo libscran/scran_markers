@@ -5,10 +5,168 @@
 
 #include "scran_markers/summarize_comparisons.hpp"
 
+class MultipleQuantilesTest : public ::testing::Test {
+protected:
+    static std::vector<double> compute_multiple_quantiles(
+        scran_markers::internal::MaybeMultipleQuantiles<double>& calc,
+        std::vector<double>::const_iterator begin,
+        std::vector<double>::const_iterator end
+    ) {
+        std::vector<double> copy(begin, end);
+        std::vector<double> output;
+        calc->compute(
+            end - begin,
+            copy.data(),
+            copy.data() + copy.size(),
+            [&](const std::size_t, const double val) -> void {
+                output.push_back(val);
+            }
+        );
+        return output;
+    }
+
+    static std::vector<double> compute_reference_quantiles(
+        const std::vector<double>& probs,
+        std::vector<double>::const_iterator begin,
+        std::vector<double>::const_iterator end
+    ) {
+        std::vector<double> copy(begin, end);
+        std::vector<double> output;
+        for (const auto p : probs) {
+            scran_blocks::SingleQuantile<double, std::vector<double>::iterator> calc(copy.size(), p);
+            output.push_back(calc(copy.begin(), copy.end()));
+        }
+        return output;
+    }
+};
+
+TEST_F(MultipleQuantilesTest, Validation) {
+    {
+        std::optional<std::vector<double> > probs;
+        scran_markers::internal::validate_quantiles(probs);
+    }
+
+    {
+        std::optional<std::vector<double> > probs(std::vector<double>{ -1 });
+        scran_tests::expect_error([&]() -> void {
+            scran_markers::internal::validate_quantiles(probs);
+        }, "should be in [0, 1]");
+    }
+
+    {
+        std::optional<std::vector<double> > probs(std::vector<double>{ 2 });
+        scran_tests::expect_error([&]() -> void {
+            scran_markers::internal::validate_quantiles(probs);
+        }, "should be in [0, 1]");
+    }
+
+    {
+        std::optional<std::vector<double> > probs(std::vector<double>{ 0.5, 0.1 });
+        scran_tests::expect_error([&]() -> void {
+            scran_markers::internal::validate_quantiles(probs);
+        }, "should be sorted");
+    }
+
+    {
+        std::optional<std::vector<double> > probs(std::vector<double>{ 0.5, 2 });
+        scran_tests::expect_error([&]() -> void {
+            scran_markers::internal::validate_quantiles(probs);
+        }, "should be in [0, 1]");
+    }
+
+    {
+        std::optional<std::vector<double> > probs(std::vector<double>{ 0.5, -1 });
+        scran_tests::expect_error([&]() -> void {
+            scran_markers::internal::validate_quantiles(probs);
+        }, "should be in [0, 1]");
+    }
+}
+
+TEST_F(MultipleQuantilesTest, Simple) {
+    auto sim = scran_tests::simulate_vector(20, []{
+        scran_tests::SimulateVectorParameters params;
+        params.seed = 42;
+        return params;
+    }());
+
+    // Using some fairly well-separated probabilities here.
+    std::optional<std::vector<double> > probs(std::vector<double>{ 0.1, 0.3, 0.5, 0.7 });
+    auto calc = scran_markers::internal::setup_multiple_quantiles<double>(probs, 20);
+    ASSERT_TRUE(calc.has_value());
+
+    auto mult = compute_multiple_quantiles(calc, sim.begin(), sim.end());
+    auto ref = compute_reference_quantiles(*probs, sim.begin(), sim.end());
+    EXPECT_EQ(mult, ref);
+
+    // Checking that another call just uses the same cached details.
+    auto mult2 = compute_multiple_quantiles(calc, sim.begin(), sim.end());
+    EXPECT_EQ(mult, mult2);
+
+    // Trying out some more ranges.
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 15);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 15);
+    EXPECT_EQ(mult, ref);
+
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 11);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 11);
+    EXPECT_EQ(mult, ref);
+
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 7);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 7);
+    EXPECT_EQ(mult, ref);
+
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 3);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 3);
+    EXPECT_EQ(mult, ref);
+}
+
+TEST_F(MultipleQuantilesTest, Tight) {
+    auto sim = scran_tests::simulate_vector(51, []{
+        scran_tests::SimulateVectorParameters params;
+        params.seed = 69;
+        return params;
+    }());
+
+    // Now trying probabilities that are more closely related.
+    std::optional<std::vector<double> > probs(std::vector<double>{ 0.09, 0.1, 0.11, 0.15, 0.2, 0.8, 0.82, 0.85, 0.99 });
+    auto calc = scran_markers::internal::setup_multiple_quantiles<double>(probs, 51);
+    ASSERT_TRUE(calc.has_value());
+
+    auto mult = compute_multiple_quantiles(calc, sim.begin(), sim.end());
+    auto ref = compute_reference_quantiles(*probs, sim.begin(), sim.end());
+    EXPECT_EQ(mult, ref);
+
+    // Checking that another call just uses the same cached details.
+    auto mult2 = compute_multiple_quantiles(calc, sim.begin(), sim.end());
+    EXPECT_EQ(mult, mult2);
+
+    // Trying out some more ranges.
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 37);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 37);
+    EXPECT_EQ(mult, ref);
+
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 18);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 18);
+    EXPECT_EQ(mult, ref);
+
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 5);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 5);
+    EXPECT_EQ(mult, ref);
+}
+
+/*********************************************/
+
 class SummarizeComparisonsTest : public ::testing::TestWithParam<std::tuple<int, int> > {
 protected:
-    static void create_outputs(int ngenes, int ngroups, std::vector<double>& output, std::vector<scran_markers::SummaryBuffers<double, int> >& ptrs) {
-        output.resize(ngroups * 4 * ngenes
+    static void create_outputs(
+        int ngenes,
+        int ngroups,
+        const std::optional<std::vector<double> >& quantiles,
+        std::vector<double>& output,
+        std::vector<scran_markers::SummaryBuffers<double, int> >& ptrs
+    ) {
+        const auto nquantiles = (quantiles.has_value() ? quantiles->size() : 0);
+        output.resize(ngroups * ngenes * (4 + nquantiles)
 #ifdef SCRAN_MARKERS_TEST_INIT
             , SCRAN_MARKERS_TEST_INIT
 #endif
@@ -26,6 +184,14 @@ protected:
             optr += ngenes;
             current.max = optr;
             optr += ngenes;
+
+            if (quantiles.has_value()) {
+                current.quantiles.emplace();
+                for ([[maybe_unused]] auto q : *quantiles) {
+                    current.quantiles->push_back(optr);
+                    optr += ngenes;
+                }
+            }
         }
     }
 
@@ -70,11 +236,11 @@ TEST_P(SummarizeComparisonsTest, Basic) {
 
     std::vector<double> output;
     std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
-    create_outputs(ngenes, ngroups, output, ptrs);
+    create_outputs(ngenes, ngroups, {}, output, ptrs);
 
     auto values = spawn_simple_values(ngenes, ngroups);
     auto threads = std::get<1>(params);
-    scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), ptrs, threads);
+    scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), {}, ptrs, threads);
 
     for (int gene = 0; gene < ngenes; ++gene) {
         for (int g = 0; g < ngroups; ++g) {
@@ -90,6 +256,9 @@ TEST_P(SummarizeComparisonsTest, Basic) {
 
             // Checking that the maximum is correct.
             EXPECT_FLOAT_EQ(ptrs[g].max[gene], g * gene + ngroups - 1 - (g == ngroups - 1));
+
+            // Check that quantiles are not set.
+            EXPECT_FALSE(ptrs[g].quantiles.has_value());
         }
     }
 
@@ -97,7 +266,39 @@ TEST_P(SummarizeComparisonsTest, Basic) {
     if (threads > 1) {
         auto parallelized = output;
         std::fill(output.begin(), output.end(), 0);
-        scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), ptrs, 1); 
+        scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), {}, ptrs, 1); 
+        EXPECT_EQ(parallelized, output);
+    }
+}
+
+TEST_P(SummarizeComparisonsTest, Quantile) {
+    auto params = GetParam();
+    int ngenes = 100;
+    int ngroups = std::get<0>(params);
+    std::vector<double> quantiles{ 0, 0.5, 1.0 };
+
+    std::vector<double> output;
+    std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
+    create_outputs(ngenes, ngroups, quantiles, output, ptrs);
+
+    auto values = spawn_simple_values(ngenes, ngroups);
+    auto threads = std::get<1>(params);
+    scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), quantiles, ptrs, threads);
+
+    for (int gene = 0; gene < ngenes; ++gene) {
+        for (int g = 0; g < ngroups; ++g) {
+            const auto& Q = *(ptrs[g].quantiles);
+            EXPECT_EQ(ptrs[g].min[gene], Q[0][gene]);
+            EXPECT_EQ(ptrs[g].median[gene], Q[1][gene]);
+            EXPECT_EQ(ptrs[g].max[gene], Q[2][gene]);
+        }
+    }
+
+    // Checking the serial version for consistency.
+    if (threads > 1) {
+        auto parallelized = output;
+        std::fill(output.begin(), output.end(), 0);
+        scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), quantiles, ptrs, 1); 
         EXPECT_EQ(parallelized, output);
     }
 }
@@ -109,17 +310,17 @@ TEST_P(SummarizeComparisonsTest, Missing) {
 
     std::vector<double> output;
     std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
-    create_outputs(ngenes, ngroups, output, ptrs);
+    create_outputs(ngenes, ngroups, {}, output, ptrs);
 
     auto threads = std::get<1>(GetParam());
 
     for (int lost = 0; lost < ngroups; ++lost) {
         auto values = spawn_missing_values(ngenes, ngroups, lost);
-        scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), ptrs, threads);
+        scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), {}, ptrs, threads);
 
         for (int gene = 0; gene < ngenes; ++ gene) {
             for (int g = 0; g < ngroups; ++g) {
-                if (g == lost) {
+                if (g == lost || ngroups == 2) {
                     EXPECT_TRUE(std::isnan(ptrs[g].min[gene]));
                     EXPECT_TRUE(std::isnan(ptrs[g].mean[gene]));
                     EXPECT_TRUE(std::isnan(ptrs[g].median[gene]));
@@ -160,11 +361,43 @@ TEST_P(SummarizeComparisonsTest, Missing) {
     }
 }
 
+TEST_P(SummarizeComparisonsTest, MissingQuantile) {
+    auto params = GetParam();
+    int ngenes = 100;
+    int ngroups = std::get<0>(params);
+    std::vector<double> quantiles{ 0, 0.5, 1.0 };
+
+    std::vector<double> output;
+    std::vector<scran_markers::SummaryBuffers<double, int> > ptrs;
+    create_outputs(ngenes, ngroups, quantiles, output, ptrs);
+
+    auto threads = std::get<1>(GetParam());
+    for (int lost = 0; lost < ngroups; ++lost) {
+        auto values = spawn_missing_values(ngenes, ngroups, lost);
+        scran_markers::internal::summarize_comparisons(ngenes, ngroups, values.data(), quantiles, ptrs, threads);
+
+        for (int gene = 0; gene < ngenes; ++ gene) {
+            for (int g = 0; g < ngroups; ++g) {
+                const auto& Q = *(ptrs[g].quantiles);
+                if (g == lost || ngroups == 2) {
+                    EXPECT_TRUE(std::isnan(Q[0][gene]));
+                    EXPECT_TRUE(std::isnan(Q[1][gene]));
+                    EXPECT_TRUE(std::isnan(Q[2][gene]));
+                } else {
+                    EXPECT_EQ(ptrs[g].min[gene], Q[0][gene]);
+                    EXPECT_EQ(ptrs[g].median[gene], Q[1][gene]);
+                    EXPECT_EQ(ptrs[g].max[gene], Q[2][gene]);
+                }
+            }
+        }
+    }
+}
+
 INSTANTIATE_TEST_SUITE_P(
     SummarizeComparisons,
     SummarizeComparisonsTest,
     ::testing::Combine(
-        ::testing::Values(3, 5, 7), // number of groups
+        ::testing::Values(2, 3, 5, 7), // number of groups
         ::testing::Values(1, 3) // number of threads
     )
 );
