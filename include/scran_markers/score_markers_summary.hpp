@@ -106,7 +106,7 @@ struct ScoreMarkersSummaryOptions {
 
     /**
      * Probabilites of the quantiles of the effect sizes for each group, to be reported.
-     * If set, each entry of the vector should lie in \$f[0, 1]\f$.
+     * If set, the vector should be sorted and each entry should lie in \$f[0, 1]\f$.
      * If not set, no quantiles are reported.
      */
     std::optional<std::vector<double> > compute_summary_quantiles;
@@ -672,6 +672,7 @@ void score_markers_summary(
     }
 
     const Index_ minrank_limit = sanisizer::cap<Index_>(options.min_rank_limit);
+    internal::validate_quantiles(options.compute_summary_quantiles);
 
     if (!output.auc.empty()) {
         std::vector<MinrankTopQueues<Stat_, Index_> > auc_minrank_all_queues;

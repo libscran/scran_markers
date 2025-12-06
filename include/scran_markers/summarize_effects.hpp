@@ -56,7 +56,7 @@ struct SummarizeEffectsOptions {
 
     /**
      * Probabilites of the quantiles of the effect sizes for each group, to be reported.
-     * If set, each entry of the vector should lie in \$f[0, 1]\f$.
+     * If set, the vector should be sorted and each entry should lie in \$f[0, 1]\f$.
      * If not set, no quantiles are reported.
      */
     std::optional<std::vector<double> > compute_quantiles;
@@ -139,6 +139,7 @@ void summarize_effects(
     const SummarizeEffectsOptions& options
 ) {
     internal::compute_min_rank_pairwise(ngenes, ngroups, effects, summaries, options.min_rank_preserve_ties, options.num_threads);
+    internal::validate_quantiles(options.compute_quantiles);
     internal::summarize_comparisons(ngenes, ngroups, effects, options.compute_quantiles, summaries, options.num_threads); 
 }
 

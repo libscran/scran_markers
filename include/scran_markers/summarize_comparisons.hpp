@@ -149,7 +149,7 @@ inline void validate_quantiles(const std::optional<std::vector<double> >& probs)
             throw std::runtime_error("quantile probabilities should be in [0, 1]");
         }
         if (val < (*probs)[i - 1]) {
-            throw std::runtime_error("quantile probabilities should be in increasing order");
+            throw std::runtime_error("quantile probabilities should be sorted");
         }
     }
 }

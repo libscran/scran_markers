@@ -869,6 +869,15 @@ TEST_F(ScoreMarkersSummaryScenariosTest, TiedMinRank) {
     }
 }
 
+TEST_F(ScoreMarkersSummaryScenariosTest, UnsortedQuantiles) {
+    tatami::DenseRowMatrix<double, int, std::vector<double> > empty(0, 0, std::vector<double>());
+    scran_markers::ScoreMarkersSummaryOptions opts;
+    opts.compute_summary_quantiles = std::vector<double>{ 0.5, 0.2 };
+    scran_tests::expect_error([&]() -> void {
+        scran_markers::score_markers_summary(empty, static_cast<int*>(NULL), opts);
+    }, "should be sorted");
+}
+
 /*********************************************/
 
 class ScoreMarkersSummaryOneAtATimeTest :
@@ -1034,4 +1043,3 @@ INSTANTIATE_TEST_SUITE_P(
     ScoreMarkersSummaryOneAtATimeTest,
     ::testing::Values(0, 1, 2, 3)
 );
-

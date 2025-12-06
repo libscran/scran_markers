@@ -125,3 +125,11 @@ TEST(SummarizeEffects, None) {
         EXPECT_EQ(r.min_rank.size(), 0);
     }
 }
+
+TEST(SummarizeEffects, UnsortedQuantiles) {
+    scran_markers::SummarizeEffectsOptions opts;
+    opts.compute_quantiles = std::vector<double>{ 0.5, 0.2 };
+    scran_tests::expect_error([&]() -> void {
+        scran_markers::summarize_effects(0, 0, static_cast<double*>(NULL), opts);
+    }, "should be sorted");
+}

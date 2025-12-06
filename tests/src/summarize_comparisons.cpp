@@ -5,6 +5,157 @@
 
 #include "scran_markers/summarize_comparisons.hpp"
 
+class MultipleQuantilesTest : public ::testing::Test {
+protected:
+    static std::vector<double> compute_multiple_quantiles(
+        scran_markers::internal::MaybeMultipleQuantiles<double>& calc,
+        std::vector<double>::const_iterator begin,
+        std::vector<double>::const_iterator end
+    ) {
+        std::vector<double> copy(begin, end);
+        std::vector<double> output;
+        calc->compute(
+            end - begin,
+            copy.data(),
+            copy.data() + copy.size(),
+            [&](const std::size_t, const double val) -> void {
+                output.push_back(val);
+            }
+        );
+        return output;
+    }
+
+    static std::vector<double> compute_reference_quantiles(
+        const std::vector<double>& probs,
+        std::vector<double>::const_iterator begin,
+        std::vector<double>::const_iterator end
+    ) {
+        std::vector<double> copy(begin, end);
+        std::vector<double> output;
+        for (const auto p : probs) {
+            scran_blocks::SingleQuantile<double, std::vector<double>::iterator> calc(copy.size(), p);
+            output.push_back(calc(copy.begin(), copy.end()));
+        }
+        return output;
+    }
+};
+
+TEST_F(MultipleQuantilesTest, Validation) {
+    {
+        std::optional<std::vector<double> > probs;
+        scran_markers::internal::validate_quantiles(probs);
+    }
+
+    {
+        std::optional<std::vector<double> > probs(std::vector<double>{ -1 });
+        scran_tests::expect_error([&]() -> void {
+            scran_markers::internal::validate_quantiles(probs);
+        }, "should be in [0, 1]");
+    }
+
+    {
+        std::optional<std::vector<double> > probs(std::vector<double>{ 2 });
+        scran_tests::expect_error([&]() -> void {
+            scran_markers::internal::validate_quantiles(probs);
+        }, "should be in [0, 1]");
+    }
+
+    {
+        std::optional<std::vector<double> > probs(std::vector<double>{ 0.5, 0.1 });
+        scran_tests::expect_error([&]() -> void {
+            scran_markers::internal::validate_quantiles(probs);
+        }, "should be sorted");
+    }
+
+    {
+        std::optional<std::vector<double> > probs(std::vector<double>{ 0.5, 2 });
+        scran_tests::expect_error([&]() -> void {
+            scran_markers::internal::validate_quantiles(probs);
+        }, "should be in [0, 1]");
+    }
+
+    {
+        std::optional<std::vector<double> > probs(std::vector<double>{ 0.5, -1 });
+        scran_tests::expect_error([&]() -> void {
+            scran_markers::internal::validate_quantiles(probs);
+        }, "should be in [0, 1]");
+    }
+}
+
+TEST_F(MultipleQuantilesTest, Simple) {
+    auto sim = scran_tests::simulate_vector(20, []{
+        scran_tests::SimulateVectorParameters params;
+        params.seed = 42;
+        return params;
+    }());
+
+    // Using some fairly well-separated probabilities here.
+    std::optional<std::vector<double> > probs(std::vector<double>{ 0.1, 0.3, 0.5, 0.7 });
+    auto calc = scran_markers::internal::setup_multiple_quantiles<double>(probs, 20);
+    ASSERT_TRUE(calc.has_value());
+
+    auto mult = compute_multiple_quantiles(calc, sim.begin(), sim.end());
+    auto ref = compute_reference_quantiles(*probs, sim.begin(), sim.end());
+    EXPECT_EQ(mult, ref);
+
+    // Checking that another call just uses the same cached details.
+    auto mult2 = compute_multiple_quantiles(calc, sim.begin(), sim.end());
+    EXPECT_EQ(mult, mult2);
+
+    // Trying out some more ranges.
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 11);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 11);
+    EXPECT_EQ(mult, ref);
+
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 7);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 7);
+    EXPECT_EQ(mult, ref);
+
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 3);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 3);
+    EXPECT_EQ(mult, ref);
+
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 1);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 1);
+    EXPECT_EQ(mult, ref);
+}
+
+TEST_F(MultipleQuantilesTest, Tight) {
+    auto sim = scran_tests::simulate_vector(51, []{
+        scran_tests::SimulateVectorParameters params;
+        params.seed = 69;
+        return params;
+    }());
+
+    // Now trying probabilities that are more closely related.
+    std::optional<std::vector<double> > probs(std::vector<double>{ 0.09, 0.1, 0.11, 0.15, 0.2, 0.8, 0.82, 0.85, 0.99 });
+    auto calc = scran_markers::internal::setup_multiple_quantiles<double>(probs, 51);
+    ASSERT_TRUE(calc.has_value());
+
+    auto mult = compute_multiple_quantiles(calc, sim.begin(), sim.end());
+    auto ref = compute_reference_quantiles(*probs, sim.begin(), sim.end());
+    EXPECT_EQ(mult, ref);
+
+    // Checking that another call just uses the same cached details.
+    auto mult2 = compute_multiple_quantiles(calc, sim.begin(), sim.end());
+    EXPECT_EQ(mult, mult2);
+
+    // Trying out some more ranges.
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 37);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 37);
+    EXPECT_EQ(mult, ref);
+
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 18);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 18);
+    EXPECT_EQ(mult, ref);
+
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 5);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 5);
+    EXPECT_EQ(mult, ref);
+}
+
+/*********************************************/
+
 class SummarizeComparisonsTest : public ::testing::TestWithParam<std::tuple<int, int> > {
 protected:
     static void create_outputs(
