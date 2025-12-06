@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstddef>
 #include <optional>
+#include <cassert>
 
 #include "tatami_stats/tatami_stats.hpp"
 #include "sanisizer/sanisizer.hpp"
@@ -177,6 +178,7 @@ private:
 private:
     Details& initialize_stack(const std::size_t len) {
         // len is guaranteed to be > 1 from summarize_comparisons(). 
+        assert(len > 1);
         auto& raw_stack = my_stacks[len - 1];
         if (raw_stack.has_value()) {
             return *raw_stack;
@@ -205,6 +207,8 @@ public:
     void compute(const std::size_t len, Iterator_ begin, Iterator_ end, OutputFun_ output) {
         // len is assumed to be > 1 and equal to 'end - begin'.
         // We just accept it as an argument to avoid recomputing it.
+        assert(len > 1);
+        assert(len == static_cast<std::size_t>(end - begin));
         auto& stack = initialize_stack(len);
 
         // Here, the assumption is that we're computing quantiles by increasing probability.

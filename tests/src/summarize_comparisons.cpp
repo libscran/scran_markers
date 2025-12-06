@@ -103,6 +103,10 @@ TEST_F(MultipleQuantilesTest, Simple) {
     EXPECT_EQ(mult, mult2);
 
     // Trying out some more ranges.
+    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 15);
+    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 15);
+    EXPECT_EQ(mult, ref);
+
     mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 11);
     ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 11);
     EXPECT_EQ(mult, ref);
@@ -113,10 +117,6 @@ TEST_F(MultipleQuantilesTest, Simple) {
 
     mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 3);
     ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 3);
-    EXPECT_EQ(mult, ref);
-
-    mult = compute_multiple_quantiles(calc, sim.begin(), sim.begin() + 1);
-    ref = compute_reference_quantiles(*probs, sim.begin(), sim.begin() + 1);
     EXPECT_EQ(mult, ref);
 }
 
