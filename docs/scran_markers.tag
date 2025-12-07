@@ -184,10 +184,10 @@
       <arglist></arglist>
     </member>
     <member kind="variable">
-      <type>AveragePolicy</type>
+      <type>BlockAveragePolicy</type>
       <name>block_average_policy</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersBestOptions.html</anchorfile>
-      <anchor>a08f7df5910f2d9ce1c31dd4af9617c3e</anchor>
+      <anchor>a38cb89d30668342854fbc14ab6980a2e</anchor>
       <arglist></arglist>
     </member>
     <member kind="variable">
@@ -367,10 +367,10 @@
       <arglist></arglist>
     </member>
     <member kind="variable">
-      <type>AveragePolicy</type>
+      <type>BlockAveragePolicy</type>
       <name>block_average_policy</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersPairwiseOptions.html</anchorfile>
-      <anchor>a499778b33f74d45d600dea444c1f10d2</anchor>
+      <anchor>a9e8ccd8de746215304785b96086a7f36</anchor>
       <arglist></arglist>
     </member>
     <member kind="variable">
@@ -785,12 +785,12 @@
     <class kind="struct">scran_markers::SummaryResults</class>
     <member kind="enumeration">
       <type></type>
-      <name>AveragePolicy</name>
+      <name>BlockAveragePolicy</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>a6618123944df0034878e41ba2b70809d</anchor>
+      <anchor>a8fa2216c42fe8616c4380bda34339ee1</anchor>
       <arglist></arglist>
-      <enumvalue file="namespacescran__markers.html" anchor="a6618123944df0034878e41ba2b70809da4ea6d1161ea24d7599365f574aff6610">MEAN</enumvalue>
-      <enumvalue file="namespacescran__markers.html" anchor="a6618123944df0034878e41ba2b70809da4ce64f35e5957a6f3ecc9895dc1bb90f">QUANTILE</enumvalue>
+      <enumvalue file="namespacescran__markers.html" anchor="a8fa2216c42fe8616c4380bda34339ee1a4ea6d1161ea24d7599365f574aff6610">MEAN</enumvalue>
+      <enumvalue file="namespacescran__markers.html" anchor="a8fa2216c42fe8616c4380bda34339ee1a4ce64f35e5957a6f3ecc9895dc1bb90f">QUANTILE</enumvalue>
     </member>
     <member kind="function">
       <type>void</type>
