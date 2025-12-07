@@ -133,10 +133,10 @@ struct ScoreMarkersSummaryOptions {
 
     /**
      * Policy to use for averaging statistics across blocks into a single value.
-     * This can either be `AveragePolicy::MEAN` (weighted mean) or `AveragePolicy::QUANTILE` (quantile).
+     * This can either be `BlockAveragePolicy::MEAN` (weighted mean) or `BlockAveragePolicy::QUANTILE` (quantile).
      * Only used in `score_markers_summary_blocked()`.
      */
-    AveragePolicy block_average_policy = AveragePolicy::MEAN;
+    BlockAveragePolicy block_average_policy = BlockAveragePolicy::MEAN;
 
     /**
      * Policy to use for weighting blocks when computing average statistics/effect sizes across blocks.
@@ -148,20 +148,20 @@ struct ScoreMarkersSummaryOptions {
      * Other options include `scran_blocks::WeightPolicy::EQUAL`, where all blocks are equally weighted regardless of size;
      * and `scran_blocks::WeightPolicy::NONE`, where the contribution of each block is proportional to its size.
      *
-     * Only used in `score_markers_summary_blocked()` when `ScoreMarkersSummaryOptions::block_average_policy = AveragePolicy::MEAN`.
+     * Only used in `score_markers_summary_blocked()` when `ScoreMarkersSummaryOptions::block_average_policy = BlockAveragePolicy::MEAN`.
      */
     scran_blocks::WeightPolicy block_weight_policy = scran_blocks::WeightPolicy::VARIABLE;
 
     /**
      * Parameters for the variable block weights, including the threshold at which blocks are considered to be large enough to have equal weight.
-     * Only used in `score_markers_summary_blocked()` when `ScoreMarkersSummaryOptions::block_average_policy = AveragePolicy::QUANTILE`
+     * Only used in `score_markers_summary_blocked()` when `ScoreMarkersSummaryOptions::block_average_policy = BlockAveragePolicy::QUANTILE`
      * and `ScoreMarkersSummaryOptions::block_weight_policy = scran_blocks::WeightPolicy::VARIABLE`.
      */
     scran_blocks::VariableWeightParameters variable_block_weight_parameters;
 
     /**
      * Quantile probability for summarizing statistics across blocks. 
-     * Only used in `score_markers_summary_blocked()` when `ScoreMarkersSummaryOptions::block_average_policy = AveragePolicy::QUANTILE`.
+     * Only used in `score_markers_summary_blocked()` when `ScoreMarkersSummaryOptions::block_average_policy = BlockAveragePolicy::QUANTILE`.
      */
     double block_quantile = 0.5;
 };
@@ -659,7 +659,7 @@ void score_markers_summary(
     // For a single block, this usually doesn't really matter, but we do it for consistency with the multi-block case,
     // and to account for variable weighting where non-zero block sizes get zero weight.
     BlockAverageInfo<Stat_> average_info;
-    if (options.block_average_policy == AveragePolicy::MEAN) {
+    if (options.block_average_policy == BlockAveragePolicy::MEAN) {
         average_info = BlockAverageInfo<Stat_>(
             scran_blocks::compute_weights<Stat_>(
                 combo_sizes,

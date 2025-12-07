@@ -175,7 +175,7 @@ TEST_P(ScoreMarkersPairwiseUnblockedTest, Reference) {
     // Should be the same with quantile calculations when there's only one block.
     {
         auto qopt = opt;
-        qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+        qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
         auto qdrgres = scran_markers::score_markers_pairwise(*dense_row, groupings.data(), qopt);
         compare_results(ref, qdrgres, auc);
 
@@ -486,7 +486,7 @@ TEST_P(ScoreMarkersPairwiseBlockedTest, VersusReferenceQuantile) {
     scran_markers::ScoreMarkersPairwiseOptions opt;
     opt.block_weight_policy = policy;
     opt.compute_auc = auc;
-    opt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    opt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
     auto ref = scran_markers::score_markers_pairwise_blocked(*dense_row, groups.data(), blocks.data(), opt);
 
     if (nthreads == 1) {
@@ -578,7 +578,7 @@ TEST_F(ScoreMarkersPairwiseScenariosTest, Self) {
 
     // Quantile should give the same results for a single block.
     auto qopt = opt;
-    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
     auto qres = scran_markers::score_markers_pairwise(*combined, groupings.data(), qopt);
     compare_results(res, qres, true);
 }
@@ -617,7 +617,7 @@ TEST_F(ScoreMarkersPairwiseScenariosTest, Perfect) {
 
     // Quantile should give the same results for a single block.
     auto qopt = opt;
-    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
     auto qres = scran_markers::score_markers_pairwise(mat, groupings.data(), qopt);
     compare_results(res, qres, true);
 }
@@ -669,7 +669,7 @@ TEST_F(ScoreMarkersPairwiseScenariosTest, Thresholds) {
 
     // Quantile should give the same results for a single block.
     auto qopt = opt;
-    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
     auto qout = scran_markers::score_markers_pairwise(mat, groupings.data(), qopt);
     compare_results(out, qout, true);
 }
@@ -741,7 +741,7 @@ TEST_F(ScoreMarkersPairwiseScenariosTest, Missing) {
 
     // Quantile should give the same results for a single block.
     auto qopt = opt;
-    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
     auto qlost = scran_markers::score_markers_pairwise(mat, groupings.data(), qopt);
     compare_results(lost, qlost, true);
 }
@@ -824,7 +824,7 @@ TEST_F(ScoreMarkersPairwiseScenariosTest, BlockConfounded) {
     // Quantile should give the same results, as there's basically only one block;
     // the second block is fully confounded.
     auto qopt = opt;
-    qopt.block_average_policy = scran_markers::AveragePolicy::QUANTILE;
+    qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
     auto qcomres = scran_markers::score_markers_pairwise_blocked(*mat, groupings.data(), blocks.data(), qopt);
     compare_results(comres, qcomres, true);
 }

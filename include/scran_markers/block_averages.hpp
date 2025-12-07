@@ -22,8 +22,9 @@ namespace scran_markers {
  * - `MEAN`: computes a weighted mean of per-block statistics.
  *   Weights are based on the size of the block.
  * - `QUANTILE`: computes a quantile of the per-block statistics.
+ *   This can be used to enforce a minimum effect size across some percentage of blocks.
  */
-enum class AveragePolicy : unsigned char { MEAN, QUANTILE };
+enum class BlockAveragePolicy : unsigned char { MEAN, QUANTILE };
 
 /**
  * @cond
