@@ -1,14 +1,9 @@
 var searchData=
 [
-  ['score_5fmarkers_5fbest_2ehpp_0',['score_markers_best.hpp',['../score__markers__best_8hpp.html',1,'']]],
-  ['score_5fmarkers_5fpairwise_2ehpp_1',['score_markers_pairwise.hpp',['../score__markers__pairwise_8hpp.html',1,'']]],
-  ['score_5fmarkers_5fsummary_2ehpp_2',['score_markers_summary.hpp',['../score__markers__summary_8hpp.html',1,'']]],
-  ['scran_5fblocks_2ehpp_3',['scran_blocks.hpp',['https://libscran.github.io/scran_blocks/scran__blocks_8hpp.html',1,'']]],
-  ['scran_5fmarkers_2ehpp_4',['scran_markers.hpp',['../scran__markers_8hpp.html',1,'']]],
-  ['somenumericarray_2ehpp_5',['SomeNumericArray.hpp',['https://tatami-inc.github.io/tatami/SomeNumericArray_8hpp.html',1,'']]],
-  ['sparserange_2ehpp_6',['SparseRange.hpp',['https://tatami-inc.github.io/tatami/SparseRange_8hpp.html',1,'']]],
-  ['sparsifiedwrapper_2ehpp_7',['SparsifiedWrapper.hpp',['https://tatami-inc.github.io/tatami/SparsifiedWrapper_8hpp.html',1,'']]],
-  ['substitute_5fhelpers_2ehpp_8',['substitute_helpers.hpp',['https://tatami-inc.github.io/tatami/substitute__helpers_8hpp.html',1,'']]],
-  ['summarize_5fcomparisons_2ehpp_9',['summarize_comparisons.hpp',['../summarize__comparisons_8hpp.html',1,'']]],
-  ['summarize_5feffects_2ehpp_10',['summarize_effects.hpp',['../summarize__effects_8hpp.html',1,'']]]
+  ['parallel_5fmeans_2ehpp_0',['parallel_means.hpp',['https://libscran.github.io/scran_blocks/parallel__means_8hpp.html',1,'']]],
+  ['parallel_5fquantiles_2ehpp_1',['parallel_quantiles.hpp',['https://libscran.github.io/scran_blocks/parallel__quantiles_8hpp.html',1,'']]],
+  ['parallelize_2ehpp_2',['parallelize.hpp',['https://tatami-inc.github.io/tatami/parallelize_8hpp.html',1,'']]],
+  ['pick_5ftop_5fgenes_2ehpp_3',['pick_top_genes.hpp',['https://libscran.github.io/topicks/pick__top__genes_8hpp.html',1,'']]],
+  ['process_5fconsecutive_5findices_2ehpp_4',['process_consecutive_indices.hpp',['https://tatami-inc.github.io/tatami/process__consecutive__indices_8hpp.html',1,'']]],
+  ['pseudooracularextractor_2ehpp_5',['PseudoOracularExtractor.hpp',['https://tatami-inc.github.io/tatami/PseudoOracularExtractor_8hpp.html',1,'']]]
 ];

@@ -827,15 +827,15 @@
       <type>ScoreMarkersBestResults&lt; Stat_, Index_ &gt;</type>
       <name>score_markers_best</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>a3b877db1571dd74a128af35eee5641d3</anchor>
-      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, int top, const ScoreMarkersBestOptions &amp;options)</arglist>
+      <anchor>aeede6a9c151da28f67c57355b96e8235</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Index_ top, const ScoreMarkersBestOptions &amp;options)</arglist>
     </member>
     <member kind="function">
       <type>ScoreMarkersBestResults&lt; Stat_, Index_ &gt;</type>
       <name>score_markers_best_blocked</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>afb11bdcf5c54fc4886a20e5f2f003aa2</anchor>
-      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, int top, const ScoreMarkersBestOptions &amp;options)</arglist>
+      <anchor>aec34482b26e85ece8bd1b565181ee214</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, const Index_ top, const ScoreMarkersBestOptions &amp;options)</arglist>
     </member>
     <member kind="function">
       <type>void</type>
