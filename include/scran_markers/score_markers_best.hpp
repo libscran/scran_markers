@@ -244,7 +244,7 @@ template<typename Stat_, typename Index_>
 void allocate_best_top_queues(
     PairwiseTopQueues<Stat_, Index_>& pqueues,
     const std::size_t ngroups,
-    const int top,
+    const Index_ top,
     const bool larger,
     const bool keep_ties,
     const std::optional<Stat_>& bound
@@ -288,7 +288,7 @@ void report_best_top_queues(
     std::size_t ngroups,
     std::vector<std::vector<std::vector<std::pair<Index_, Stat_> > > >& output
 ) {
-    // We know it fits int an 'int' as this is what we got originally.
+    // We know it fits into an 'int' as this is what we got originally.
     const int num_threads = pqueues.size();
 
     // Consolidating all of the thread-specific queues into a single queue.
@@ -336,7 +336,7 @@ void find_best_simple_best_effects(
     const std::vector<Stat_>& combo_vars,
     const std::vector<Stat_>& combo_detected,
     const BlockAverageInfo<Stat_>& average_info,
-    int top,
+    const Index_ top,
     const ScoreMarkersBestOptions& options,
     ScoreMarkersBestResults<Stat_, Index_>& output
 ) {
@@ -503,7 +503,7 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
     const std::size_t ncombos,
     const std::size_t* const combo,
     const std::vector<Index_>& combo_sizes,
-    int top,
+    const Index_ top,
     const ScoreMarkersBestOptions& options
 ) {
     const auto ngenes = matrix.nrow();
@@ -667,7 +667,7 @@ template<typename Stat_, typename Value_, typename Index_, typename Group_>
 ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
     const tatami::Matrix<Value_, Index_>& matrix, 
     const Group_* const group, 
-    int top,
+    const Index_ top,
     const ScoreMarkersBestOptions& options
 ) {
     const Index_ NC = matrix.ncol();
@@ -719,7 +719,7 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best_blocked(
     const tatami::Matrix<Value_, Index_>& matrix, 
     const Group_* const group, 
     const Block_* const block,
-    int top,
+    const Index_ top,
     const ScoreMarkersBestOptions& options
 ) {
     const Index_ NC = matrix.ncol();
