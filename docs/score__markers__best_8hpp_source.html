@@ -627,7 +627,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>    <span class="keyword">const</span> <span class="keyword">auto</span> ngroups = tatami_stats::total_groups(group, NC);</div>
 <div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>    <span class="keyword">const</span> <span class="keyword">auto</span> nblocks = tatami_stats::total_groups(block, NC); </div>
 <div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span> </div>
-<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>    <span class="keyword">const</span> <span class="keyword">auto</span> combinations = internal::create_combinations(ngroups, group, block, NC);</div>
+<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>    <span class="keyword">const</span> <span class="keyword">auto</span> combinations = internal::create_combinations(ngroups, group, nblocks, block, NC);</div>
 <div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>    <span class="keyword">const</span> <span class="keyword">auto</span> combo_sizes = internal::tabulate_combinations&lt;Index_&gt;(ngroups, nblocks, combinations);</div>
 <div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>    <span class="keyword">const</span> <span class="keyword">auto</span> ncombos = combo_sizes.size();</div>
 <div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span> </div>

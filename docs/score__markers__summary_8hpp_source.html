@@ -751,7 +751,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>    <span class="keyword">const</span> <span class="keyword">auto</span> ngroups = output.<a class="code hl_variable" href="structscran__markers_1_1ScoreMarkersSummaryBuffers.html#a84e6cc5b1e0ab7cff8e7c240f1b126cc">mean</a>.size();</div>
 <div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>    <span class="keyword">const</span> <span class="keyword">auto</span> nblocks = tatami_stats::total_groups(block, NC); </div>
 <div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span> </div>
-<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>    <span class="keyword">const</span> <span class="keyword">auto</span> combinations = internal::create_combinations(ngroups, group, block, NC);</div>
+<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>    <span class="keyword">const</span> <span class="keyword">auto</span> combinations = internal::create_combinations(ngroups, group, nblocks, block, NC);</div>
 <div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>    <span class="keyword">const</span> <span class="keyword">auto</span> combo_sizes = internal::tabulate_combinations&lt;Index_&gt;(ngroups, nblocks, combinations);</div>
 <div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>    <span class="keyword">const</span> <span class="keyword">auto</span> ncombos = combo_sizes.size();</div>
 <div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span> </div>
