@@ -726,7 +726,7 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best_blocked(
     const auto ngroups = tatami_stats::total_groups(group, NC);
     const auto nblocks = tatami_stats::total_groups(block, NC); 
 
-    const auto combinations = internal::create_combinations(ngroups, group, block, NC);
+    const auto combinations = internal::create_combinations(ngroups, group, nblocks, block, NC);
     const auto combo_sizes = internal::tabulate_combinations<Index_>(ngroups, nblocks, combinations);
     const auto ncombos = combo_sizes.size();
 

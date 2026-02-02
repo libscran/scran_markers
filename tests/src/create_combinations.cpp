@@ -5,7 +5,7 @@
 TEST(CreateCombinations, Basic) {
     std::vector<int> group{ 0, 1, 2, 3 };
     std::vector<int> block{ 3, 2, 1, 0 };
-    auto out = scran_markers::internal::create_combinations(10, group.data(), block.data(), group.size());
+    auto out = scran_markers::internal::create_combinations(10, group.data(), 4, block.data(), group.size());
 
     std::vector<size_t> expected{ 30, 21, 12, 3 };
     EXPECT_EQ(out, expected);
