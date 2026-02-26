@@ -381,7 +381,10 @@ void report_minrank_from_queues(
                 if (gr == gr2) {
                     continue;
                 }
-                auto current_out = std::move((*(first_mr_queue[gr]))[gr2]); // moving it to minimize false sharing.
+
+                // Moving contents into a thread-local variable to minimize false sharing,
+                // at least while we repeatedly update the queue within this thread.
+                auto current_out = std::move((*(first_mr_queue[gr]))[gr2]);
 
                 const auto num_queues = all_queues.size();
                 for (I<decltype(num_queues)> q = 1; q < num_queues; ++q) {

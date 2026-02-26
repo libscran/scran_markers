@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 
 project(scran_markers
-    VERSION 0.3.1
+    VERSION 0.3.2
     DESCRIPTION "Marker detection for single-cell data"
     LANGUAGES CXX)
 
@@ -22,11 +22,11 @@ option(SCRAN_MARKERS_FETCH_EXTERN "Automatically fetch scran_markers's external 
 if(SCRAN_MARKERS_FETCH_EXTERN)
     add_subdirectory(extern)
 else()
-    find_package(tatami_tatami 4.0.0 CONFIG REQUIRED)
+    find_package(tatami_tatami 4.1.0 CONFIG REQUIRED)
     find_package(tatami_tatami_stats 2.0.0 CONFIG REQUIRED)
     find_package(libscran_scran_blocks 0.1.0 CONFIG REQUIRED)
     find_package(libscran_topicks 0.2.1 CONFIG REQUIRED)
-    find_package(ltla_sanisizer 0.1.2 CONFIG REQUIRED)
+    find_package(ltla_sanisizer 0.2.0 CONFIG REQUIRED)
 endif()
 
 target_link_libraries(scran_markers INTERFACE tatami::tatami tatami::tatami_stats libscran::scran_blocks libscran::topicks ltla::sanisizer)
