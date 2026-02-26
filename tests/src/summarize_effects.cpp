@@ -103,27 +103,133 @@ TEST(SummarizeEffects, Quantile) {
     }
 }
 
-TEST(SummarizeEffects, None) {
+TEST(SummarizeEffects, Disabled) {
     size_t ngenes = 10, ngroups = 3;
-    std::vector<double> stuff(ngroups * ngroups * ngenes);
+    std::vector<double> stuff = scran_tests::simulate_vector(ngroups * ngroups * ngenes, scran_tests::SimulateVectorParameters());
 
     scran_markers::SummarizeEffectsOptions opts;
-    opts.compute_min = false;
-    opts.compute_mean = false;
-    opts.compute_median = false;
-    opts.compute_max = false;
-    opts.compute_min_rank = false;
+    auto ref = scran_markers::summarize_effects(ngenes, ngroups, stuff.data(), opts);
 
-    auto res = scran_markers::summarize_effects(ngenes, ngroups, stuff.data(), opts);
+    // Only min is available.
+    {
+        scran_markers::SummarizeEffectsOptions opts;
+        opts.compute_mean = false;
+        opts.compute_median = false;
+        opts.compute_max = false;
+        opts.compute_min_rank = false;
+        auto res = scran_markers::summarize_effects(ngenes, ngroups, stuff.data(), opts);
 
-    EXPECT_EQ(res.size(), ngroups);
-    for (const auto& r : res) {
-        EXPECT_EQ(r.min.size(), 0);
-        EXPECT_EQ(r.mean.size(), 0);
-        EXPECT_EQ(r.median.size(), 0);
-        EXPECT_EQ(r.max.size(), 0);
-        EXPECT_EQ(r.min_rank.size(), 0);
+        EXPECT_EQ(res.size(), ngroups);
+        for (size_t g = 0; g < ngroups; ++g) {
+            const auto& r = res[g];
+            EXPECT_EQ(r.min, ref[g].min);
+            EXPECT_TRUE(r.mean.empty());
+            EXPECT_TRUE(r.median.empty());
+            EXPECT_TRUE(r.max.empty());
+            EXPECT_TRUE(r.min_rank.empty());
+        }
     }
+
+    // Only mean is available.
+    {
+        scran_markers::SummarizeEffectsOptions opts;
+        opts.compute_min = false;
+        opts.compute_median = false;
+        opts.compute_max = false;
+        opts.compute_min_rank = false;
+        auto res = scran_markers::summarize_effects(ngenes, ngroups, stuff.data(), opts);
+
+        EXPECT_EQ(res.size(), ngroups);
+        for (size_t g = 0; g < ngroups; ++g) {
+            const auto& r = res[g];
+            EXPECT_TRUE(r.min.empty());
+            EXPECT_EQ(r.mean, ref[g].mean);
+            EXPECT_TRUE(r.median.empty());
+            EXPECT_TRUE(r.max.empty());
+            EXPECT_TRUE(r.min_rank.empty());
+        }
+    }
+
+    // Only median is available.
+    {
+        scran_markers::SummarizeEffectsOptions opts;
+        opts.compute_min = false;
+        opts.compute_mean = false;
+        opts.compute_max = false;
+        opts.compute_min_rank = false;
+        auto res = scran_markers::summarize_effects(ngenes, ngroups, stuff.data(), opts);
+
+        EXPECT_EQ(res.size(), ngroups);
+        for (size_t g = 0; g < ngroups; ++g) {
+            const auto& r = res[g];
+            EXPECT_TRUE(r.min.empty());
+            EXPECT_TRUE(r.mean.empty());
+            EXPECT_EQ(r.median, ref[g].median);
+            EXPECT_TRUE(r.max.empty());
+            EXPECT_TRUE(r.min_rank.empty());
+        }
+    }
+
+    // Only max is available.
+    {
+        scran_markers::SummarizeEffectsOptions opts;
+        opts.compute_min = false;
+        opts.compute_mean = false;
+        opts.compute_median = false;
+        opts.compute_min_rank = false;
+        auto res = scran_markers::summarize_effects(ngenes, ngroups, stuff.data(), opts);
+
+        EXPECT_EQ(res.size(), ngroups);
+        for (size_t g = 0; g < ngroups; ++g) {
+            const auto& r = res[g];
+            EXPECT_TRUE(r.min.empty());
+            EXPECT_TRUE(r.mean.empty());
+            EXPECT_TRUE(r.median.empty());
+            EXPECT_EQ(r.max, ref[g].max);
+            EXPECT_TRUE(r.min_rank.empty());
+        }
+    }
+
+    // Only min_rank is available.
+    {
+        scran_markers::SummarizeEffectsOptions opts;
+        opts.compute_min = false;
+        opts.compute_mean = false;
+        opts.compute_median = false;
+        opts.compute_max = false;
+        auto res = scran_markers::summarize_effects(ngenes, ngroups, stuff.data(), opts);
+
+        EXPECT_EQ(res.size(), ngroups);
+        for (size_t g = 0; g < ngroups; ++g) {
+            const auto& r = res[g];
+            EXPECT_TRUE(r.min.empty());
+            EXPECT_TRUE(r.mean.empty());
+            EXPECT_TRUE(r.median.empty());
+            EXPECT_TRUE(r.max.empty());
+            EXPECT_EQ(r.min_rank, ref[g].min_rank);
+        }
+    }
+
+    // Nothing is available.
+    {
+        scran_markers::SummarizeEffectsOptions opts;
+        opts.compute_min = false;
+        opts.compute_mean = false;
+        opts.compute_median = false;
+        opts.compute_max = false;
+        opts.compute_min_rank = false;
+        auto res = scran_markers::summarize_effects(ngenes, ngroups, stuff.data(), opts);
+
+        EXPECT_EQ(res.size(), ngroups);
+        for (const auto& r : res) {
+            EXPECT_TRUE(r.min.empty());
+            EXPECT_TRUE(r.mean.empty());
+            EXPECT_TRUE(r.median.empty());
+            EXPECT_TRUE(r.max.empty());
+            EXPECT_TRUE(r.min_rank.empty());
+        }
+    }
+
 }
 
 TEST(SummarizeEffects, UnsortedQuantiles) {

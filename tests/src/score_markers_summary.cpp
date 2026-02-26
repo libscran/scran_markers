@@ -790,24 +790,68 @@ TEST_F(ScoreMarkersSummaryScenariosTest, MinRank) {
 
 TEST_F(ScoreMarkersSummaryScenariosTest, DisabledSummaries) {
     int ngenes = 10, nsamples = 40;
-    tatami::DenseRowMatrix<double, int> mat(ngenes, nsamples, std::vector<double>(ngenes * nsamples));
+    tatami::DenseRowMatrix<double, int> mat(
+        ngenes,
+        nsamples, 
+        scran_tests::simulate_vector(
+            ngenes * nsamples,
+            []{
+                scran_tests::SimulateVectorParameters sparam;
+                sparam.seed = 64;
+                return sparam;
+            }()
+        )
+    );
+
     int ngroups = 4;
     std::vector<int> groupings = create_groupings(nsamples, ngroups);
 
+    // We won't test these one-by-one as this is already done in summarize_effects(). 
     scran_markers::ScoreMarkersSummaryOptions opt;
+    auto ref = scran_markers::score_markers_summary(mat, groupings.data(), opt);
+
     opt.compute_min = false;
     opt.compute_mean = false;
     opt.compute_median = false;
     opt.compute_max = false;
     opt.compute_min_rank = false;
-
     auto empty = scran_markers::score_markers_summary(mat, groupings.data(), opt);
+
     EXPECT_EQ(empty.mean.size(), ngroups);
     EXPECT_EQ(empty.detected.size(), ngroups);
     EXPECT_EQ(empty.cohens_d.size(), ngroups);
     EXPECT_EQ(empty.auc.size(), ngroups);
     EXPECT_EQ(empty.delta_mean.size(), ngroups);
     EXPECT_EQ(empty.delta_detected.size(), ngroups);
+
+    for (int g = 0; g < ngroups; ++g) {
+        EXPECT_EQ(empty.mean[g], ref.mean[g]);
+        EXPECT_EQ(empty.detected[g], ref.detected[g]);
+
+        EXPECT_TRUE(empty.cohens_d[g].min.empty());
+        EXPECT_TRUE(empty.cohens_d[g].mean.empty());
+        EXPECT_TRUE(empty.cohens_d[g].median.empty());
+        EXPECT_TRUE(empty.cohens_d[g].max.empty());
+        EXPECT_TRUE(empty.cohens_d[g].min_rank.empty());
+
+        EXPECT_TRUE(empty.auc[g].min.empty());
+        EXPECT_TRUE(empty.auc[g].mean.empty());
+        EXPECT_TRUE(empty.auc[g].median.empty());
+        EXPECT_TRUE(empty.auc[g].max.empty());
+        EXPECT_TRUE(empty.auc[g].min_rank.empty());
+
+        EXPECT_TRUE(empty.delta_mean[g].min.empty());
+        EXPECT_TRUE(empty.delta_mean[g].mean.empty());
+        EXPECT_TRUE(empty.delta_mean[g].median.empty());
+        EXPECT_TRUE(empty.delta_mean[g].max.empty());
+        EXPECT_TRUE(empty.delta_mean[g].min_rank.empty());
+
+        EXPECT_TRUE(empty.delta_detected[g].min.empty());
+        EXPECT_TRUE(empty.delta_detected[g].mean.empty());
+        EXPECT_TRUE(empty.delta_detected[g].median.empty());
+        EXPECT_TRUE(empty.delta_detected[g].max.empty());
+        EXPECT_TRUE(empty.delta_detected[g].min_rank.empty());
+    }
 }
 
 TEST_F(ScoreMarkersSummaryScenariosTest, TiedMinRank) {
@@ -1059,7 +1103,7 @@ TEST_P(ScoreMarkersSummaryOneAtATimeTest, Basic) {
         EXPECT_TRUE(alt.delta_detected.empty());
     }
 
-    // Only delta-mean.
+    // Only delta-detected.
     {
         scran_markers::ScoreMarkersSummaryOptions opt;
         opt.compute_group_mean = false;
@@ -1075,6 +1119,25 @@ TEST_P(ScoreMarkersSummaryOneAtATimeTest, Basic) {
         EXPECT_TRUE(alt.cohens_d.empty());
         EXPECT_TRUE(alt.auc.empty());
         EXPECT_TRUE(alt.delta_mean.empty());
+    }
+
+    // Nothing at all.
+    {
+        scran_markers::ScoreMarkersSummaryOptions opt;
+        opt.compute_group_mean = false;
+        opt.compute_group_detected = false;
+        opt.compute_cohens_d = false;
+        opt.compute_auc = false;
+        opt.compute_delta_mean = false;
+        opt.compute_delta_detected= false;
+
+        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), opt);
+        EXPECT_TRUE(alt.mean.empty());
+        EXPECT_TRUE(alt.detected.empty());
+        EXPECT_TRUE(alt.cohens_d.empty());
+        EXPECT_TRUE(alt.auc.empty());
+        EXPECT_TRUE(alt.delta_mean.empty());
+        EXPECT_TRUE(alt.delta_detected.empty());
     }
 }
 
