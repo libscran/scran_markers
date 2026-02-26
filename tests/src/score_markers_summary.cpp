@@ -878,6 +878,46 @@ TEST_F(ScoreMarkersSummaryScenariosTest, UnsortedQuantiles) {
     }, "should be sorted");
 }
 
+TEST_F(ScoreMarkersSummaryScenariosTest, Empty) {
+    int nrows = 0, ncols = 91;
+    tatami::DenseMatrix<double, int, std::vector<double> > mat(nrows, ncols, std::vector<double>(), true);
+
+    int ngroups = 4;
+    std::vector<int> groupings = create_groupings(ncols, ngroups);
+
+    scran_markers::ScoreMarkersSummaryOptions opts;
+    auto out = scran_markers::score_markers_summary(mat, groupings.data(), opts);
+
+    for (int g = 0; g < ngroups; ++g) {
+        EXPECT_TRUE(out.mean[g].empty());
+        EXPECT_TRUE(out.detected[g].empty());
+
+        EXPECT_TRUE(out.cohens_d[g].mean.empty());
+        EXPECT_TRUE(out.cohens_d[g].median.empty());
+        EXPECT_TRUE(out.cohens_d[g].min.empty());
+        EXPECT_TRUE(out.cohens_d[g].max.empty());
+        EXPECT_TRUE(out.cohens_d[g].min_rank.empty());
+
+        EXPECT_TRUE(out.auc[g].mean.empty());
+        EXPECT_TRUE(out.auc[g].median.empty());
+        EXPECT_TRUE(out.auc[g].min.empty());
+        EXPECT_TRUE(out.auc[g].max.empty());
+        EXPECT_TRUE(out.auc[g].min_rank.empty());
+
+        EXPECT_TRUE(out.delta_mean[g].mean.empty());
+        EXPECT_TRUE(out.delta_mean[g].median.empty());
+        EXPECT_TRUE(out.delta_mean[g].min.empty());
+        EXPECT_TRUE(out.delta_mean[g].max.empty());
+        EXPECT_TRUE(out.delta_mean[g].min_rank.empty());
+
+        EXPECT_TRUE(out.delta_detected[g].mean.empty());
+        EXPECT_TRUE(out.delta_detected[g].median.empty());
+        EXPECT_TRUE(out.delta_detected[g].min.empty());
+        EXPECT_TRUE(out.delta_detected[g].max.empty());
+        EXPECT_TRUE(out.delta_detected[g].min_rank.empty());
+    }
+}
+
 /*********************************************/
 
 class ScoreMarkersSummaryOneAtATimeTest :

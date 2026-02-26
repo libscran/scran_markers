@@ -656,6 +656,35 @@ TEST_F(ScoreMarkersBestScenariosTest, BlockConfounded) {
     compare_best(comres, qcomres);
 }
 
+TEST_F(ScoreMarkersBestScenariosTest, Empty) {
+    int nrows = 0, ncols = 66;
+    tatami::DenseMatrix<double, int, std::vector<double> > mat(nrows, ncols, std::vector<double>(), true);
+
+    int ngroups = 4;
+    std::vector<int> groupings = create_groupings(ncols, ngroups);
+
+    scran_markers::ScoreMarkersBestOptions opts;
+    int top = 10;
+    auto out = scran_markers::score_markers_best<double>(mat, groupings.data(), top, opts);
+
+    for (int g = 0; g < ngroups; ++g) {
+        EXPECT_TRUE(out.mean[g].empty());
+        EXPECT_TRUE(out.detected[g].empty());
+
+        EXPECT_EQ(out.cohens_d[g].size(), ngroups);
+        EXPECT_EQ(out.auc[g].size(), ngroups);
+        EXPECT_EQ(out.delta_mean[g].size(), ngroups);
+        EXPECT_EQ(out.delta_detected[g].size(), ngroups);
+
+        for (int g2 = 0; g2 < ngroups; ++g2) {
+            EXPECT_TRUE(out.cohens_d[g][g2].empty());
+            EXPECT_TRUE(out.auc[g][g2].empty());
+            EXPECT_TRUE(out.delta_mean[g][g2].empty());
+            EXPECT_TRUE(out.delta_detected[g][g2].empty());
+        }
+    }
+}
+
 /*********************************************/
 
 class ScoreMarkersBestOneAtATimeTest : public ScoreMarkersBestTestCore, public ::testing::TestWithParam<int> {
