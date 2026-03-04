@@ -9,6 +9,7 @@
 #include "tatami/tatami.hpp"
 #include "tatami_stats/tatami_stats.hpp"
 #include "sanisizer/sanisizer.hpp"
+#include "quickstats/quickstats.hpp"
 
 #include "scan_matrix.hpp"
 #include "average_group_stats.hpp"
@@ -287,7 +288,7 @@ void process_simple_pairwise_effects(
 
     tatami::parallelize([&](const int, const Index_ start, const Index_ length) -> void {
         std::optional<std::vector<Stat_> > qbuffer, qrevbuffer;
-        std::optional<scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator> > qcalc;
+        std::optional<quickstats::SingleQuantileVariableNumber<Stat_, std::size_t> > qcalc;
         if (!average_info.use_mean()) {
             qbuffer.emplace();
             qrevbuffer.emplace();

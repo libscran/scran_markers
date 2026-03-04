@@ -34,7 +34,7 @@ struct AucScanWorkspace {
 
     // Only when use_mean = false.
     std::optional<std::vector<std::vector<std::vector<Stat_> > > > pairwise_buffers;
-    std::optional<scran_blocks::SingleQuantileVariable<Stat_, typename std::vector<Stat_>::iterator> > calculator;
+    std::optional<quickstats::SingleQuantileVariableNumber<Stat_, std::size_t> > calculator;
 };
 
 template<typename Value_, typename Group_, typename Stat_, typename Index_>
@@ -213,7 +213,7 @@ void process_auc_for_rows(
             } else {
                 if (g1 != g2) {
                     auto& curbuffer = (*work.pairwise_buffers)[g1][g2];
-                    current = (*work.calculator)(curbuffer.size(), curbuffer.begin(), curbuffer.end());
+                    current = (*work.calculator)(curbuffer.size(), curbuffer.data());
                 } else {
                     // Explicitly set this to zero because we didn't do an initial fill in quantile mode.
                     current = 0;

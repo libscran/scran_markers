@@ -403,7 +403,7 @@ protected:
             }
         }
 
-        scran_blocks::SingleQuantile<double, typename std::vector<double>::iterator> qcalc(nblocks, opt.block_quantile);
+        quickstats::SingleQuantileFixedNumber<double, std::size_t> qcalc(nblocks, opt.block_quantile);
         for (size_t i = 0; i < ngenes; ++i) {
             auto offset = i * ngroups * ngroups;
 
@@ -411,18 +411,18 @@ protected:
                 for (size_t g2 = 0; g2 < ngroups; ++g2) {
                     size_t from = g1 * ngroups + g2;
                     size_t to = offset + from;
-                    output.cohens_d[to] = qcalc(qbuffers_cohen[g1][g2][i].begin(), qbuffers_cohen[g1][g2][i].end());
-                    output.delta_mean[to] = qcalc(qbuffers_dmean[g1][g2][i].begin(), qbuffers_dmean[g1][g2][i].end());
-                    output.delta_detected[to] = qcalc(qbuffers_ddet[g1][g2][i].begin(), qbuffers_ddet[g1][g2][i].end());
+                    output.cohens_d[to] = qcalc(qbuffers_cohen[g1][g2][i].data());
+                    output.delta_mean[to] = qcalc(qbuffers_dmean[g1][g2][i].data());
+                    output.delta_detected[to] = qcalc(qbuffers_ddet[g1][g2][i].data());
                     if (opt.compute_auc) {
-                        output.auc[to] = qcalc(qbuffers_auc[g1][g2][i].begin(), qbuffers_auc[g1][g2][i].end());
+                        output.auc[to] = qcalc(qbuffers_auc[g1][g2][i].data());
                     }
                 }
             }
 
             for (size_t g = 0; g < ngroups; ++g) {
-                output.mean[g][i] = qcalc(qbuffers_mean[g][i].begin(), qbuffers_mean[g][i].end());
-                output.detected[g][i] = qcalc(qbuffers_det[g][i].begin(), qbuffers_det[g][i].end());
+                output.mean[g][i] = qcalc(qbuffers_mean[g][i].data());
+                output.detected[g][i] = qcalc(qbuffers_det[g][i].data());
             }
         }
 

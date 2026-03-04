@@ -1,5 +1,6 @@
 #include "scran_tests/scran_tests.hpp"
 #include "scran_blocks/scran_blocks.hpp"
+#include "quickstats/quickstats.hpp"
 
 #include "scran_markers/average_group_stats.hpp"
 
@@ -80,7 +81,7 @@ TEST_F(AverageGroupStatsTest, Quantile) {
     }
 
     std::vector<double> buffer;
-    scran_blocks::SingleQuantileVariable<double, typename std::vector<double>::iterator> qcalc(nblocks, 0.5);
+    quickstats::SingleQuantileVariableNumber<double, std::size_t> qcalc(nblocks, 0.5);
     for (std::size_t r = 0; r < ngenes; ++r) {
         std::size_t offset = r * ngroups * nblocks;
         scran_markers::internal::average_group_stats_blockquantile(
@@ -186,7 +187,7 @@ TEST_F(AverageGroupStatsTest, ZeroedBlockQuantile) {
 
     auto means_copy = means;
     std::vector<double> buffer;
-    scran_blocks::SingleQuantileVariable<double, typename std::vector<double>::iterator> qcalc(nblocks, 0.5);
+    quickstats::SingleQuantileVariableNumber<double, std::size_t> qcalc(nblocks, 0.5);
     for (std::size_t r = 0; r < ngenes; ++r) {
         // Setting all means in the second block to NaN.
         size_t offset = r * ngroups * nblocks;
@@ -284,7 +285,7 @@ TEST_F(AverageGroupStatsTest, ZeroedGroupQuantile) {
 
     auto means_copy = means;
     std::vector<double> buffer;
-    scran_blocks::SingleQuantileVariable<double, typename std::vector<double>::iterator> qcalc(nblocks, 0.5);
+    quickstats::SingleQuantileVariableNumber<double, std::size_t> qcalc(nblocks, 0.5);
     for (size_t r = 0; r < ngenes; ++r) {
         // Setting all quantiles in the first group to NaN. 
         std::size_t offset = r * ngroups * nblocks;

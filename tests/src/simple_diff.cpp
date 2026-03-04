@@ -1,4 +1,5 @@
 #include "scran_tests/scran_tests.hpp"
+#include "quickstats/quickstats.hpp"
 
 #include <cmath>
 #include <vector>
@@ -32,7 +33,7 @@ TEST(SimpleDiff, Unblocked) {
 #endif
         );
         std::vector<double> buffer;
-        scran_blocks::SingleQuantileVariable<double, typename std::vector<double>::iterator> qcalc(1, 0.5);
+        quickstats::SingleQuantileVariableNumber<double, std::size_t> qcalc(1, 0.5);
         scran_markers::internal::compute_pairwise_simple_diff_blockquantile(means.data(), ngroups, 1, buffer, qcalc, q_output.data());
         scran_tests::compare_almost_equal_containers(output, q_output, {});
     }
@@ -77,7 +78,7 @@ TEST(SimpleDiff, ZeroSize) {
 #endif
         );
         std::vector<double> buffer;
-        scran_blocks::SingleQuantileVariable<double, typename std::vector<double>::iterator> qcalc(1, 0.5);
+        quickstats::SingleQuantileVariableNumber<double, std::size_t> qcalc(1, 0.5);
         scran_markers::internal::compute_pairwise_simple_diff_blockquantile(means.data(), ngroups, 1, buffer, qcalc, q_output.data());
         scran_tests::compare_almost_equal_containers(output, q_output, {});
     }
@@ -122,7 +123,7 @@ TEST(SimpleDiff, Blocked) {
 #endif
         );
         std::vector<double> buffer;
-        scran_blocks::SingleQuantileVariable<double, typename std::vector<double>::iterator> qcalc(nblocks, 0.5);
+        quickstats::SingleQuantileVariableNumber<double, std::size_t> qcalc(nblocks, 0.5);
         scran_markers::internal::compute_pairwise_simple_diff_blockquantile(means.data(), ngroups, nblocks, buffer, qcalc, q_output.data());
 
         for (int g1 = 0; g1 < ngroups; ++g1) {
@@ -174,7 +175,7 @@ TEST(SimpleDiff, BlockedMissing) {
 #endif
         );
         std::vector<double> buffer;
-        scran_blocks::SingleQuantileVariable<double, typename std::vector<double>::iterator> qcalc(nblocks, 0.5);
+        quickstats::SingleQuantileVariableNumber<double, std::size_t> qcalc(nblocks, 0.5);
         scran_markers::internal::compute_pairwise_simple_diff_blockquantile(means.data(), ngroups, nblocks, buffer, qcalc, q_output.data());
         scran_tests::compare_almost_equal_containers(output, q_output, {});
     }
