@@ -148,7 +148,7 @@ template&lt;typename Stat_ , typename Index_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Vector containing the genes with the largest AUCs for each pairwise comparison between groups. Specifically, <code>auc[i][j][k]</code> represents the <code>k</code>-th largest AUC for the comparison of group <code>i</code> to group <code>j</code> (i.e., a positive value indicates upregulation in <code>i</code> over <code>j</code>). Each pair contains the index of the gene in the input matrix and the value of the AUC.</p>
+<p>Vector containing the genes with the largest AUCs for each pairwise comparison between groups. Specifically, <code>auc[i][j][k]</code> represents the <code>k</code>-th largest AUC for the comparison of group <code>i</code> to group <code>j</code> (i.e., a value above 0.5 indicates upregulation in <code>i</code> over <code>j</code>). Each pair contains the index of the gene in the input matrix and the value of the AUC.</p>
 <p>If <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#aa824707714a1690fbc23648578062e3b">ScoreMarkersBestOptions::largest_auc</a> = false</code>, this instead contains the markers with the smallest AUCs.</p>
 <p>This vector will be empty if <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#a2007c3ef0856d7c924820eeabe7c610f">ScoreMarkersBestOptions::compute_auc</a> = false</code>. </p>
 
