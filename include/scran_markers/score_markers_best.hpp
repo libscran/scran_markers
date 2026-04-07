@@ -200,7 +200,7 @@ struct ScoreMarkersBestResults {
     /**
      * Vector containing the genes with the largest AUCs for each pairwise comparison between groups.
      * Specifically, `auc[i][j][k]` represents the `k`-th largest AUC for the comparison of group `i` to group `j`
-     * (i.e., a positive value indicates upregulation in `i` over `j`).
+     * (i.e., a value above 0.5 indicates upregulation in `i` over `j`).
      * Each pair contains the index of the gene in the input matrix and the value of the AUC.
      *
      * If `ScoreMarkersBestOptions::largest_auc = false`, this instead contains the markers with the smallest AUCs.
