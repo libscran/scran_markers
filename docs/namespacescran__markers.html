@@ -167,6 +167,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ab07e111b7e98525a9230937bb5ff61f8" id="r_ab07e111b7e98525a9230937bb5ff61f8"><td class="memTemplParams" colspan="2">template&lt;typename Stat_  = double, typename Value_ , typename Index_ , typename Group_ , typename Block_ &gt; </td></tr>
 <tr class="memitem:ab07e111b7e98525a9230937bb5ff61f8"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseResults.html">ScoreMarkersPairwiseResults</a>&lt; Stat_ &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ab07e111b7e98525a9230937bb5ff61f8">score_markers_pairwise_blocked</a> (const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, const <a class="el" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">ScoreMarkersPairwiseOptions</a> &amp;options)</td></tr>
 <tr class="separator:ab07e111b7e98525a9230937bb5ff61f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1f23e41830dd625c6e23427a396e0440" id="r_a1f23e41830dd625c6e23427a396e0440"><td class="memTemplParams" colspan="2">template&lt;typename Stat_ , typename Index_ &gt; </td></tr>
+<tr class="memitem:a1f23e41830dd625c6e23427a396e0440"><td class="memTemplItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; std::vector&lt; std::pair&lt; Index_, Stat_ &gt; &gt; &gt; &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a1f23e41830dd625c6e23427a396e0440">queues_to_vectors</a> (std::vector&lt; std::vector&lt; <a class="elRef" href="https://libscran.github.io/topicks/classtopicks_1_1TopQueue.html">topicks::TopQueue</a>&lt; Stat_, Index_ &gt; &gt; &gt; &amp;queued)</td></tr>
+<tr class="separator:a1f23e41830dd625c6e23427a396e0440"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aeede6a9c151da28f67c57355b96e8235" id="r_aeede6a9c151da28f67c57355b96e8235"><td class="memTemplParams" colspan="2">template&lt;typename Stat_ , typename Value_ , typename Index_ , typename Group_ &gt; </td></tr>
 <tr class="memitem:aeede6a9c151da28f67c57355b96e8235"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structscran__markers_1_1ScoreMarkersBestResults.html">ScoreMarkersBestResults</a>&lt; Stat_, Index_ &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aeede6a9c151da28f67c57355b96e8235">score_markers_best</a> (const <a class="elRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix</a>&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Index_ top, const <a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html">ScoreMarkersBestOptions</a> &amp;options)</td></tr>
 <tr class="separator:aeede6a9c151da28f67c57355b96e8235"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -223,6 +226,40 @@ Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
+<a id="a1f23e41830dd625c6e23427a396e0440" name="a1f23e41830dd625c6e23427a396e0440"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1f23e41830dd625c6e23427a396e0440">&#9670;&#160;</a></span>queues_to_vectors()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename Stat_ , typename Index_ &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::vector&lt; std::vector&lt; std::pair&lt; Index_, Stat_ &gt; &gt; &gt; &gt; scran_markers::queues_to_vectors </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; std::vector&lt; <a class="elRef" href="https://libscran.github.io/topicks/classtopicks_1_1TopQueue.html">topicks::TopQueue</a>&lt; Stat_, Index_ &gt; &gt; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>queued</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Convert the set of queues from <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestResults.html" title="Results for score_markers_best() and friends.">ScoreMarkersBestResults</a></code> into a set of vectors that are easier to query.</p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">Stat_</td><td>Floating-point type of the output statistics. </td></tr>
+    <tr><td class="paramname">Index_</td><td>Integer type of the matrix row indices.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">queued</td><td>Vector of vector of queues containing the top genes for an effect size in each pairwise comparison. See <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestResults.html#a8bb1cc4761841813d5824da5ea80a197">ScoreMarkersBestResults::cohens_d</a></code> and related members for examples.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of vector of top genes, where each innermost queue in <code>queued</code> is converted into a vector of (index, effect size) pairs. Each innermost vector is sorted by effect size in increasing order. </dd></dl>
+
+</div>
+</div>
 <a id="aeede6a9c151da28f67c57355b96e8235" name="aeede6a9c151da28f67c57355b96e8235"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aeede6a9c151da28f67c57355b96e8235">&#9670;&#160;</a></span>score_markers_best()</h2>
 
@@ -253,7 +290,7 @@ template&lt;typename Stat_ , typename Value_ , typename Index_ , typename Group_
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Find potential marker genes with the largest effect sizes in each pairwise comparison between groups. This function is equivalent to (but more efficient than) running <code><a class="el" href="#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code> and then using <code><a class="elRef" href="https://libscran.github.io/topicks/namespacetopicks.html#afb96918e66418b1d67caca308c3acc98">topicks::pick_top_genes()</a></code> on the effect sizes from each pairwise comparison. The idea is to identify the top markers without a large memory allocation to hold the 3D array of effect sizes.</p>
+<p>Find potential marker genes with the largest effect sizes in each pairwise comparison between groups. The results are equivalent to those obtained by calling <code><a class="el" href="#a6c63a08774d6f2105b68b656f8a3da94">score_markers_pairwise()</a></code> and then using <code><a class="elRef" href="https://libscran.github.io/topicks/namespacetopicks.html#afb96918e66418b1d67caca308c3acc98">topicks::pick_top_genes()</a></code> on the effect sizes from each comparison. However, this function is more efficient as it can identify the top markers without allocating a large 3D array of effect sizes.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">Stat_</td><td>Floating-point type of the statistics. </td></tr>
@@ -311,7 +348,7 @@ template&lt;typename Stat_ , typename Value_ , typename Index_ , typename Group_
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Find potential marker genes with the largest effect sizes in each pairwise comparison between groups, after accounting for any blocking factor in the dataset. This function is equivalent to (but more efficient than) running <code><a class="el" href="#a9c5a2571c6f34d150a9b155ebd396a25">score_markers_pairwise_blocked()</a></code> and then using <code><a class="elRef" href="https://libscran.github.io/topicks/namespacetopicks.html#afb96918e66418b1d67caca308c3acc98">topicks::pick_top_genes()</a></code> on the effect sizes from each pairwise comparison. The idea is to identify the top markers without a large memory allocation to hold the 3D array of effect sizes.</p>
+<p>Find potential marker genes with the largest effect sizes in each pairwise comparison between groups, after accounting for any blocking factor in the dataset. The results are equivalent to those obtained by calling <code><a class="el" href="#a9c5a2571c6f34d150a9b155ebd396a25">score_markers_pairwise_blocked()</a></code> and then using <code><a class="elRef" href="https://libscran.github.io/topicks/namespacetopicks.html#afb96918e66418b1d67caca308c3acc98">topicks::pick_top_genes()</a></code> on the effect sizes from each comparison. However, this function is more efficient as it can identify the top markers without allocating a large 3D array of effect sizes.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">Stat_</td><td>Floating-point type of the statistics. </td></tr>

@@ -232,31 +232,31 @@
       <arglist></arglist>
     </member>
     <member kind="variable">
-      <type>std::vector&lt; std::vector&lt; std::vector&lt; std::pair&lt; Index_, Stat_ &gt; &gt; &gt; &gt;</type>
+      <type>std::vector&lt; std::vector&lt; topicks::TopQueue&lt; Stat_, Index_ &gt; &gt; &gt;</type>
       <name>cohens_d</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersBestResults.html</anchorfile>
-      <anchor>a7c6188aed4406851850793732aa030ce</anchor>
+      <anchor>a8bb1cc4761841813d5824da5ea80a197</anchor>
       <arglist></arglist>
     </member>
     <member kind="variable">
-      <type>std::vector&lt; std::vector&lt; std::vector&lt; std::pair&lt; Index_, Stat_ &gt; &gt; &gt; &gt;</type>
+      <type>std::vector&lt; std::vector&lt; topicks::TopQueue&lt; Stat_, Index_ &gt; &gt; &gt;</type>
       <name>auc</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersBestResults.html</anchorfile>
-      <anchor>a336708567f4dfacef8ba8bf188d720f4</anchor>
+      <anchor>a87136bf8407821da31fdad581cef36fa</anchor>
       <arglist></arglist>
     </member>
     <member kind="variable">
-      <type>std::vector&lt; std::vector&lt; std::vector&lt; std::pair&lt; Index_, Stat_ &gt; &gt; &gt; &gt;</type>
+      <type>std::vector&lt; std::vector&lt; topicks::TopQueue&lt; Stat_, Index_ &gt; &gt; &gt;</type>
       <name>delta_mean</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersBestResults.html</anchorfile>
-      <anchor>a5cb20a7523c070686818ce889ea4d8ef</anchor>
+      <anchor>ae25e8181eda17ae0570076e293afde6a</anchor>
       <arglist></arglist>
     </member>
     <member kind="variable">
-      <type>std::vector&lt; std::vector&lt; std::vector&lt; std::pair&lt; Index_, Stat_ &gt; &gt; &gt; &gt;</type>
+      <type>std::vector&lt; std::vector&lt; topicks::TopQueue&lt; Stat_, Index_ &gt; &gt; &gt;</type>
       <name>delta_detected</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersBestResults.html</anchorfile>
-      <anchor>a8a0be5bb72f393dddc153e40bb2cb8e2</anchor>
+      <anchor>a2ed32df7c300b7e503aa43ef1686925d</anchor>
       <arglist></arglist>
     </member>
   </compound>
@@ -822,6 +822,13 @@
       <anchorfile>namespacescran__markers.html</anchorfile>
       <anchor>ab07e111b7e98525a9230937bb5ff61f8</anchor>
       <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, const ScoreMarkersPairwiseOptions &amp;options)</arglist>
+    </member>
+    <member kind="function">
+      <type>std::vector&lt; std::vector&lt; std::vector&lt; std::pair&lt; Index_, Stat_ &gt; &gt; &gt; &gt;</type>
+      <name>queues_to_vectors</name>
+      <anchorfile>namespacescran__markers.html</anchorfile>
+      <anchor>a1f23e41830dd625c6e23427a396e0440</anchor>
+      <arglist>(std::vector&lt; std::vector&lt; topicks::TopQueue&lt; Stat_, Index_ &gt; &gt; &gt; &amp;queued)</arglist>
     </member>
     <member kind="function">
       <type>ScoreMarkersBestResults&lt; Stat_, Index_ &gt;</type>
