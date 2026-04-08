@@ -148,8 +148,9 @@ template&lt;typename Stat_ , typename Index_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Genes with the largest AUCs for each pairwise comparison between groups. Specifically, <code>auc[i][j]</code> is a queue containing the genes with the largest AUCs for the comparison of group <code>i</code> to group <code>j</code> (i.e., a value above 0.5 indicates upregulation in <code>i</code> over <code>j</code>). Each queue element consists of the index of the gene in the input matrix and the value of the AUC.</p>
-<p>If <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#aa824707714a1690fbc23648578062e3b">ScoreMarkersBestOptions::largest_auc</a> = false</code>, this instead contains the markers with the smallest AUCs.</p>
+<p>Genes with the largest AUCs for each pairwise comparison between groups. Specifically, <code>auc[i][j]</code> is a queue containing the genes with the largest AUCs for the comparison of group <code>i</code> to group <code>j</code>, i.e., an AUC above 0.5 represents upregulation of that gene in <code>i</code> over <code>j</code>.</p>
+<p>Each queue element consists of the index of the gene in the input matrix and the value of the AUC. The innermost queues can be converted to vectors of (index, effect size) pairs with <code><a class="el" href="namespacescran__markers.html#a1f23e41830dd625c6e23427a396e0440">queues_to_vectors()</a></code>.</p>
+<p>If <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#aa824707714a1690fbc23648578062e3b">ScoreMarkersBestOptions::largest_auc</a> = false</code>, the innermost queues instead contain the markers with the smallest AUCs for each pairwise comparison. In this case, an AUC below 0.5 for <code>auc[i][j]</code> represents downregulation in <code>i</code> against <code>j</code>.</p>
 <p>This vector will be empty if <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#a2007c3ef0856d7c924820eeabe7c610f">ScoreMarkersBestOptions::compute_auc</a> = false</code>. </p>
 
 </div>
@@ -167,8 +168,9 @@ template&lt;typename Stat_ , typename Index_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Genes with the largest Cohen's d for each pairwise comparison between groups. Specifically, <code>cohens_d[i][j]</code> is a queue containing the genes with the largest Cohen's d for the comparison of group <code>i</code> to group <code>j</code> (i.e., a positive value indicates upregulation in <code>i</code> over <code>j</code>). Each queue element consists of the index of the gene in the input matrix and the value of the Cohen's d.</p>
-<p>If <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#a267157d5d176619cc7e0e6c322c1042d">ScoreMarkersBestOptions::largest_cohens_d</a> = false</code>, this instead contains the markers with the smallest Cohens'd d.</p>
+<p>Genes with the largest Cohen's d for each pairwise comparison between groups. Specifically, <code>cohens_d[i][j]</code> is a queue containing the genes with the largest Cohen's d for the comparison of group <code>i</code> to group <code>j</code>, i.e., a positive Cohen's d represents upregulation of that gene in <code>i</code> over <code>j</code>.</p>
+<p>Each queue element consists of the index of the gene in the input matrix and the value of the Cohen's d. The innermost queues can be converted to vectors of (index, effect size) pairs with <code><a class="el" href="namespacescran__markers.html#a1f23e41830dd625c6e23427a396e0440">queues_to_vectors()</a></code>.</p>
+<p>If <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#a267157d5d176619cc7e0e6c322c1042d">ScoreMarkersBestOptions::largest_cohens_d</a> = false</code>, the innermost queues instead contain the markers with the smallest Cohen's d for each pairwise comparison. In this case, a negative Cohen's d for <code>cohens_d[i][j]</code> represents downregulation in <code>i</code> against <code>j</code>.</p>
 <p>This vector will be empty if <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#a123cba61d40fcdc36d8cc1e674b6965f">ScoreMarkersBestOptions::compute_cohens_d</a> = false</code>. </p>
 
 </div>
@@ -186,8 +188,9 @@ template&lt;typename Stat_ , typename Index_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Genes with the largest delta-detected values for each pairwise comparison between groups. Specifically, <code>delta_detected[i][j]</code> is a queue containing the genes with the largest delta-detected values for the comparison of group <code>i</code> to group <code>j</code> (i.e., a positive value indicates upregulation in <code>i</code> over <code>j</code>). Each queue element contains the index of the gene in the input matrix and the value of the delta-detected.</p>
-<p>If <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#aa4a46e58c07d0c99483a254caeb3eba8">ScoreMarkersBestOptions::largest_delta_detected</a> = false</code>, this instead contains the markers with the smallest delta-detecteds.</p>
+<p>Genes with the largest delta-detected values for each pairwise comparison between groups. Specifically, <code>delta_detected[i][j]</code> is a queue containing the genes with the largest delta-detected values for the comparison of group <code>i</code> to group <code>j</code> i.e., a positive delta-detected indicates upregulation of that gene in <code>i</code> over <code>j</code>.</p>
+<p>Each queue element contains the index of the gene in the input matrix and the value of the delta-detected. The innermost queues can be converted to vectors of (index, effect size) pairs with <code><a class="el" href="namespacescran__markers.html#a1f23e41830dd625c6e23427a396e0440">queues_to_vectors()</a></code>.</p>
+<p>If <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#aa4a46e58c07d0c99483a254caeb3eba8">ScoreMarkersBestOptions::largest_delta_detected</a> = false</code>, the innermost queues instead contain the markers with the smallest delta-detected values for each pairwise comparison. In this case, a negative delta-detected for <code>delta_detected[i][j]</code> represents downregulation in <code>i</code> against <code>j</code>.</p>
 <p>This vector will be empty if <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#aeb34e94fe7911ba89babdd338155d196">ScoreMarkersBestOptions::compute_delta_detected</a> = false</code>. </p>
 
 </div>
@@ -205,8 +208,9 @@ template&lt;typename Stat_ , typename Index_ &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Genes with the largest delta-means for each pairwise comparison between groups. Specifically, <code>delta_mean[i][j]</code> is a queue containing the genes with the largest delta-means for the comparison of group <code>i</code> to group <code>j</code> (i.e., a positive value indicates upregulation in <code>i</code> over <code>j</code>). Each queue element consists of the index of the gene in the input matrix and the value of the delta-mean.</p>
-<p>If <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#a54def7db73a0f2eb9931443274b664d8">ScoreMarkersBestOptions::largest_delta_mean</a> = false</code>, this instead contains the markers with the smallest delta-means.</p>
+<p>Genes with the largest delta-means for each pairwise comparison between groups. Specifically, <code>delta_mean[i][j]</code> is a queue containing the genes with the largest delta-means for the comparison of group <code>i</code> to group <code>j</code> i.e., a positive delta-mean represents upregulation of that gene in <code>i</code> over <code>j</code>.</p>
+<p>Each queue element consists of the index of the gene in the input matrix and the value of the delta-mean. The innermost queues can be converted to vectors of (index, effect size) pairs with <code><a class="el" href="namespacescran__markers.html#a1f23e41830dd625c6e23427a396e0440">queues_to_vectors()</a></code>.</p>
+<p>If <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#a54def7db73a0f2eb9931443274b664d8">ScoreMarkersBestOptions::largest_delta_mean</a> = false</code>, the innermost queues instead contain the markers with the smallest delta-means for each pairwise comparison. In this case, a negative delta-mean for <code>delta_mean[i][j]</code> represents downregulation in <code>i</code> against <code>j</code>.</p>
 <p>This vector will be empty if <code><a class="el" href="structscran__markers_1_1ScoreMarkersBestOptions.html#a3c3663407f7f6634df71173b3e0415e4">ScoreMarkersBestOptions::compute_delta_mean</a> = false</code>. </p>
 
 </div>
