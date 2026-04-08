@@ -8,6 +8,15 @@
 
 #include "utils.h"
 
+struct ScoreMarkersBestResultsAsVectors {
+    std::vector<std::vector<double> > mean;
+    std::vector<std::vector<double> > detected;
+    std::vector<std::vector<std::vector<std::pair<int, double> > > > cohens_d;
+    std::vector<std::vector<std::vector<std::pair<int, double> > > > auc;
+    std::vector<std::vector<std::vector<std::pair<int, double> > > > delta_mean;
+    std::vector<std::vector<std::vector<std::pair<int, double> > > > delta_detected;
+};
+
 class ScoreMarkersBestTestCore {
 protected:
     static void compare_averages(const std::vector<std::vector<double> >& res, const std::vector<std::vector<double> >& other) {
@@ -16,6 +25,17 @@ protected:
         for (int l = 0; l < ngroups; ++l) {
             scran_tests::compare_almost_equal(res[l], other[l]);
         }
+    }
+
+    ScoreMarkersBestResultsAsVectors vectorize(scran_markers::ScoreMarkersBestResults<double, int> in) {
+        ScoreMarkersBestResultsAsVectors output;
+        output.mean = std::move(in.mean);
+        output.detected = std::move(in.detected);
+        output.cohens_d = scran_markers::queues_to_vectors(in.cohens_d); 
+        output.auc = scran_markers::queues_to_vectors(in.auc); 
+        output.delta_mean = scran_markers::queues_to_vectors(in.delta_mean); 
+        output.delta_detected = scran_markers::queues_to_vectors(in.delta_detected); 
+        return output;
     }
 
     void compare_best(
@@ -40,10 +60,7 @@ protected:
         }
     }
 
-    void compare_best(
-        const scran_markers::ScoreMarkersBestResults<double, int>& left,
-        const scran_markers::ScoreMarkersBestResults<double, int>& right
-    ) {
+    void compare_best(const ScoreMarkersBestResultsAsVectors& left, const ScoreMarkersBestResultsAsVectors& right) {
         compare_best(left.cohens_d, right.cohens_d);
         compare_best(left.auc, right.auc);
         compare_best(left.delta_mean, right.delta_mean);
@@ -161,7 +178,7 @@ TEST_P(ScoreMarkersBestTest, Basic) {
 
     opt.keep_ties = keep_ties;
     opt.compute_auc = do_auc; // false, if we want to check the running implementations.
-    auto ref = scran_markers::score_markers_best<double>(*dense_row, groupings.data(), top, opt);
+    auto ref = vectorize(scran_markers::score_markers_best<double>(*dense_row, groupings.data(), top, opt));
 
     if (nthreads == 1) {
         // Comparing score_markers_best against score_markers_pairwise + topicks::pick_top_genes.
@@ -181,7 +198,7 @@ TEST_P(ScoreMarkersBestTest, Basic) {
 
     } else {
         opt.num_threads = nthreads;
-        auto dr = scran_markers::score_markers_best<double>(*dense_row, groupings.data(), top, opt);
+        auto dr = vectorize(scran_markers::score_markers_best<double>(*dense_row, groupings.data(), top, opt));
         compare_averages(ref.mean, dr.mean);
         compare_averages(ref.detected, dr.detected);
         compare_best(ref, dr);
@@ -189,17 +206,17 @@ TEST_P(ScoreMarkersBestTest, Basic) {
 
     // Comparing to all of the other matrix representations.
     {
-        auto dc = scran_markers::score_markers_best<double>(*dense_column, groupings.data(), top, opt);
+        auto dc = vectorize(scran_markers::score_markers_best<double>(*dense_column, groupings.data(), top, opt));
         compare_averages(ref.mean, dc.mean);
         compare_averages(ref.detected, dc.detected);
         compare_best(ref, dc);
 
-        auto sr = scran_markers::score_markers_best<double>(*sparse_row, groupings.data(), top, opt);
+        auto sr = vectorize(scran_markers::score_markers_best<double>(*sparse_row, groupings.data(), top, opt));
         compare_averages(ref.mean, sr.mean);
         compare_averages(ref.detected, sr.detected);
         compare_best(ref, sr);
 
-        auto sc = scran_markers::score_markers_best<double>(*sparse_column, groupings.data(), top, opt);
+        auto sc = vectorize(scran_markers::score_markers_best<double>(*sparse_column, groupings.data(), top, opt));
         compare_averages(ref.mean, sc.mean);
         compare_averages(ref.detected, sc.detected);
         compare_best(ref, sc);
@@ -210,22 +227,22 @@ TEST_P(ScoreMarkersBestTest, Basic) {
         auto qopt = opt;
         qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
 
-        auto qdr = scran_markers::score_markers_best<double>(*dense_row, groupings.data(), top, qopt);
+        auto qdr = vectorize(scran_markers::score_markers_best<double>(*dense_row, groupings.data(), top, qopt));
         compare_averages(ref.mean, qdr.mean);
         compare_averages(ref.detected, qdr.detected);
         compare_best(ref, qdr);
 
-        auto qdc = scran_markers::score_markers_best<double>(*dense_column, groupings.data(), top, qopt);
+        auto qdc = vectorize(scran_markers::score_markers_best<double>(*dense_column, groupings.data(), top, qopt));
         compare_averages(ref.mean, qdc.mean);
         compare_averages(ref.detected, qdc.detected);
         compare_best(ref, qdc);
 
-        auto qsr = scran_markers::score_markers_best<double>(*sparse_row, groupings.data(), top, qopt);
+        auto qsr = vectorize(scran_markers::score_markers_best<double>(*sparse_row, groupings.data(), top, qopt));
         compare_averages(ref.mean, qsr.mean);
         compare_averages(ref.detected, qsr.detected);
         compare_best(ref, qsr);
 
-        auto qsc = scran_markers::score_markers_best<double>(*sparse_column, groupings.data(), top, qopt);
+        auto qsc = vectorize(scran_markers::score_markers_best<double>(*sparse_column, groupings.data(), top, qopt));
         compare_averages(ref.mean, qsc.mean);
         compare_averages(ref.detected, qsc.detected);
         compare_best(ref, qsc);
@@ -307,7 +324,7 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseMean) {
     opt.keep_ties = keep_ties;
     opt.compute_auc = do_auc; // false, if we want to check the running implementations.
     opt.block_weight_policy = policy;
-    auto ref = scran_markers::score_markers_best_blocked<double>(*dense_row, groupings.data(), blocks.data(), top, opt);
+    auto ref = vectorize(scran_markers::score_markers_best_blocked<double>(*dense_row, groupings.data(), blocks.data(), top, opt));
 
     // Comparing score_markers_best_blocked against score_markers_pairwise_blocked + topicks::pick_top_genes.
     // The latter is less mind-bending but requires holding a large 3D matrix in memory.
@@ -332,17 +349,17 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseMean) {
 
     // Comparing to all of the other matrix representations.
     {
-        auto dc = scran_markers::score_markers_best_blocked<double>(*dense_column, groupings.data(), blocks.data(), top, opt);
+        auto dc = vectorize(scran_markers::score_markers_best_blocked<double>(*dense_column, groupings.data(), blocks.data(), top, opt));
         compare_averages(ref.mean, dc.mean);
         compare_averages(ref.detected, dc.detected);
         compare_best(ref, dc);
 
-        auto sr = scran_markers::score_markers_best_blocked<double>(*sparse_row, groupings.data(), blocks.data(), top, opt);
+        auto sr = vectorize(scran_markers::score_markers_best_blocked<double>(*sparse_row, groupings.data(), blocks.data(), top, opt));
         compare_averages(ref.mean, sr.mean);
         compare_averages(ref.detected, sr.detected);
         compare_best(ref, sr);
 
-        auto sc = scran_markers::score_markers_best_blocked<double>(*sparse_column, groupings.data(), blocks.data(), top, opt);
+        auto sc = vectorize(scran_markers::score_markers_best_blocked<double>(*sparse_column, groupings.data(), blocks.data(), top, opt));
         compare_averages(ref.mean, sc.mean);
         compare_averages(ref.detected, sc.detected);
         compare_best(ref, sc);
@@ -385,7 +402,7 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseQuantile) {
     opt.keep_ties = keep_ties;
     opt.compute_auc = do_auc; // false, if we want to check the running implementations.
     opt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
-    auto ref = scran_markers::score_markers_best_blocked<double>(*dense_row, groupings.data(), blocks.data(), top, opt);
+    auto ref = vectorize(scran_markers::score_markers_best_blocked<double>(*dense_row, groupings.data(), blocks.data(), top, opt));
 
     // Comparing score_markers_best_blocked against score_markers_pairwise_blocked + topicks::pick_top_genes.
     // The latter is less mind-bending but requires holding a large 3D matrix in memory.
@@ -410,17 +427,17 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseQuantile) {
 
     // Comparing to all of the other matrix representations.
     {
-        auto dc = scran_markers::score_markers_best_blocked<double>(*dense_column, groupings.data(), blocks.data(), top, opt);
+        auto dc = vectorize(scran_markers::score_markers_best_blocked<double>(*dense_column, groupings.data(), blocks.data(), top, opt));
         compare_averages(ref.mean, dc.mean);
         compare_averages(ref.detected, dc.detected);
         compare_best(ref, dc);
 
-        auto sr = scran_markers::score_markers_best_blocked<double>(*sparse_row, groupings.data(), blocks.data(), top, opt);
+        auto sr = vectorize(scran_markers::score_markers_best_blocked<double>(*sparse_row, groupings.data(), blocks.data(), top, opt));
         compare_averages(ref.mean, sr.mean);
         compare_averages(ref.detected, sr.detected);
         compare_best(ref, sr);
 
-        auto sc = scran_markers::score_markers_best_blocked<double>(*sparse_column, groupings.data(), blocks.data(), top, opt);
+        auto sc = vectorize(scran_markers::score_markers_best_blocked<double>(*sparse_column, groupings.data(), blocks.data(), top, opt));
         compare_averages(ref.mean, sc.mean);
         compare_averages(ref.detected, sc.detected);
         compare_best(ref, sc);
@@ -465,9 +482,9 @@ TEST_F(ScoreMarkersBestScenariosTest, Thresholds) {
 
     int top = 10;
     scran_markers::ScoreMarkersBestOptions sopt;
-    auto ref = scran_markers::score_markers_best<double>(mat, groupings.data(), top, sopt);
+    auto ref = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), top, sopt));
     sopt.threshold = 1;
-    auto out = scran_markers::score_markers_best<double>(mat, groupings.data(), top, sopt);
+    auto out = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), top, sopt));
 
     int some_diff = 0;
     for (int l = 0; l < ngroups; ++l) {
@@ -506,7 +523,7 @@ TEST_F(ScoreMarkersBestScenariosTest, Thresholds) {
     // Quantile should give the same results for a single block.
     auto qopt = sopt;
     qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
-    auto qout = scran_markers::score_markers_best<double>(mat, groupings.data(), top, qopt);
+    auto qout = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), top, qopt));
     compare_averages(out.mean, qout.mean);
     compare_averages(out.detected, qout.detected);
     compare_best(out, qout);
@@ -532,13 +549,13 @@ TEST_F(ScoreMarkersBestScenariosTest, Missing) {
 
     int top = 10;
     scran_markers::ScoreMarkersBestOptions opt;
-    auto ref = scran_markers::score_markers_best<double>(mat, groupings.data(), top, opt);
+    auto ref = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), top, opt));
 
     // Zero is effectively the missing group here.
     for (auto& g : groupings) {
         ++g;
     }
-    auto lost = scran_markers::score_markers_best<double>(mat, groupings.data(), top, opt);
+    auto lost = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), top, opt));
 
     // Everything should be empty.
     for (int g = 1; g <= ngroups; ++g) {
@@ -572,7 +589,7 @@ TEST_F(ScoreMarkersBestScenariosTest, Missing) {
     // Quantile should give the same results for a single block.
     auto qopt = opt;
     qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
-    auto qlost = scran_markers::score_markers_best<double>(mat, groupings.data(), top, qopt);
+    auto qlost = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), top, qopt));
     compare_averages(lost.mean, qlost.mean);
     compare_averages(lost.detected, qlost.detected);
     compare_best(lost, qlost);
@@ -606,7 +623,7 @@ TEST_F(ScoreMarkersBestScenariosTest, BlockConfounded) {
 
     int top = 10;
     scran_markers::ScoreMarkersBestOptions opt;
-    auto comres = scran_markers::score_markers_best_blocked<double>(*mat, groupings.data(), blocks.data(), top, opt);
+    auto comres = vectorize(scran_markers::score_markers_best_blocked<double>(*mat, groupings.data(), blocks.data(), top, opt));
 
     // First group should only be NaN's.
     for (int g = 1; g < ngroups; ++g) {
@@ -632,7 +649,7 @@ TEST_F(ScoreMarkersBestScenariosTest, BlockConfounded) {
     }
 
     auto sub = tatami::make_DelayedSubset(mat, std::move(keep), false);
-    auto ref = scran_markers::score_markers_best<double>(*sub, subgroups.data(), top, opt);
+    auto ref = vectorize(scran_markers::score_markers_best<double>(*sub, subgroups.data(), top, opt));
 
     for (int g1 = 1; g1 < ngroups; ++g1) {
         EXPECT_EQ(comres.mean[g1], ref.mean[g1 - 1]);
@@ -650,7 +667,7 @@ TEST_F(ScoreMarkersBestScenariosTest, BlockConfounded) {
     // the second block is fully confounded.
     auto qopt = opt;
     qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
-    auto qcomres = scran_markers::score_markers_best_blocked<double>(*mat, groupings.data(), blocks.data(), top, qopt);
+    auto qcomres = vectorize(scran_markers::score_markers_best_blocked<double>(*mat, groupings.data(), blocks.data(), top, qopt));
     compare_averages(comres.mean, qcomres.mean);
     compare_averages(comres.detected, qcomres.detected);
     compare_best(comres, qcomres);
@@ -665,7 +682,7 @@ TEST_F(ScoreMarkersBestScenariosTest, Empty) {
 
     scran_markers::ScoreMarkersBestOptions opts;
     int top = 10;
-    auto out = scran_markers::score_markers_best<double>(mat, groupings.data(), top, opts);
+    auto out = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), top, opts));
 
     for (int g = 0; g < ngroups; ++g) {
         EXPECT_TRUE(out.mean[g].empty());
@@ -733,7 +750,7 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
 
     scran_markers::ScoreMarkersBestOptions opt;
     int top = 15;
-    auto ref = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
+    auto ref = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt));
 
     // Only the group mean.
     {
@@ -744,7 +761,7 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
 
-        auto alt = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
+        auto alt = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt));
         compare_averages(ref.mean, alt.mean);
         EXPECT_TRUE(alt.detected.empty());
         EXPECT_TRUE(alt.cohens_d.empty());
@@ -762,7 +779,7 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
 
-        auto alt = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
+        auto alt = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt));
         compare_averages(ref.detected, alt.detected);
         EXPECT_TRUE(alt.mean.empty());
         EXPECT_TRUE(alt.cohens_d.empty());
@@ -780,7 +797,7 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
 
-        auto alt = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
+        auto alt = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt));
         compare_best(alt.cohens_d, ref.cohens_d);
         EXPECT_TRUE(alt.mean.empty());
         EXPECT_TRUE(alt.detected.empty());
@@ -798,7 +815,7 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
 
-        auto alt = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
+        auto alt = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt));
         compare_best(alt.auc, ref.auc);
         EXPECT_TRUE(alt.cohens_d.empty());
         EXPECT_TRUE(alt.delta_mean.empty());
@@ -814,7 +831,7 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
         opt.compute_auc = false;
         opt.compute_delta_detected = false;
 
-        auto alt = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
+        auto alt = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt));
         compare_best(alt.delta_mean, ref.delta_mean);
         EXPECT_TRUE(alt.mean.empty());
         EXPECT_TRUE(alt.detected.empty());
@@ -832,7 +849,7 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
         opt.compute_auc = false;
         opt.compute_delta_mean = false;
 
-        auto alt = scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt);
+        auto alt = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), top, opt));
         compare_best(alt.delta_detected, ref.delta_detected);
         EXPECT_TRUE(alt.mean.empty());
         EXPECT_TRUE(alt.detected.empty());
