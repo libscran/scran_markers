@@ -810,11 +810,11 @@ TEST_F(ScoreMarkersSummaryScenariosTest, DisabledSummaries) {
     scran_markers::ScoreMarkersSummaryOptions opt;
     auto ref = scran_markers::score_markers_summary(mat, groupings.data(), opt);
 
-    opt.compute_min = false;
-    opt.compute_mean = false;
-    opt.compute_median = false;
-    opt.compute_max = false;
-    opt.compute_min_rank = false;
+    opt.compute_summary_min = false;
+    opt.compute_summary_mean = false;
+    opt.compute_summary_median = false;
+    opt.compute_summary_max = false;
+    opt.compute_summary_min_rank = false;
     auto empty = scran_markers::score_markers_summary(mat, groupings.data(), opt);
 
     EXPECT_EQ(empty.mean.size(), ngroups);

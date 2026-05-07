@@ -85,25 +85,25 @@ struct ScoreMarkersSummaryOptions {
      * Whether to report the minimum of the effect sizes for each group.
      * Only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
      */
-    bool compute_min = true;
+    bool compute_summary_min = true;
 
     /**
      * Whether to report the mean of the effect sizes for each group.
      * Only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
      */
-    bool compute_mean = true;
+    bool compute_summary_mean = true;
 
     /**
      * Whether to report the median of the effect sizes for each group.
      * Only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
      */
-    bool compute_median = true;
+    bool compute_summary_median = true;
 
     /**
      * Whether to report the maximum of the effect sizes for each group.
      * Only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
      */
-    bool compute_max = true;
+    bool compute_summary_max = true;
 
     /**
      * Probabilites of the quantiles of the effect sizes for each group, to be reported.
@@ -116,7 +116,7 @@ struct ScoreMarkersSummaryOptions {
      * Whether to report the minimum rank of the effect sizes for each group.
      * Only affects the `score_markers_summary()` overload that returns a `ScoreMarkersSummaryResults`.
      */
-    bool compute_min_rank = true;
+    bool compute_summary_min_rank = true;
 
     /**
      * Limit on the reported minimum rank.
@@ -253,7 +253,7 @@ struct ScoreMarkersSummaryResults {
      * This may be an empty vector if `ScoreMarkersSummaryOptions::compute_cohens_d = false`.
      *
      * Individual vectors inside the `SummaryResults` may also be empty if specified by the relevant option,
-     * e.g., `ScoreMarkersSummaryOptions::compute_min = false` will cause `SummaryResults::min` to be empty.
+     * e.g., `ScoreMarkersSummaryOptions::compute_summary_min = false` will cause `SummaryResults::min` to be empty.
      */
     std::vector<SummaryResults<Stat_, Rank_> > cohens_d;
 
@@ -262,7 +262,7 @@ struct ScoreMarkersSummaryResults {
      * This may be an empty vector if `ScoreMarkersSummaryOptions::compute_auc = false`.
      *
      * Individual vectors inside the `SummaryResults` may also be empty if specified by the relevant option,
-     * e.g., `ScoreMarkersSummaryOptions::compute_min = false` will cause `SummaryResults::min` to be empty.
+     * e.g., `ScoreMarkersSummaryOptions::compute_summary_min = false` will cause `SummaryResults::min` to be empty.
      */
     std::vector<SummaryResults<Stat_, Rank_> > auc;
 
@@ -271,7 +271,7 @@ struct ScoreMarkersSummaryResults {
      * This may be an empty vector if `ScoreMarkersSummaryOptions::compute_delta_mean = false`.
      *
      * Individual vectors inside the `SummaryResults` may also be empty if specified by the relevant option,
-     * e.g., `ScoreMarkersSummaryOptions::compute_min = false` will cause `SummaryResults::min` to be empty.
+     * e.g., `ScoreMarkersSummaryOptions::compute_summary_min = false` will cause `SummaryResults::min` to be empty.
      */
     std::vector<SummaryResults<Stat_, Rank_> > delta_mean;
 
@@ -280,7 +280,7 @@ struct ScoreMarkersSummaryResults {
      * This may be an empty vector if `ScoreMarkersSummaryOptions::compute_delta_detected = false`.
      *
      * Individual vectors inside the `SummaryResults` may also be empty if specified by the relevant option,
-     * e.g., `ScoreMarkersSummaryOptions::compute_min = false` will cause `SummaryResults::min` to be empty.
+     * e.g., `ScoreMarkersSummaryOptions::compute_summary_min = false` will cause `SummaryResults::min` to be empty.
      */
     std::vector<SummaryResults<Stat_, Rank_> > delta_detected;
 };
@@ -607,12 +607,12 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> preallocate_summary_results(
             ngenes,
             ngroups,
             store.cohens_d,
-            options.compute_min,
-            options.compute_mean,
-            options.compute_median,
-            options.compute_max,
+            options.compute_summary_min,
+            options.compute_summary_mean,
+            options.compute_summary_median,
+            options.compute_summary_max,
             options.compute_summary_quantiles,
-            options.compute_min_rank
+            options.compute_summary_min_rank
         );
     }
 
@@ -621,12 +621,12 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> preallocate_summary_results(
             ngenes,
             ngroups,
             store.auc,
-            options.compute_min,
-            options.compute_mean,
-            options.compute_median,
-            options.compute_max,
+            options.compute_summary_min,
+            options.compute_summary_mean,
+            options.compute_summary_median,
+            options.compute_summary_max,
             options.compute_summary_quantiles,
-            options.compute_min_rank
+            options.compute_summary_min_rank
         );
     }
 
@@ -635,12 +635,12 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> preallocate_summary_results(
             ngenes,
             ngroups,
             store.delta_mean,
-            options.compute_min,
-            options.compute_mean,
-            options.compute_median,
-            options.compute_max,
+            options.compute_summary_min,
+            options.compute_summary_mean,
+            options.compute_summary_median,
+            options.compute_summary_max,
             options.compute_summary_quantiles,
-            options.compute_min_rank
+            options.compute_summary_min_rank
         );
     }
 
@@ -649,12 +649,12 @@ ScoreMarkersSummaryBuffers<Stat_, Rank_> preallocate_summary_results(
             ngenes,
             ngroups,
             store.delta_detected,
-            options.compute_min,
-            options.compute_mean,
-            options.compute_median,
-            options.compute_max,
+            options.compute_summary_min,
+            options.compute_summary_mean,
+            options.compute_summary_median,
+            options.compute_summary_max,
             options.compute_summary_quantiles,
-            options.compute_min_rank
+            options.compute_summary_min_rank
         );
     }
 
