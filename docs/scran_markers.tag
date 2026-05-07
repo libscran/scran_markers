@@ -551,30 +551,30 @@
     </member>
     <member kind="variable">
       <type>bool</type>
-      <name>compute_min</name>
+      <name>compute_summary_min</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
-      <anchor>a51472efaed737fea2dc57f16fdc53870</anchor>
+      <anchor>ab2cb5cc187964a3e51fc48f09d8be91c</anchor>
       <arglist></arglist>
     </member>
     <member kind="variable">
       <type>bool</type>
-      <name>compute_mean</name>
+      <name>compute_summary_mean</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
-      <anchor>a76ada94f5fef79f959b41fd59c2d3224</anchor>
+      <anchor>a9814d7496191a7362fb50ac68faa3923</anchor>
       <arglist></arglist>
     </member>
     <member kind="variable">
       <type>bool</type>
-      <name>compute_median</name>
+      <name>compute_summary_median</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
-      <anchor>a660ccf44e64c70b72817ac3031b5c26b</anchor>
+      <anchor>ae809497654a1be98db59aa1e88e2f8b0</anchor>
       <arglist></arglist>
     </member>
     <member kind="variable">
       <type>bool</type>
-      <name>compute_max</name>
+      <name>compute_summary_max</name>
       <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
-      <anchor>a20a322581c10b9963c6ca639cd898cb0</anchor>
+      <anchor>a6d78c16b4ebd8435766396b2d72a8504</anchor>
       <arglist></arglist>
     </member>
   </compound>
