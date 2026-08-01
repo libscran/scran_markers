@@ -10,6 +10,5 @@ var searchData=
   ['constantmatrix_7',['ConstantMatrix',['https://tatami-inc.github.io/tatami/classtatami_1_1ConstantMatrix.html',1,'tatami']]],
   ['converttocompressedsparseoptions_8',['ConvertToCompressedSparseOptions',['https://tatami-inc.github.io/tatami/structtatami_1_1ConvertToCompressedSparseOptions.html',1,'tatami']]],
   ['converttodenseoptions_9',['ConvertToDenseOptions',['https://tatami-inc.github.io/tatami/structtatami_1_1ConvertToDenseOptions.html',1,'tatami']]],
-  ['converttofragmentedsparseoptions_10',['ConvertToFragmentedSparseOptions',['https://tatami-inc.github.io/tatami/structtatami_1_1ConvertToFragmentedSparseOptions.html',1,'tatami']]],
-  ['countcompressedsparsenonzerosoptions_11',['CountCompressedSparseNonZerosOptions',['https://tatami-inc.github.io/tatami/structtatami_1_1CountCompressedSparseNonZerosOptions.html',1,'tatami']]]
+  ['converttofragmentedsparseoptions_10',['ConvertToFragmentedSparseOptions',['https://tatami-inc.github.io/tatami/structtatami_1_1ConvertToFragmentedSparseOptions.html',1,'tatami']]]
 ];

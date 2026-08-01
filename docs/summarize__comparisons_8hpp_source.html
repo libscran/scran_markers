@@ -111,7 +111,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;optional&gt;</span></div>
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="preprocessor">#include &lt;cassert&gt;</span></div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &quot;tatami_stats/tatami_stats.hpp&quot;</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#include &quot;<a class="codeRef" href="https://tatami-inc.github.io/tatami/tatami_8hpp.html">tatami/tatami.hpp</a>&quot;</span></div>
 <div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="preprocessor">#include &quot;sanisizer/sanisizer.hpp&quot;</span></div>
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &quot;<a class="codeRef" href="https://libscran.github.io/scran_blocks/scran__blocks_8hpp.html">scran_blocks/scran_blocks.hpp</a>&quot;</span></div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#include &quot;quickstats/quickstats.hpp&quot;</span></div>
@@ -179,7 +179,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>}</div>
 <div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span> </div>
 <div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span><span class="keyword">template</span>&lt;<span class="keyword">typename</span> Stat_&gt;</div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span><span class="keyword">using </span>MaybeMultipleQuantiles = std::optional&lt;quickstats::MultipleQuantilesVariableNumber&lt;Stat_, std::size_t, const std::vector&lt;double&gt;*&gt; &gt;;</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span><span class="keyword">using </span>MaybeMultipleQuantiles = std::optional&lt;quickstats::MultipleQuantilesVariableNumber&lt;Stat_, const std::vector&lt;double&gt;*&gt; &gt;;</div>
 <div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span> </div>
 <div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span><span class="keyword">template</span>&lt;<span class="keyword">typename</span> Stat_&gt;</div>
 <div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>MaybeMultipleQuantiles&lt;Stat_&gt; setup_multiple_quantiles(<span class="keyword">const</span> std::optional&lt;std::vector&lt;double&gt; &gt;&amp; requested, <span class="keyword">const</span> std::size_t ngroups) {</div>
@@ -243,7 +243,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>        }</div>
 <div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>        <span class="comment">// This following calculations mutate the buffer, so we put this last to avoid surprises.</span></div>
 <div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>        <span class="keywordflow">if</span> (output.median) {</div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>            output.median[gene] = tatami_stats::medians::direct(ebegin, ncomps, <span class="comment">/* skip_nan = */</span> <span class="keyword">false</span>); </div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>            output.median[gene] = quickstats::median(ncomps, ebegin);</div>
 <div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        }</div>
 <div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>        <span class="keywordflow">if</span> (output.quantiles.has_value()) {</div>
 <div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>            (*quantile_calculators)(</div>
@@ -485,7 +485,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00467" name="l00467"></a><span class="lineno">  467</span>}</div>
 <div class="line"><a id="l00468" name="l00468"></a><span class="lineno">  468</span> </div>
 <div class="line"><a id="l00469" name="l00469"></a><span class="lineno">  469</span><span class="preprocessor">#endif</span></div>
-<div class="ttc" id="anamespacescran__markers_html"><div class="ttname"><a href="namespacescran__markers.html">scran_markers</a></div><div class="ttdoc">Marker detection for single-cell data.</div><div class="ttdef"><b>Definition</b> score_markers_pairwise.hpp:27</div></div>
+<div class="ttc" id="anamespacescran__markers_html"><div class="ttname"><a href="namespacescran__markers.html">scran_markers</a></div><div class="ttdoc">Marker detection for single-cell data.</div><div class="ttdef"><b>Definition</b> score_markers_pairwise.hpp:26</div></div>
 <div class="ttc" id="anamespacetatami_html_a9c3979c60e3d7e066be533f7ee3a2f97"><div class="ttname"><a href="https://tatami-inc.github.io/tatami/namespacetatami.html#a9c3979c60e3d7e066be533f7ee3a2f97">tatami::parallelize</a></div><div class="ttdeci">int parallelize(Function_ fun, const Index_ tasks, const int workers)</div></div>
 <div class="ttc" id="ascran__blocks_8hpp_html"><div class="ttname"><a href="https://libscran.github.io/scran_blocks/scran__blocks_8hpp.html">scran_blocks.hpp</a></div></div>
 <div class="ttc" id="astructscran__markers_1_1SummaryBuffers_html"><div class="ttname"><a href="structscran__markers_1_1SummaryBuffers.html">scran_markers::SummaryBuffers</a></div><div class="ttdoc">Pointers to arrays to hold the summary statistics.</div><div class="ttdef"><b>Definition</b> summarize_comparisons.hpp:33</div></div>
@@ -502,6 +502,7 @@ $(function(){ initResizable(false); });
 <div class="ttc" id="astructscran__markers_1_1SummaryResults_html_ab6661dc9ff5feafdfd4410493fd1d4e6"><div class="ttname"><a href="structscran__markers_1_1SummaryResults.html#ab6661dc9ff5feafdfd4410493fd1d4e6">scran_markers::SummaryResults::min</a></div><div class="ttdeci">std::vector&lt; Stat_ &gt; min</div><div class="ttdef"><b>Definition</b> summarize_comparisons.hpp:97</div></div>
 <div class="ttc" id="astructscran__markers_1_1SummaryResults_html_ab7ba8d989f18a8cc939f5c9435876800"><div class="ttname"><a href="structscran__markers_1_1SummaryResults.html#ab7ba8d989f18a8cc939f5c9435876800">scran_markers::SummaryResults::min_rank</a></div><div class="ttdeci">std::vector&lt; Rank_ &gt; min_rank</div><div class="ttdef"><b>Definition</b> summarize_comparisons.hpp:129</div></div>
 <div class="ttc" id="astructscran__markers_1_1SummaryResults_html_aca9447a330e31fb89a04c00843a65a76"><div class="ttname"><a href="structscran__markers_1_1SummaryResults.html#aca9447a330e31fb89a04c00843a65a76">scran_markers::SummaryResults::max</a></div><div class="ttdeci">std::vector&lt; Stat_ &gt; max</div><div class="ttdef"><b>Definition</b> summarize_comparisons.hpp:115</div></div>
+<div class="ttc" id="atatami_8hpp_html"><div class="ttname"><a href="https://tatami-inc.github.io/tatami/tatami_8hpp.html">tatami.hpp</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
