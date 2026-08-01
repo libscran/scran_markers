@@ -9,7 +9,7 @@
 #include <optional>
 #include <cassert>
 
-#include "tatami_stats/tatami_stats.hpp"
+#include "tatami/tatami.hpp"
 #include "sanisizer/sanisizer.hpp"
 #include "scran_blocks/scran_blocks.hpp"
 #include "quickstats/quickstats.hpp"
@@ -157,7 +157,7 @@ inline void validate_quantiles(const std::optional<std::vector<double> >& probs)
 }
 
 template<typename Stat_>
-using MaybeMultipleQuantiles = std::optional<quickstats::MultipleQuantilesVariableNumber<Stat_, std::size_t, const std::vector<double>*> >;
+using MaybeMultipleQuantiles = std::optional<quickstats::MultipleQuantilesVariableNumber<Stat_, const std::vector<double>*> >;
 
 template<typename Stat_>
 MaybeMultipleQuantiles<Stat_> setup_multiple_quantiles(const std::optional<std::vector<double> >& requested, const std::size_t ngroups) {
@@ -221,7 +221,7 @@ void summarize_comparisons(
         }
         // This following calculations mutate the buffer, so we put this last to avoid surprises.
         if (output.median) {
-            output.median[gene] = tatami_stats::medians::direct(ebegin, ncomps, /* skip_nan = */ false); 
+            output.median[gene] = quickstats::median(ncomps, ebegin);
         }
         if (output.quantiles.has_value()) {
             (*quantile_calculators)(

@@ -71,7 +71,7 @@ protected:
 
     static auto simple_reference(const tatami::Matrix<double, int>& mat, const int* group, double threshold) {
         size_t ngenes = mat.nrow();
-        auto group_sizes = tatami_stats::tabulate_groups(group, mat.ncol());
+        auto group_sizes = scran_markers::tabulate_groups(group, mat.ncol());
         size_t ngroups = group_sizes.size();
 
         scran_markers::ScoreMarkersPairwiseResults<double> output;
@@ -79,20 +79,18 @@ protected:
         output.delta_mean = output.cohens_d;
         output.delta_detected = output.cohens_d;
 
-        output.mean = tatami_stats::grouped_sums::by_row(&mat, group, tatami_stats::grouped_sums::Options());
-        auto all_variances = tatami_stats::grouped_variances::by_row(&mat, group, tatami_stats::grouped_variances::Options());
+        auto var_out = tatami_stats::group_variance(true, mat, group, ngroups, {});
+        output.mean = var_out.mean;
+        const auto& all_variances = var_out.variance;
 
         auto nonzero = tatami::DelayedUnaryIsometricOperation<double, double, int>(
             tatami::wrap_shared_ptr(&mat), 
             std::make_shared<tatami::DelayedUnaryIsometricCompareScalarHelper<tatami::CompareOperation::NOT_EQUAL, double, double, int, int> >(0)
         );
-        output.detected = tatami_stats::grouped_sums::by_row(&nonzero, group, tatami_stats::grouped_sums::Options());
+        output.detected = tatami_stats::group_sum(true, nonzero, group, ngroups, {});
 
         for (size_t g = 0; g < ngroups; ++g) {
             double current = group_sizes[g];
-            for (auto& r : output.mean[g]) {
-                r /= current;
-            }
             for (auto& r : output.detected[g]) {
                 r /= current;
             }
@@ -257,8 +255,8 @@ private:
 protected:
     static auto blocked_reference_mean(const tatami::Matrix<double, int>& mat, const int* group, const int* blocks, const scran_markers::ScoreMarkersPairwiseOptions& opt) {
         size_t ngenes = mat.nrow();
-        size_t ngroups = tatami_stats::total_groups(group, mat.ncol());
-        int nblocks = tatami_stats::total_groups(blocks, mat.ncol());
+        size_t ngroups = scran_markers::total_groups(group, mat.ncol());
+        int nblocks = scran_markers::total_groups(blocks, mat.ncol());
         auto output = allocate_output(ngenes, ngroups, opt.compute_auc);
 
         std::vector<double> total_group_weights(ngroups);
@@ -277,7 +275,7 @@ protected:
 
             auto sub = tatami::make_DelayedSubset(dense_row, std::move(subset), false);
             auto res = scran_markers::score_markers_pairwise(*sub, subgroups.data(), opt);
-            auto subcount = tatami_stats::tabulate_groups(subgroups.data(), subgroups.size());
+            auto subcount = scran_markers::tabulate_groups(subgroups.data(), subgroups.size());
             auto subweights = scran_blocks::compute_weights(subcount, opt.block_weight_policy, opt.variable_block_weight_parameters);
 
             for (size_t i = 0; i < ngenes; ++i) {
@@ -334,8 +332,8 @@ protected:
 
     static auto blocked_reference_quantile(const tatami::Matrix<double, int>& mat, const int* group, const int* blocks, const scran_markers::ScoreMarkersPairwiseOptions& opt) {
         size_t ngenes = mat.nrow();
-        size_t ngroups = tatami_stats::total_groups(group, mat.ncol());
-        int nblocks = tatami_stats::total_groups(blocks, mat.ncol());
+        size_t ngroups = scran_markers::total_groups(group, mat.ncol());
+        int nblocks = scran_markers::total_groups(blocks, mat.ncol());
         auto output = allocate_output(ngenes, ngroups, opt.compute_auc);
 
         // Indexing goes: group, gene, blocks.
@@ -403,7 +401,7 @@ protected:
             }
         }
 
-        quickstats::SingleQuantileFixedNumber<double, std::size_t> qcalc(nblocks, opt.block_quantile);
+        quickstats::SingleQuantileFixedNumber<double> qcalc(nblocks, opt.block_quantile);
         for (size_t i = 0; i < ngenes; ++i) {
             auto offset = i * ngroups * ngroups;
 

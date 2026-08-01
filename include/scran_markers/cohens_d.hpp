@@ -146,7 +146,7 @@ std::pair<Stat_, Stat_> compute_cohens_d_blockquantile(
     const Stat_ threshold,
     std::vector<Stat_>& buffer,
     std::vector<Stat_>& rev_buffer,
-    quickstats::SingleQuantileVariableNumber<Stat_, std::size_t>& qcalc
+    quickstats::SingleQuantileVariableNumber<Stat_>& qcalc
 ) {
     buffer.clear();
     rev_buffer.clear();
@@ -197,7 +197,7 @@ void compute_pairwise_cohens_d_blockquantile(
     const Stat_ threshold,
     std::vector<Stat_>& buffer,
     std::vector<Stat_>& rev_buffer,
-    quickstats::SingleQuantileVariableNumber<Stat_, std::size_t>& qcalc,
+    quickstats::SingleQuantileVariableNumber<Stat_>& qcalc,
     Stat_* const output
 ) {
     for (I<decltype(ngroups)> g1 = 0; g1 < ngroups; ++g1) {

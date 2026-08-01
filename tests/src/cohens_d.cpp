@@ -50,7 +50,7 @@ TEST(CohensD, Unblocked) {
 #endif
         );
         std::vector<double> buffer, rev_buffer;
-        quickstats::SingleQuantileVariableNumber<double, std::size_t> qcalc(1, 0.5);
+        quickstats::SingleQuantileVariableNumber<double> qcalc(1, 0.5);
         scran_markers::internal::compute_pairwise_cohens_d_blockquantile(means.data(), variances.data(), ngroups, 1, 0.0, buffer, rev_buffer, qcalc, q_output.data());
         scran_tests::compare_almost_equal_containers(output, q_output, {});
     }
@@ -86,7 +86,7 @@ TEST(CohensD, Thresholded) {
 #endif
         );
         std::vector<double> buffer, rev_buffer;
-        quickstats::SingleQuantileVariableNumber<double, std::size_t> qcalc(1, 0.5);
+        quickstats::SingleQuantileVariableNumber<double> qcalc(1, 0.5);
         scran_markers::internal::compute_pairwise_cohens_d_blockquantile(means.data(), variances.data(), ngroups, 1, 1.0, buffer, rev_buffer, qcalc, q_output.data());
         scran_tests::compare_almost_equal_containers(output, q_output, {});
     }
@@ -138,7 +138,7 @@ TEST(CohensD, MissingValues) {
 #endif
         );
         std::vector<double> buffer, rev_buffer;
-        quickstats::SingleQuantileVariableNumber<double, std::size_t> qcalc(1, 0.5);
+        quickstats::SingleQuantileVariableNumber<double> qcalc(1, 0.5);
         scran_markers::internal::compute_pairwise_cohens_d_blockquantile(means.data(), variances.data(), ngroups, 1, 0.0, buffer, rev_buffer, qcalc, q_output.data());
         scran_tests::compare_almost_equal_containers(output, q_output, {});
     }
@@ -184,7 +184,7 @@ TEST(CohensD, Blocked) {
 #endif
         );
         std::vector<double> buffer, rev_buffer;
-        quickstats::SingleQuantileVariableNumber<double, std::size_t> qcalc(nblocks, 0.5);
+        quickstats::SingleQuantileVariableNumber<double> qcalc(nblocks, 0.5);
         scran_markers::internal::compute_pairwise_cohens_d_blockquantile(means.data(), variances.data(), ngroups, nblocks, 0.0, buffer, rev_buffer, qcalc, q_output.data());
 
         for (int g1 = 0; g1 < ngroups; ++g1) {
@@ -238,7 +238,7 @@ TEST(CohensD, BlockedMissing) {
 #endif
         );
         std::vector<double> buffer, rev_buffer;
-        quickstats::SingleQuantileVariableNumber<double, std::size_t> qcalc(nblocks, 0.5);
+        quickstats::SingleQuantileVariableNumber<double> qcalc(nblocks, 0.5);
         scran_markers::internal::compute_pairwise_cohens_d_blockquantile(means.data(), variances.data(), ngroups, nblocks, 0.0, buffer, rev_buffer, qcalc, q_output.data());
         EXPECT_EQ(output, q_output);
     }
@@ -287,7 +287,7 @@ TEST(CohensD, MeanOnly) {
 #endif
         );
         std::vector<double> buffer, rev_buffer;
-        quickstats::SingleQuantileVariableNumber<double, std::size_t> qcalc(1, 0.5);
+        quickstats::SingleQuantileVariableNumber<double> qcalc(1, 0.5);
         scran_markers::internal::compute_pairwise_cohens_d_blockquantile(means.data(), variances.data(), ngroups, 1, 0.0, buffer, rev_buffer, qcalc, q_output.data());
         scran_tests::compare_almost_equal_containers(output, q_output, {});
     }

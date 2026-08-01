@@ -485,7 +485,7 @@ void process_simple_summary_effects(
         auto summary_qcalcs = setup_multiple_quantiles<Stat_>(summary_quantiles, ngroups);
 
         std::optional<std::vector<Stat_> > qbuffer, qrevbuffer;
-        std::optional<quickstats::SingleQuantileVariableNumber<Stat_, std::size_t> > qcalc;
+        std::optional<quickstats::SingleQuantileVariableNumber<Stat_> > qcalc;
         if (!average_info.use_mean()) {
             qbuffer.emplace();
             qrevbuffer.emplace();
@@ -871,7 +871,7 @@ void score_markers_summary(
     const ScoreMarkersSummaryBuffers<Stat_, Rank_>& output
 ) {
     const auto NC = matrix.ncol();
-    const auto group_sizes = tatami_stats::tabulate_groups(group, NC); 
+    const auto group_sizes = tabulate_groups(group, NC); 
     const auto ngroups = sanisizer::cast<std::size_t>(group_sizes.size());
 
     internal::score_markers_summary<true>(
@@ -926,7 +926,7 @@ void score_markers_summary_blocked(
 {
     const auto NC = matrix.ncol();
     const auto ngroups = output.mean.size();
-    const auto nblocks = tatami_stats::total_groups(block, NC); 
+    const auto nblocks = total_groups(block, NC); 
 
     const auto combinations = internal::create_combinations(ngroups, group, nblocks, block, NC);
     const auto combo_sizes = internal::tabulate_combinations<Index_>(ngroups, nblocks, combinations);
@@ -970,7 +970,7 @@ ScoreMarkersSummaryResults<Stat_, Rank_> score_markers_summary(
     const Group_* const group,
     const ScoreMarkersSummaryOptions& options)
 {
-    const auto ngroups = tatami_stats::total_groups(group, matrix.ncol());
+    const auto ngroups = total_groups(group, matrix.ncol());
     ScoreMarkersSummaryResults<Stat_, Rank_> output;
     const auto buffers = internal::preallocate_summary_results(matrix.nrow(), ngroups, output, options);
     score_markers_summary(matrix, group, options, buffers);
@@ -1004,7 +1004,7 @@ ScoreMarkersSummaryResults<Stat_, Rank_> score_markers_summary_blocked(
     const Block_* const block,
     const ScoreMarkersSummaryOptions& options)
 {
-    const auto ngroups = tatami_stats::total_groups(group, matrix.ncol());
+    const auto ngroups = total_groups(group, matrix.ncol());
     ScoreMarkersSummaryResults<Stat_, Rank_> output;
     const auto buffers = internal::preallocate_summary_results(matrix.nrow(), ngroups, output, options);
     score_markers_summary_blocked(matrix, group, block, options, buffers);

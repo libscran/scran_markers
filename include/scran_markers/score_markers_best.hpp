@@ -7,7 +7,6 @@
 
 #include "scran_blocks/scran_blocks.hpp"
 #include "tatami/tatami.hpp"
-#include "tatami_stats/tatami_stats.hpp"
 #include "sanisizer/sanisizer.hpp"
 #include "topicks/topicks.hpp"
 #include "quickstats/quickstats.hpp"
@@ -469,7 +468,7 @@ void find_best_simple_best_effects(
         }
 
         std::optional<std::vector<Stat_> > qbuffer, qrevbuffer;
-        std::optional<quickstats::SingleQuantileVariableNumber<Stat_, std::size_t> > qcalc;
+        std::optional<quickstats::SingleQuantileVariableNumber<Stat_> > qcalc;
         if (!average_info.use_mean()) {
             qbuffer.emplace();
             qrevbuffer.emplace();
@@ -743,7 +742,7 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best(
     const ScoreMarkersBestOptions& options
 ) {
     const Index_ NC = matrix.ncol();
-    const auto group_sizes = tatami_stats::tabulate_groups(group, NC); 
+    const auto group_sizes = tabulate_groups(group, NC); 
     const auto ngroups = sanisizer::cast<std::size_t>(group_sizes.size());
 
     return internal::score_markers_best<true, Stat_>(
@@ -793,8 +792,8 @@ ScoreMarkersBestResults<Stat_, Index_> score_markers_best_blocked(
     const ScoreMarkersBestOptions& options
 ) {
     const Index_ NC = matrix.ncol();
-    const auto ngroups = tatami_stats::total_groups(group, NC);
-    const auto nblocks = tatami_stats::total_groups(block, NC); 
+    const auto ngroups = total_groups(group, NC);
+    const auto nblocks = total_groups(block, NC); 
 
     const auto combinations = internal::create_combinations(ngroups, group, nblocks, block, NC);
     const auto combo_sizes = internal::tabulate_combinations<Index_>(ngroups, nblocks, combinations);

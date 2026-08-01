@@ -6,7 +6,14 @@ FetchContent_Declare(
   GIT_TAG master
 )
 
+FetchContent_Declare(
+  tatami_stats 
+  GIT_REPOSITORY https://github.com/tatami-inc/tatami_stats
+  GIT_TAG master
+)
+
 FetchContent_MakeAvailable(scran_tests)
+FetchContent_MakeAvailable(tatami_stats)
 
 include(GoogleTest)
 
@@ -21,6 +28,7 @@ macro(decorate_test target)
         ${target}
         scran_markers
         scran_tests
+        tatami::tatami_stats
     )
 
     target_compile_options(${target} PRIVATE -Wall -Werror -Wpedantic -Wextra)

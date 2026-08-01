@@ -7,7 +7,6 @@
 
 #include "scran_blocks/scran_blocks.hpp"
 #include "tatami/tatami.hpp"
-#include "tatami_stats/tatami_stats.hpp"
 #include "sanisizer/sanisizer.hpp"
 #include "quickstats/quickstats.hpp"
 
@@ -288,7 +287,7 @@ void process_simple_pairwise_effects(
 
     tatami::parallelize([&](const int, const Index_ start, const Index_ length) -> void {
         std::optional<std::vector<Stat_> > qbuffer, qrevbuffer;
-        std::optional<quickstats::SingleQuantileVariableNumber<Stat_, std::size_t> > qcalc;
+        std::optional<quickstats::SingleQuantileVariableNumber<Stat_> > qcalc;
         if (!average_info.use_mean()) {
             qbuffer.emplace();
             qrevbuffer.emplace();
@@ -597,7 +596,7 @@ void score_markers_pairwise(
     const ScoreMarkersPairwiseBuffers<Stat_>& output
 ) {
     const Index_ NC = matrix.ncol();
-    const auto group_sizes = tatami_stats::tabulate_groups(group, NC); 
+    const auto group_sizes = tabulate_groups(group, NC); 
     const auto ngroups = sanisizer::cast<std::size_t>(group_sizes.size());
 
     internal::score_markers_pairwise<true>(
@@ -663,7 +662,7 @@ void score_markers_pairwise_blocked(
 ) {
     const Index_ NC = matrix.ncol();
     const auto ngroups = output.mean.size();
-    const auto nblocks = tatami_stats::total_groups(block, NC); 
+    const auto nblocks = total_groups(block, NC); 
 
     const auto combinations = internal::create_combinations(ngroups, group, nblocks, block, NC);
     const auto combo_sizes = internal::tabulate_combinations<Index_>(ngroups, nblocks, combinations);
@@ -701,7 +700,7 @@ void score_markers_pairwise_blocked(
  */
 template<typename Stat_ = double, typename Value_, typename Index_, typename Group_>
 ScoreMarkersPairwiseResults<Stat_> score_markers_pairwise(const tatami::Matrix<Value_, Index_>& matrix, const Group_* const group, const ScoreMarkersPairwiseOptions& options) {
-    const auto ngroups = tatami_stats::total_groups(group, matrix.ncol());
+    const auto ngroups = total_groups(group, matrix.ncol());
     ScoreMarkersPairwiseResults<Stat_> res;
     auto buffers = internal::preallocate_pairwise_results(matrix.nrow(), ngroups, res, options);
     score_markers_pairwise(matrix, group, options, buffers);
@@ -734,7 +733,7 @@ ScoreMarkersPairwiseResults<Stat_> score_markers_pairwise_blocked(
     const Block_* const block,
     const ScoreMarkersPairwiseOptions& options)
 {
-    const auto ngroups = tatami_stats::total_groups(group, matrix.ncol());
+    const auto ngroups = total_groups(group, matrix.ncol());
     ScoreMarkersPairwiseResults<Stat_> res;
     const auto buffers = internal::preallocate_pairwise_results(matrix.nrow(), ngroups, res, options);
     score_markers_pairwise_blocked(matrix, group, block, options, buffers);

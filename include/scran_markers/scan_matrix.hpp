@@ -7,7 +7,7 @@
 #include <cstddef>
 
 #include "tatami/tatami.hpp"
-#include "tatami_stats/tatami_stats.hpp"
+#include "quickstats/quickstats.hpp"
 #include "sanisizer/sanisizer.hpp"
 
 #include "cohens_d.hpp"
@@ -34,7 +34,7 @@ struct AucScanWorkspace {
 
     // Only when use_mean = false.
     std::optional<std::vector<std::vector<std::vector<Stat_> > > > pairwise_buffers;
-    std::optional<quickstats::SingleQuantileVariableNumber<Stat_, std::size_t> > calculator;
+    std::optional<quickstats::SingleQuantileVariableNumber<Stat_> > calculator;
 };
 
 template<typename Value_, typename Group_, typename Stat_, typename Index_>
@@ -268,16 +268,30 @@ int scan_matrix_by_row_custom_auc(
         assert(nblocks == 1);
     }
 
+    const bool do_means = !combo_means.empty();
+    const bool do_detected = !combo_detected.empty();
+    const bool do_vars = !combo_vars.empty();
+
+    // Note: do_vars = true implies do_means = true,
+    // as there is no situation where we need the variances but not the means.
+    if (do_vars) {
+        assert(do_means);
+    }
+
     auto num_used = tatami::parallelize([&](const int t, const Index_ start, const Index_ length) -> void {
         auto vbuffer = tatami::create_container_of_Index_size<std::vector<Value_> >(NC);
-        const bool do_means = !combo_means.empty();
-        const bool do_detected = !combo_detected.empty();
-        const bool do_vars = !combo_vars.empty();
 
-        // Note: do_vars = true implies do_means = true,
-        // as there is no situation where we need the variances but not the means.
+        // Creating buffers to store the intermediate statistics to avoid false sharing.
+        std::optional<std::vector<Stat_> > cur_means, cur_rss;
+        if (do_means) {
+            cur_means.emplace(tatami::cast_Index_to_container_size<std::vector<Stat_> >(ncombos));
+        }
         if (do_vars) {
-            assert(do_means);
+            cur_rss.emplace(tatami::cast_Index_to_container_size<std::vector<Stat_> >(ncombos));
+        }
+        std::optional<std::vector<Index_> > cur_detected;
+        if (do_detected) {
+            cur_detected.emplace(tatami::cast_Index_to_container_size<std::vector<Index_> >(ncombos));
         }
 
         // A vast array of AUC-related bits and pieces.
@@ -288,51 +302,71 @@ int scan_matrix_by_row_custom_auc(
             auc_res_work = auc_result_init(t);
         }
 
-        const auto divide = [&](Stat_* ptr) -> void {
-            for (I<decltype(ncombos)> co = 0; co < ncombos; ++co) {
-                ptr[co] /= combo_size[co];
-            }
-        };
-
         if (matrix.is_sparse()) {
             auto ibuffer = tatami::create_container_of_Index_size<std::vector<Index_> >(NC);
             auto ext = tatami::consecutive_extractor<true>(matrix, true, start, length);
-            auto tmp_index = sanisizer::create<std::vector<Index_> >(ncombos);
+
+            std::optional<std::vector<Index_> > cur_non_zeros;
+            if (do_vars) {
+                cur_non_zeros.emplace(tatami::cast_Index_to_container_size<std::vector<Index_> >(ncombos));
+            }
 
             for (Index_ r = start, end = start + length; r < end; ++r) {
                 const auto offset = sanisizer::product_unsafe<std::size_t>(r, ncombos);
                 const auto range = ext->fetch(vbuffer.data(), ibuffer.data());
 
-                if (do_vars) {
-                    const auto var_ptr = combo_vars.data() + offset;
-                    const auto mean_ptr = combo_means.data() + offset;
-                    tatami_stats::grouped_variances::direct(
-                        range.value,
-                        range.index,
-                        range.number,
-                        grouping,
-                        ncombos,
-                        combo_size.data(),
-                        mean_ptr,
-                        var_ptr,
-                        tmp_index.data(),
-                        /* skip_nan = */ false,
-                        /* invalid_count = */ static_cast<Index_*>(NULL)
-                    );
-                } else if (do_means) {
-                    const auto mean_ptr = combo_means.data() + offset;
+                if (do_means) {
                     for (Index_ i = 0; i < range.number; ++i) {
-                        mean_ptr[grouping[range.index[i]]] += range.value[i];
+                        const auto g = grouping[range.index[i]];
+                        (*cur_means)[g] += range.value[i];
                     }
-                    divide(mean_ptr);
+                    for (std::size_t g = 0; g < ncombos; ++g) {
+                        if (combo_size[g]) {
+                            (*cur_means)[g] /= combo_size[g];
+                        } else {
+                            (*cur_means)[g] = std::numeric_limits<Stat_>::quiet_NaN();
+                        }
+                    }
+
+                    if (do_vars) {
+                        for (Index_ i = 0; i < range.number; ++i) {
+                            const auto g = grouping[range.index[i]];
+                            const auto delta = range.value[i] - (*cur_means)[g];
+                            (*cur_rss)[g] += delta * delta;
+                            ++(*cur_non_zeros)[g];
+                        }
+
+                        const auto var_ptr = combo_vars.data() + offset;
+                        for (std::size_t g = 0; g < ncombos; ++g) {
+                            if (combo_size[g] >= 2) {
+                                const Stat_ my_rss = (*cur_rss)[g] + (*cur_means)[g] * (*cur_means)[g] * (combo_size[g] - (*cur_non_zeros)[g]);
+                                var_ptr[g] = my_rss / (combo_size[g] - 1);
+                            } else {
+                                var_ptr[g] = std::numeric_limits<Stat_>::quiet_NaN();
+                            }
+                        }
+
+                        std::fill(cur_rss->begin(), cur_rss->end(), 0);
+                        std::fill(cur_non_zeros->begin(), cur_non_zeros->end(), 0);
+                    }
+
+                    std::copy(cur_means->begin(), cur_means->end(), combo_means.data() + offset);
+                    std::fill(cur_means->begin(), cur_means->end(), 0);
                 }
 
                 if (do_detected) {
-                    const auto det_ptr = combo_detected.data() + offset;
                     for (Index_ i = 0; i < range.number; ++i) {
-                        det_ptr[grouping[range.index[i]]] += (range.value[i] != 0);
+                        (*cur_detected)[grouping[range.index[i]]] += (range.value[i] != 0);
                     }
-                    divide(det_ptr);
+                    const auto det_ptr = combo_detected.data() + offset;
+                    for (std::size_t g = 0; g < ncombos; ++g) {
+                        if (combo_size[g]) {
+                            det_ptr[g] = static_cast<Stat_>((*cur_detected)[g]) / combo_size[g];
+                        } else {
+                            det_ptr[g] = std::numeric_limits<Stat_>::quiet_NaN();
+                        }
+                    }
+                    std::fill(cur_detected->begin(), cur_detected->end(), 0);
                 }
 
                 if (do_auc) {
@@ -372,34 +406,54 @@ int scan_matrix_by_row_custom_auc(
                 const auto ptr = ext->fetch(vbuffer.data());
                 const auto offset = sanisizer::product_unsafe<std::size_t>(r, ncombos);
 
-                if (do_vars) {
-                    const auto mean_ptr = combo_means.data() + offset;
-                    const auto var_ptr = combo_vars.data() + offset;
-                    tatami_stats::grouped_variances::direct(
-                        ptr,
-                        NC,
-                        grouping,
-                        ncombos,
-                        combo_size.data(),
-                        mean_ptr,
-                        var_ptr,
-                        /* skip_nan = */ false,
-                        /* invalid_count = */ static_cast<Index_*>(NULL)
-                    );
-                } else if (do_means) {
-                    const auto mean_ptr = combo_means.data() + offset;
-                    for (Index_ c = 0; c < NC; ++c) {
-                        mean_ptr[grouping[c]] += ptr[c];
+                if (do_means) {
+                    for (Index_ c = 0; c < NC ; ++c) {
+                        (*cur_means)[grouping[c]] += ptr[c];
                     }
-                    divide(mean_ptr);
+                    for (std::size_t g = 0; g < ncombos; ++g) {
+                        if (combo_size[g]) {
+                            (*cur_means)[g] /= combo_size[g];
+                        } else {
+                            (*cur_means)[g] = std::numeric_limits<Stat_>::quiet_NaN();
+                        }
+                    }
+
+                    if (do_vars) {
+                        for (Index_ c = 0; c < NC ; ++c) {
+                            const auto g = grouping[c];
+                            const auto delta = ptr[c] - (*cur_means)[g];
+                            (*cur_rss)[g] += delta * delta;
+                        }
+
+                        const auto var_ptr = combo_vars.data() + offset;
+                        for (std::size_t g = 0; g < ncombos; ++g) {
+                            if (combo_size[g] >= 2) {
+                                var_ptr[g] = (*cur_rss)[g] / (combo_size[g] - 1);
+                            } else {
+                                var_ptr[g] = std::numeric_limits<Stat_>::quiet_NaN();
+                            }
+                        }
+
+                        std::fill(cur_rss->begin(), cur_rss->end(), 0);
+                    }
+
+                    std::copy(cur_means->begin(), cur_means->end(), combo_means.data() + offset);
+                    std::fill(cur_means->begin(), cur_means->end(), 0);
                 }
 
                 if (do_detected) {
-                    const auto det_ptr = combo_detected.data() + offset;
                     for (Index_ c = 0; c < NC; ++c) {
-                        det_ptr[grouping[c]] += (ptr[c] != 0);
+                        (*cur_detected)[grouping[c]] += (ptr[c] != 0);
                     }
-                    divide(det_ptr);
+                    const auto det_ptr = combo_detected.data() + offset;
+                    for (std::size_t g = 0; g < ncombos; ++g) {
+                        if (combo_size[g]) {
+                            det_ptr[g] = static_cast<Stat_>((*cur_detected)[g]) / combo_size[g];
+                        } else {
+                            det_ptr[g] = std::numeric_limits<Stat_>::quiet_NaN();
+                        }
+                    }
+                    std::fill(cur_detected->begin(), cur_detected->end(), 0);
                 }
 
                 if (do_auc) {
@@ -504,138 +558,283 @@ void scan_matrix_by_column(
     std::vector<Stat_>& combo_detected,
     const int num_threads
 ) {
-    const Index_ NC = matrix.ncol();
-    tatami::parallelize([&](const int, const Index_ start, const Index_ length) -> void {
-        auto vbuffer = tatami::create_container_of_Index_size<std::vector<Value_> >(length);
-        const bool do_means = !combo_means.empty();
-        const bool do_detected = !combo_detected.empty();
-        const bool do_vars = !combo_vars.empty();
+    const bool do_means = !combo_means.empty();
+    const bool do_detected = !combo_detected.empty();
+    const bool do_vars = !combo_vars.empty();
 
-        // Using local buffers to avoid problems with false sharing.
-        const auto len = tatami::cast_Index_to_container_size<std::vector<Stat_> >(length);
-        const auto allocate_tmp = [&](std::vector<std::vector<Stat_> >& tmp) -> void {
-            tmp.reserve(ncombos);
-            for (I<decltype(ncombos)> co = 0; co < ncombos; ++co) {
-                tmp.emplace_back(len);
-            }
-        };
+    // Note: do_vars = true implies do_means = true,
+    // as there is no situation where we need the variances but not the means.
+    if (do_vars) {
+        assert(do_means);
+    }
 
-        std::vector<std::vector<Stat_> > tmp_means, tmp_vars, tmp_dets;
-        if (do_vars) {
-            allocate_tmp(tmp_means);
-            allocate_tmp(tmp_vars);
-        } else if (do_means) {
-            allocate_tmp(tmp_means);
+    std::optional<std::vector<std::optional<std::vector<Stat_> > > > collected_means;
+    if (do_means) {
+        collected_means.emplace(sanisizer::cast<I<decltype(collected_means->size())> >(num_threads));
+    }
+
+    std::optional<std::vector<std::optional<std::vector<Stat_> > > > collected_rss;
+    std::optional<std::vector<std::optional<std::vector<Index_> > > > collected_counts;
+    if (do_vars) {
+        collected_rss.emplace(sanisizer::cast<I<decltype(collected_rss->size())> >(num_threads));
+        collected_counts.emplace(sanisizer::cast<I<decltype(collected_counts->size())> >(num_threads));
+    }
+
+    // Using Stat_ to hold the number of detected cells in each group, instead of Index_.
+    // This avoids another allocation to hold the proportions before transposition.
+    std::optional<std::vector<std::optional<std::vector<Stat_> > > > collected_detected;
+    if (do_detected) {
+        collected_detected.emplace(sanisizer::cast<I<decltype(collected_detected->size())> >(num_threads));
+    }
+
+    const Index_ NR = matrix.nrow();
+    const auto full_size = sanisizer::product_unsafe<std::size_t>(NR, ncombos);
+    const auto nused = tatami::parallelize([&](const int t, const Index_ start, const Index_ length) -> void {
+        auto vbuffer = tatami::create_container_of_Index_size<std::vector<Value_> >(NR);
+
+        std::optional<std::vector<Stat_> > tmp_means;
+        if (do_means) {
+            tmp_means.emplace(sanisizer::cast<I<decltype(tmp_means->size())> >(full_size));
         }
 
+        std::optional<std::vector<Stat_> > tmp_rss;
+        std::optional<std::vector<Index_> > tmp_counts;
+        if (do_vars) {
+            tmp_rss.emplace(sanisizer::cast<I<decltype(tmp_rss->size())> >(full_size));
+            tmp_counts.emplace(sanisizer::cast<I<decltype(tmp_counts->size())> >(ncombos));
+        }
+
+        std::optional<std::vector<Stat_> > tmp_detected;
         if (do_detected) {
-            allocate_tmp(tmp_dets);
+            tmp_detected.emplace(sanisizer::cast<I<decltype(tmp_detected->size())> >(full_size));
         }
 
         if (matrix.is_sparse()) {
-            auto ibuffer = tatami::create_container_of_Index_size<std::vector<Index_> >(length);
-            auto ext = tatami::consecutive_extractor<true>(matrix, false, static_cast<Index_>(0), NC, start, length);
+            auto ibuffer = tatami::create_container_of_Index_size<std::vector<Index_> >(NR);
+            auto ext = tatami::consecutive_extractor<true>(matrix, false, start, length);
 
-            std::vector<tatami_stats::variances::RunningSparse<Stat_, Value_, Index_> > runners;
+            std::optional<std::vector<Index_> > cur_non_zeros;
             if (do_vars) {
-                runners.reserve(ncombos);
-                for (I<decltype(ncombos)> co = 0; co < ncombos; ++co) {
-                    runners.emplace_back(length, tmp_means[co].data(), tmp_vars[co].data(), /* skip_nan = */ false, start);
-                }
+                cur_non_zeros.emplace(sanisizer::cast<I<decltype(cur_non_zeros->size())> >(full_size));
             }
 
-            for (Index_ c = 0; c < NC; ++c) {
+            for (Index_ c = 0; c < length; ++c) {
                 const auto range = ext->fetch(vbuffer.data(), ibuffer.data());
-                const auto co = combo[c];
+                const auto co = combo[start + c];
+                const auto offset = sanisizer::product_unsafe<std::size_t>(co, NR);
 
                 if (do_vars) {
-                    runners[co].add(range.value, range.index, range.number);
-                } else if (do_means) {
-                    auto& curmean = tmp_means[co];
+                    ++(*tmp_counts)[co];
                     for (Index_ i = 0; i < range.number; ++i) {
-                        curmean[range.index[i] - start] += range.value[i];
+                        const auto r = range.index[i];
+                        quickstats::update_rss((*tmp_means)[offset + r], (*tmp_rss)[offset + r], range.value[i], ++(*cur_non_zeros)[offset + r]);
+                    }
+                } else if (do_means) {
+                    for (Index_ i = 0; i < range.number; ++i) {
+                        (*tmp_means)[offset + range.index[i]] += range.value[i];
                     }
                 }
 
                 if (do_detected) {
-                    auto& curdet = tmp_dets[co];
                     for (Index_ i = 0; i < range.number; ++i) {
-                        curdet[range.index[i] - start] += (range.value[i] != 0);
+                        (*tmp_detected)[offset + range.index[i]] += (range.value[i] != 0);
                     }
                 }
             }
 
             if (do_vars) {
-                for (auto& run : runners) {
-                    run.finish();
+                for (std::size_t g = 0; g < ncombos; ++g) {
+                    const auto cursize = (*tmp_counts)[g];
+                    if (cursize == 0) {
+                        continue;
+                    }
+                    const auto offset = sanisizer::product_unsafe<std::size_t>(g, NR);
+                    for (Index_ r = 0; r < NR; ++r) {
+                        quickstats::update_rss_with_zeros_unsafe((*tmp_means)[offset + r], (*tmp_rss)[offset + r], cursize - (*cur_non_zeros)[offset + r], cursize);
+                    }
                 }
             }
 
         } else {
-            auto ext = tatami::consecutive_extractor<false>(matrix, false, static_cast<Index_>(0), NC, start, length);
+            auto ext = tatami::consecutive_extractor<false>(matrix, false, start, length);
 
-            std::vector<tatami_stats::variances::RunningDense<Stat_, Value_, Index_> > runners;
-            if (do_vars) {
-                runners.reserve(ncombos);
-                for (I<decltype(ncombos)> co = 0; co < ncombos; ++co) {
-                    runners.emplace_back(length, tmp_means[co].data(), tmp_vars[co].data(), /* skip_nan = */ false);
-                }
-            }
-
-            for (Index_ c = 0; c < NC; ++c) {
+            for (Index_ c = 0; c < length; ++c) {
                 const auto ptr = ext->fetch(vbuffer.data());
-                const auto co = combo[c];
+                const auto co = combo[start + c];
+                const auto offset = sanisizer::product_unsafe<std::size_t>(co, NR);
 
                 if (do_vars) {
-                    runners[co].add(ptr);
+                    ++(*tmp_counts)[co];
+                    for (Index_ r = 0; r < NR; ++r) {
+                        quickstats::update_rss((*tmp_means)[offset + r], (*tmp_rss)[offset + r], ptr[r], (*tmp_counts)[co]);
+                    }
                 } else if (do_means) {
-                    auto& curmean = tmp_means[co];
-                    for (Index_ r = 0; r < length; ++r) {
-                        curmean[r] += ptr[r];
+                    for (Index_ r = 0; r < NR; ++r) {
+                        (*tmp_means)[offset + r] += ptr[r];
                     }
                 }
 
                 if (do_detected) {
-                    auto& curdet = tmp_dets[co];
-                    for (Index_ r = 0; r < length; ++r) {
-                        curdet[r] += (ptr[r] != 0);
+                    for (Index_ r = 0; r < NR; ++r) {
+                        (*tmp_detected)[offset + r] += (ptr[r] != 0);
                     }
                 }
             }
+        }
 
-            if (do_vars) {
-                for (auto& run : runners) {
-                    run.finish();
+        if (do_vars) {
+            (*collected_rss)[t] = std::move(tmp_rss);
+            (*collected_counts)[t] = std::move(tmp_counts);
+        }
+        if (do_means) {
+            (*collected_means)[t] = std::move(tmp_means);
+        }
+        if (do_detected) {
+            (*collected_detected)[t] = std::move(tmp_detected);
+        }
+    }, matrix.ncol(), num_threads);
+
+    // Reducing the statistics from all threads.
+    if (do_vars) {
+        auto& first_mean = *(collected_means->front());
+        auto& first_rss = *(collected_rss->front());
+
+        if (nused > 1) {
+            // We need to allocate a separate vector for the global mean for each gene in each group,
+            // as we need to compare the global and per-thread means to recenter the RSS.
+            auto global_means = sanisizer::create<std::vector<Stat_> >(NR);
+            for (std::size_t g = 0; g < ncombos; ++g) {
+                const auto offset = sanisizer::product_unsafe<std::size_t>(g, NR);
+                if (combo_size[g] == 0) {
+                    std::fill_n(first_mean.begin() + offset, NR, std::numeric_limits<double>::quiet_NaN());
+                    std::fill_n(first_rss.begin() + offset, NR, std::numeric_limits<double>::quiet_NaN());
+                    continue;
+                }
+
+                bool mean_initialized = false;
+                for (int u = 0; u < nused; ++u) {
+                    const auto cur_count = (*((*collected_counts)[u]))[g];
+                    if (cur_count == 0) {
+                        continue;
+                    }
+                    const auto& src = *((*collected_means)[u]);
+                    const Stat_ ratio = static_cast<Stat_>(cur_count) / static_cast<Stat_>(combo_size[g]);
+                    if (!mean_initialized) { // Don't rely on u == 0 as this group might be empty in the first thread.
+                        for (Index_ r = 0; r < NR; ++r) {
+                            global_means[r] = ratio * src[offset + r];
+                        }
+                        mean_initialized = true;
+                    } else {
+                        for (Index_ r = 0; r < NR; ++r) {
+                            global_means[r] += ratio * src[offset + r];
+                        }
+                    }
+                }
+                assert(mean_initialized);
+
+                if (combo_size[g] == 1) {
+                    std::fill_n(first_rss.begin() + offset, NR, std::numeric_limits<double>::quiet_NaN());
+                    std::copy(global_means.begin(), global_means.end(), first_mean.begin() + offset);
+                    continue;
+                } 
+
+                bool var_initialized = false;
+                for (int u = 0; u < nused; ++u) {
+                    const auto cur_count = (*((*collected_counts)[u]))[g];
+                    if (cur_count == 0) {
+                        continue;
+                    }
+                    const auto& src_means = *((*collected_means)[u]);
+                    if (u == 0) { // Special case so that we can optimize for the source being the same as the destination.
+                        for (Index_ r = 0; r < NR; ++r) {
+                            first_rss[offset + r] = quickstats::recenter_rss_unsafe(cur_count, first_rss[offset + r], src_means[offset + r], global_means[r]);
+                        }
+                        var_initialized = true;
+                    } else {
+                        const auto& src_rss = *((*collected_rss)[u]);
+                        if (!var_initialized) { // Don't rely on u == 0 as this group might be empty in the first thread.
+                            for (Index_ r = 0; r < NR; ++r) {
+                                first_rss[offset + r] = quickstats::recenter_rss_unsafe(cur_count, src_rss[offset + r], src_means[offset + r], global_means[r]);
+                            }
+                            var_initialized = true;
+                        } else {
+                            for (Index_ r = 0; r < NR; ++r) {
+                                first_rss[offset + r] += quickstats::recenter_rss_unsafe(cur_count, src_rss[offset + r], src_means[offset + r], global_means[r]);
+                            }
+                        }
+                    }
+                }
+                assert(var_initialized);
+
+                for (Index_ r = 0; r < NR; ++r) {
+                    // We know that combo_size[g] > 1 at this point, so no need to add protection.
+                    first_rss[offset + r] /= combo_size[g] - 1;
+                }
+                std::copy(global_means.begin(), global_means.end(), first_mean.begin() + offset);
+            }
+
+        } else {
+            for (std::size_t g = 0; g < ncombos; ++g) {
+                const auto offset = sanisizer::product_unsafe<std::size_t>(g, NR);
+                if (combo_size[g] == 0) {
+                    std::fill_n(first_mean.begin() + offset, NR, std::numeric_limits<double>::quiet_NaN());
+                    std::fill_n(first_rss.begin() + offset, NR, std::numeric_limits<double>::quiet_NaN());
+                    continue;
+                } else if (combo_size[g] == 1) {
+                    std::fill_n(first_rss.begin() + offset, NR, std::numeric_limits<double>::quiet_NaN());
+                    continue;
+                } else {
+                    for (Index_ r = 0; r < NR; ++r) {
+                        first_rss[offset + r] /= combo_size[g] - 1;
+                    }
                 }
             }
         }
 
-        // Moving it all into the output buffers at the end.
-        for (Index_ r = 0; r < length; ++r) {
-            const auto offset = sanisizer::product_unsafe<std::size_t>(start + r, ncombos);
+        tatami::transpose(first_mean.data(), ncombos, NR, combo_means.data());
+        tatami::transpose(first_rss.data(), ncombos, NR, combo_vars.data());
 
-            if (do_vars) {
-                const auto mean_ptr = combo_means.data() + offset;
-                const auto var_ptr = combo_vars.data() + offset;
-                for (I<decltype(ncombos)> co = 0; co < ncombos; ++co) {
-                    mean_ptr[co] = tmp_means[co][r];
-                    var_ptr[co] = tmp_vars[co][r];
-                }
-            } else if (do_means) {
-                const auto mean_ptr = combo_means.data() + offset;
-                for (I<decltype(ncombos)> co = 0; co < ncombos; ++co) {
-                    mean_ptr[co] = tmp_means[co][r] / combo_size[co];
-                }
-            }
-
-            if (do_detected) {
-                const auto det_ptr = combo_detected.data() + offset;
-                for (I<decltype(ncombos)> co = 0; co < ncombos; ++co) {
-                    det_ptr[co] = tmp_dets[co][r] / combo_size[co];
-                }
+    } else if (do_means) {
+        auto& first = *(collected_means->front());
+        for (int u = 1; u < nused; ++u) {
+            const auto& src = *((*collected_means)[u]);
+            for (std::size_t f = 0; f < full_size; ++f) {
+                first[f] += src[f];
             }
         }
-    }, matrix.nrow(), num_threads);
+        for (std::size_t g = 0; g < ncombos; ++g) {
+            const auto offset = sanisizer::product_unsafe<std::size_t>(g, NR);
+            if (combo_size[g] == 0) {
+                std::fill_n(first.begin() + offset, NR, std::numeric_limits<double>::quiet_NaN());
+                continue;
+            }
+            for (Index_ r = 0; r < NR; ++r) {
+                first[offset + r] /= combo_size[g];
+            }
+        }
+        tatami::transpose(first.data(), ncombos, NR, combo_means.data());
+    }
+
+    if (do_detected) {
+        auto& first = *(collected_detected->front());
+        for (int u = 1; u < nused; ++u) {
+            const auto& src = *((*collected_detected)[u]);
+            for (std::size_t f = 0; f < full_size; ++f) {
+                first[f] += src[f];
+            }
+        }
+        for (std::size_t g = 0; g < ncombos; ++g) {
+            const auto offset = sanisizer::product_unsafe<std::size_t>(g, NR);
+            if (combo_size[g] == 0) {
+                std::fill_n(first.begin() + offset, NR, std::numeric_limits<double>::quiet_NaN());
+                continue;
+            }
+            for (Index_ r = 0; r < NR; ++r) {
+                first[offset + r] /= combo_size[g];
+            }
+        }
+        tatami::transpose(first.data(), ncombos, NR, combo_detected.data());
+    }
 }
 
 }

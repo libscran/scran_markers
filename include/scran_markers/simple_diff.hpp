@@ -72,7 +72,7 @@ std::pair<Stat_, Stat_> compute_simple_diff_blockquantile(
     const std::size_t ngroups,
     const std::size_t nblocks,
     std::vector<Stat_>& buffer,
-    quickstats::SingleQuantileVariableNumber<Stat_, std::size_t>& qcalc
+    quickstats::SingleQuantileVariableNumber<Stat_>& qcalc
 ) {
     buffer.clear();
     for (I<decltype(nblocks)> b = 0; b < nblocks; ++b) {
@@ -100,7 +100,7 @@ void compute_pairwise_simple_diff_blockquantile(
     const std::size_t ngroups,
     const std::size_t nblocks,
     std::vector<Stat_>& buffer,
-    quickstats::SingleQuantileVariableNumber<Stat_, std::size_t>& qcalc,
+    quickstats::SingleQuantileVariableNumber<Stat_>& qcalc,
     Stat_* const output
 ) {
     for (I<decltype(ngroups)> g1 = 0; g1 < ngroups; ++g1) {

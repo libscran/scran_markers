@@ -65,7 +65,7 @@ void average_group_stats_blockquantile(
     const std::size_t nblocks,
     const Stat_* const stats,
     std::vector<Stat_>& buffer,
-    quickstats::SingleQuantileVariableNumber<Stat_, std::size_t>& qcalc,
+    quickstats::SingleQuantileVariableNumber<Stat_>& qcalc,
     const std::vector<Stat_*>& out_stats 
 ) {
     for (I<decltype(ngroups)> g = 0; g < ngroups; ++g) {
