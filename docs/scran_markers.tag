@@ -796,8 +796,8 @@
       <type>void</type>
       <name>score_markers_pairwise</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>a6c63a08774d6f2105b68b656f8a3da94</anchor>
-      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const ScoreMarkersPairwiseOptions &amp;options, const ScoreMarkersPairwiseBuffers&lt; Stat_ &gt; &amp;output)</arglist>
+      <anchor>a14eb231ef9e7bd82b04655a6c698f8b2</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const ScoreMarkersPairwiseOptions &amp;options, const ScoreMarkersPairwiseBuffers&lt; Stat_ &gt; &amp;output)</arglist>
       <docanchor file="namespacescran__markers.html" title="Choice of effect size">effect-sizes</docanchor>
       <docanchor file="namespacescran__markers.html" title="With a minimum change threshold">threshold</docanchor>
       <docanchor file="namespacescran__markers.html" title="Other statistics">other</docanchor>
@@ -806,22 +806,22 @@
       <type>void</type>
       <name>score_markers_pairwise_blocked</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>a9c5a2571c6f34d150a9b155ebd396a25</anchor>
-      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, const ScoreMarkersPairwiseOptions &amp;options, const ScoreMarkersPairwiseBuffers&lt; Stat_ &gt; &amp;output)</arglist>
+      <anchor>a35f81b7d462275224cdf97bc07c358a4</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const Block_ *const block, const std::size_t num_blocks, const ScoreMarkersPairwiseOptions &amp;options, const ScoreMarkersPairwiseBuffers&lt; Stat_ &gt; &amp;output)</arglist>
     </member>
     <member kind="function">
       <type>ScoreMarkersPairwiseResults&lt; Stat_ &gt;</type>
       <name>score_markers_pairwise</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>aa0e6a1d4dc2f4bad9e80ebe68eb08ce1</anchor>
-      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const ScoreMarkersPairwiseOptions &amp;options)</arglist>
+      <anchor>aad6ae9f9d08c4dac3936248faafecbd4</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const ScoreMarkersPairwiseOptions &amp;options)</arglist>
     </member>
     <member kind="function">
       <type>ScoreMarkersPairwiseResults&lt; Stat_ &gt;</type>
       <name>score_markers_pairwise_blocked</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>ab07e111b7e98525a9230937bb5ff61f8</anchor>
-      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, const ScoreMarkersPairwiseOptions &amp;options)</arglist>
+      <anchor>ad35280c258a1ef57a7f564f2a635d184</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const Block_ *const block, const std::size_t num_blocks, const ScoreMarkersPairwiseOptions &amp;options)</arglist>
     </member>
     <member kind="function">
       <type>std::vector&lt; std::vector&lt; std::vector&lt; std::pair&lt; Index_, Stat_ &gt; &gt; &gt; &gt;</type>
@@ -834,57 +834,64 @@
       <type>ScoreMarkersBestResults&lt; Stat_, Index_ &gt;</type>
       <name>score_markers_best</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>aeede6a9c151da28f67c57355b96e8235</anchor>
-      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Index_ top, const ScoreMarkersBestOptions &amp;options)</arglist>
+      <anchor>a9fd5cd9e115515f49b151b9aa8a303db</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const Index_ top, const ScoreMarkersBestOptions &amp;options)</arglist>
     </member>
     <member kind="function">
       <type>ScoreMarkersBestResults&lt; Stat_, Index_ &gt;</type>
       <name>score_markers_best_blocked</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>aec34482b26e85ece8bd1b565181ee214</anchor>
-      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, const Index_ top, const ScoreMarkersBestOptions &amp;options)</arglist>
+      <anchor>a5e9fd5711d88b8ef9e8fe47ea77a6e12</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const Block_ *const block, const std::size_t num_blocks, const Index_ top, const ScoreMarkersBestOptions &amp;options)</arglist>
     </member>
     <member kind="function">
       <type>void</type>
       <name>summarize_effects</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>aefddf4357cc7de227c5242b3861d5a27</anchor>
-      <arglist>(const Gene_ ngenes, const std::size_t ngroups, const Stat_ *const effects, const std::vector&lt; SummaryBuffers&lt; Stat_, Rank_ &gt; &gt; &amp;summaries, const SummarizeEffectsOptions &amp;options)</arglist>
+      <anchor>ae581fdc934b2c14eb04c4b4f68dfc898</anchor>
+      <arglist>(const Gene_ num_genes, const std::size_t num_groups, const Stat_ *const effects, const std::vector&lt; SummaryBuffers&lt; Stat_, Rank_ &gt; &gt; &amp;summaries, const SummarizeEffectsOptions &amp;options)</arglist>
     </member>
     <member kind="function">
       <type>std::vector&lt; SummaryResults&lt; Stat_, Rank_ &gt; &gt;</type>
       <name>summarize_effects</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>a5ae49bdf2cb9840a8dddf919de36107f</anchor>
-      <arglist>(const Gene_ ngenes, const std::size_t ngroups, const Stat_ *const effects, const SummarizeEffectsOptions &amp;options)</arglist>
+      <anchor>aa45b1e6b3dd8c1cd1bdcdbdb32088ce5</anchor>
+      <arglist>(const Gene_ num_genes, const std::size_t num_groups, const Stat_ *const effects, const SummarizeEffectsOptions &amp;options)</arglist>
     </member>
     <member kind="function">
       <type>void</type>
       <name>score_markers_summary</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>a92c28687f963fbe5535e3fc0c4a60a80</anchor>
-      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const ScoreMarkersSummaryOptions &amp;options, const ScoreMarkersSummaryBuffers&lt; Stat_, Rank_ &gt; &amp;output)</arglist>
+      <anchor>ae2dd82f0a44f0394f365dae16544c14a</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const ScoreMarkersSummaryOptions &amp;options, const ScoreMarkersSummaryBuffers&lt; Stat_, Rank_ &gt; &amp;output)</arglist>
     </member>
     <member kind="function">
       <type>void</type>
       <name>score_markers_summary_blocked</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>ab817d3509bf11224c5841cee6eb19d26</anchor>
-      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, const ScoreMarkersSummaryOptions &amp;options, const ScoreMarkersSummaryBuffers&lt; Stat_, Rank_ &gt; &amp;output)</arglist>
+      <anchor>a3deee03cb517e246b09ae58c5df90c58</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const Block_ *const block, const std::size_t num_blocks, const ScoreMarkersSummaryOptions &amp;options, const ScoreMarkersSummaryBuffers&lt; Stat_, Rank_ &gt; &amp;output)</arglist>
+    </member>
+    <member kind="function">
+      <type>ScoreMarkersSummaryBuffers&lt; Stat_, Rank_ &gt;</type>
+      <name>preallocate_summary_results</name>
+      <anchorfile>namespacescran__markers.html</anchorfile>
+      <anchor>a86ca0a0af32c100db8449be2eef05610</anchor>
+      <arglist>(const Index_ num_genes, const std::size_t num_groups, ScoreMarkersSummaryResults&lt; Stat_, Rank_ &gt; &amp;store, const ScoreMarkersSummaryOptions &amp;options)</arglist>
     </member>
     <member kind="function">
       <type>ScoreMarkersSummaryResults&lt; Stat_, Rank_ &gt;</type>
       <name>score_markers_summary</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>a2c9b15716f2c1a1d9d9add3d12319c7b</anchor>
-      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const ScoreMarkersSummaryOptions &amp;options)</arglist>
+      <anchor>a7966153f9aee92602913cc37e3b52904</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const ScoreMarkersSummaryOptions &amp;options)</arglist>
     </member>
     <member kind="function">
       <type>ScoreMarkersSummaryResults&lt; Stat_, Rank_ &gt;</type>
       <name>score_markers_summary_blocked</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>a3c5621dc5ac02a137bee6fab5c1c84e0</anchor>
-      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const Block_ *const block, const ScoreMarkersSummaryOptions &amp;options)</arglist>
+      <anchor>a77895e45dbbd6716cd404a1ced5d6427</anchor>
+      <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const Block_ *const block, const std::size_t num_blocks, const ScoreMarkersSummaryOptions &amp;options)</arglist>
     </member>
   </compound>
   <compound kind="namespace">
