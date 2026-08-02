@@ -19,11 +19,16 @@ namespace scran_markers {
 
 namespace internal {
 
+/*****************************************************/
+
 template<typename Value_, typename Group_, typename Stat_, typename Index_>
 struct AucScanWorkspace {
     std::vector<AucWorkspace<Value_, Group_, Stat_> > block_workspaces;
     std::vector<std::vector<Index_> > block_num_zeros;
     std::vector<std::vector<Index_> > block_totals;
+
+    // All workspaces just re-use the same buffer for the AUCs,
+    // so make sure to run compute_pairwise_auc() and extract the results for one block before moving onto the next block.
     std::vector<Stat_> common_buffer;
 
     bool use_mean;
@@ -38,14 +43,12 @@ struct AucScanWorkspace {
 };
 
 template<typename Value_, typename Group_, typename Stat_, typename Index_>
-AucScanWorkspace<Value_, Group_, Stat_, Index_> initialize_workspace_for_auc(
+void initialize_workspace_for_auc_common(
+    AucScanWorkspace<Value_, Group_, Stat_, Index_>& work,
     const std::size_t num_groups,
     const std::size_t num_blocks,
-    const std::vector<Index_>& combo_size,
-    const BlockAverageInfo<Stat_>& average_info
+    const std::vector<Index_>& combo_size
 ) {
-    AucScanWorkspace<Value_, Group_, Stat_, Index_> work;
-
     const auto num_groups2 = sanisizer::product<typename std::vector<Stat_>::size_type>(num_groups, num_groups);
     work.common_buffer.resize(num_groups2
 #ifdef SCRAN_MARKERS_TEST_INIT
@@ -59,7 +62,6 @@ AucScanWorkspace<Value_, Group_, Stat_, Index_> initialize_workspace_for_auc(
 
     sanisizer::cast<typename std::vector<Index_>::size_type>(num_groups);
     for (I<decltype(num_blocks)> b = 0; b < num_blocks; ++b) {
-        // All workspaces just re-use the same buffer for the AUCs, so make sure to run compute_pairwise_auc() for only one block at a time.
         work.block_workspaces.emplace_back(num_groups, work.common_buffer.data()); 
         work.block_num_zeros.emplace_back(
             num_groups
@@ -77,67 +79,112 @@ AucScanWorkspace<Value_, Group_, Stat_, Index_> initialize_workspace_for_auc(
 
     for (I<decltype(num_blocks)> b = 0; b < num_blocks; ++b) {
         for (I<decltype(num_groups)> g = 0; g < num_groups; ++g) {
-            work.block_totals[b][g] = combo_size[sanisizer::nd_offset<std::size_t>(g, num_groups, b)]; // remember that the groups are the fastest changing dimension in this array.
+            // Remember that the groups are the fastest changing dimension in the 'combo_size' array.
+            work.block_totals[b][g] = combo_size[sanisizer::nd_offset<std::size_t>(g, num_groups, b)];
         }
     }
+}
 
-    if (average_info.use_mean()) {
-        const auto& combo_weights = average_info.combo_weights();
-        work.block_scale.emplace();
-        work.block_scale->reserve(num_blocks);
-        work.full_weight.emplace();
-        work.full_weight->resize(num_groups2);
-        work.use_mean = true;
+template<typename Value_, typename Group_, typename Stat_, typename Index_>
+void initialize_workspace_for_auc_with_block_mean(
+    AucScanWorkspace<Value_, Group_, Stat_, Index_>& work,
+    const std::size_t num_groups,
+    const std::size_t num_blocks,
+    const BlockAverageInfo<Stat_>& average_info
+) {
+    const auto& combo_weights = average_info.combo_weights();
+    work.block_scale.emplace();
+    work.block_scale->reserve(num_blocks);
+    work.full_weight.emplace();
 
-        for (I<decltype(num_blocks)> b = 0; b < num_blocks; ++b) {
-            work.block_scale->emplace_back(num_groups2);
-            auto& cur_scale = (*work.block_scale)[b];
-            const auto& cur_totals = work.block_totals[b];
+    const auto num_groups2 = work.common_buffer.size();
+    work.full_weight->resize(num_groups2);
+    work.use_mean = true;
 
-            for (I<decltype(num_groups)> g1 = 1; g1 < num_groups; ++g1) {
-                const auto w1 = combo_weights[sanisizer::nd_offset<std::size_t>(g1, num_groups, b)];
-                const Stat_ denom1 = cur_totals[g1];
-                if (denom1 == 0) {
+    for (I<decltype(num_blocks)> b = 0; b < num_blocks; ++b) {
+        work.block_scale->emplace_back(num_groups2);
+        auto& cur_scale = (*work.block_scale)[b];
+        const auto& cur_totals = work.block_totals[b];
+
+        for (I<decltype(num_groups)> g1 = 1; g1 < num_groups; ++g1) {
+            const auto w1 = combo_weights[sanisizer::nd_offset<std::size_t>(g1, num_groups, b)];
+            const Stat_ denom1 = cur_totals[g1];
+            if (denom1 == 0) {
+                continue;
+            }
+
+            for (I<decltype(g1)> g2 = 0; g2 < g1; ++g2) {
+                const Stat_ denom2 = cur_totals[g2];
+                if (denom2 == 0) {
                     continue;
                 }
 
-                for (I<decltype(g1)> g2 = 0; g2 < g1; ++g2) {
-                    const Stat_ denom2 = cur_totals[g2];
-                    if (denom2 == 0) {
-                        continue;
-                    }
+                const Stat_ block_denom = denom1 * denom2;
+                const Stat_ block_weight = w1 * combo_weights[sanisizer::nd_offset<std::size_t>(g2, num_groups, b)];
+                const Stat_ block_scaling = block_denom / block_weight;
 
-                    const Stat_ block_denom = denom1 * denom2;
-                    const Stat_ block_weight = w1 * combo_weights[sanisizer::nd_offset<std::size_t>(g2, num_groups, b)];
-                    const Stat_ block_scaling = block_denom / block_weight;
+                const auto pair_offset1 = sanisizer::nd_offset<std::size_t>(g2, num_groups, g1);
+                cur_scale[pair_offset1] = block_scaling;
+                (*work.full_weight)[pair_offset1] += block_weight;
 
-                    const auto pair_offset1 = sanisizer::nd_offset<std::size_t>(g2, num_groups, g1);
-                    cur_scale[pair_offset1] = block_scaling;
-                    (*work.full_weight)[pair_offset1] += block_weight;
-
-                    const auto pair_offset2 = sanisizer::nd_offset<std::size_t>(g1, num_groups, g2);
-                    cur_scale[pair_offset2] = block_scaling;
-                    (*work.full_weight)[pair_offset2] += block_weight;
-                }
+                const auto pair_offset2 = sanisizer::nd_offset<std::size_t>(g1, num_groups, g2);
+                cur_scale[pair_offset2] = block_scaling;
+                (*work.full_weight)[pair_offset2] += block_weight;
             }
         }
-
-    } else {
-        work.pairwise_buffers.emplace();
-        work.pairwise_buffers->reserve(num_groups);
-        sanisizer::cast<I<decltype(work.pairwise_buffers->front().size())> >(num_groups);
-        for (I<decltype(num_groups)> g = 0; g < num_groups; ++g) {
-            work.pairwise_buffers->emplace_back(num_groups);
-        }
-        work.calculator.emplace(sanisizer::cast<std::size_t>(num_blocks), average_info.quantile());
-        work.use_mean = false;
     }
+}
 
-    return work;
+template<typename Value_, typename Group_, typename Stat_, typename Index_>
+void initialize_workspace_for_auc_with_block_quantile(
+    AucScanWorkspace<Value_, Group_, Stat_, Index_>& work,
+    const std::size_t num_groups,
+    const std::size_t num_blocks,
+    const BlockAverageInfo<Stat_>& average_info
+) {
+    work.pairwise_buffers.emplace();
+    work.pairwise_buffers->reserve(num_groups);
+    sanisizer::cast<I<decltype(work.pairwise_buffers->front().size())> >(num_groups);
+    for (I<decltype(num_groups)> g = 0; g < num_groups; ++g) {
+        work.pairwise_buffers->emplace_back(num_groups);
+    }
+    work.calculator.emplace(sanisizer::cast<std::size_t>(num_blocks), average_info.quantile());
+    work.use_mean = false;
+}
+
+template<typename Value_, typename Group_, typename Stat_, typename Index_>
+AucScanWorkspace<Value_, Group_, Stat_, Index_> initialize_workspace_for_auc(
+    const std::size_t num_groups,
+    const std::size_t num_blocks,
+    const std::vector<Index_>& combo_size,
+    const BlockAverageInfo<Stat_>& average_info
+) {
+    AucScanWorkspace<Value_, Group_, Stat_, Index_> output;
+    initialize_workspace_for_auc_common(output, num_groups, num_blocks, combo_size);
+    if (average_info.use_mean()) {
+        initialize_workspace_for_auc_with_block_mean(output, num_groups, num_blocks, average_info);
+    } else {
+        initialize_workspace_for_auc_with_block_quantile(output, num_groups, num_blocks, average_info);
+    }
+    return output;
+}
+
+/*****************************************************/
+
+template<typename Value_, typename Group_, typename Stat_, typename Index_, typename Block_, typename Threshold_>
+void compute_pairwise_auc(AucScanWorkspace<Value_, Group_, Stat_, Index_>& work, const Block_ b, const Threshold_ threshold, const bool normalize) {
+    auto& wrk = work.block_workspaces[b];
+    auto& nz = work.block_num_zeros[b];
+    const auto& tt = work.block_totals[b];
+    if (threshold) {
+        compute_pairwise_auc(wrk, nz, tt, threshold, normalize);
+    } else {
+        compute_pairwise_auc(wrk, nz, tt, normalize);
+    }
 }
 
 template<typename Value_, typename Group_, typename Stat_, typename Index_, typename Threshold_>
-void process_auc_for_rows(
+void process_auc_for_rows_block_mean(
     AucScanWorkspace<Value_, Group_, Stat_, Index_>& work,
     const std::size_t num_groups,
     const std::size_t num_blocks,
@@ -146,46 +193,62 @@ void process_auc_for_rows(
 ) {
     auto& auc_buffer = work.common_buffer;
     const auto num_groups2 = auc_buffer.size();
-    if (work.use_mean) {
-        std::fill_n(output, num_groups2, 0);
-    } else {
-        for (auto& buffers : *work.pairwise_buffers){
-            for (auto& individual : buffers) {
-                individual.clear();
+    std::fill_n(output, num_groups2, 0);
+
+    for (I<decltype(num_blocks)> b = 0; b < num_blocks; ++b) {
+        compute_pairwise_auc(work, b, threshold, false);
+        const auto& block_scale = (*work.block_scale)[b];
+        for (I<decltype(num_groups2)> g = 0; g < num_groups2; ++g) {
+            const auto scale = block_scale[g];
+            if (scale) {
+                output[g] += auc_buffer[g] / scale;
             }
         }
     }
 
-    for (I<decltype(num_blocks)> b = 0; b < num_blocks; ++b) {
-        auto& wrk = work.block_workspaces[b];
-        auto& nz = work.block_num_zeros[b];
-        const auto& tt = work.block_totals[b];
-
-        const bool normalize = !work.use_mean;
-        if (threshold) {
-            compute_pairwise_auc(wrk, nz, tt, threshold, normalize);
-        } else {
-            compute_pairwise_auc(wrk, nz, tt, normalize);
-        }
-
-        if (work.use_mean) {
-            const auto& block_scale = (*work.block_scale)[b];
-            for (I<decltype(num_groups2)> g = 0; g < num_groups2; ++g) {
-                const auto scale = block_scale[g];
-                if (scale) {
-                    output[g] += auc_buffer[g] / scale;
+    for (I<decltype(num_groups)> g1 = 0; g1 < num_groups; ++g1) {
+        for (I<decltype(num_groups)> g2 = 0; g2 < num_groups; ++g2) {
+            const auto offset = sanisizer::nd_offset<std::size_t>(g2, num_groups, g1);
+            auto& current = output[offset];
+            if (g1 != g2) {
+                const auto full = (*work.full_weight)[offset];
+                if (full) {
+                    current /= full;
+                } else {
+                    current = std::numeric_limits<Stat_>::quiet_NaN();
                 }
+            } else {
+                // We do nothing for g1 == g2, so current defaults to 0 from the initial fill.
+                // This is technically wrong, but no one should be using the self-comparison effect size anyway.
             }
+        }
+    }
+}
 
-        } else {
-            for (I<decltype(num_groups)> g1 = 0; g1 < num_groups; ++g1) {
-                auto& curbuffers = (*work.pairwise_buffers)[g1];
-                for (I<decltype(num_groups)> g2 = 0; g2 < num_groups; ++g2) {
-                    if (g1 != g2) {
-                        const auto val = auc_buffer[sanisizer::nd_offset<std::size_t>(g2, num_groups, g1)];
-                        if (!std::isnan(val)) {
-                            curbuffers[g2].push_back(val);
-                        }
+template<typename Value_, typename Group_, typename Stat_, typename Index_, typename Threshold_>
+void process_auc_for_rows_block_quantile(
+    AucScanWorkspace<Value_, Group_, Stat_, Index_>& work,
+    const std::size_t num_groups,
+    const std::size_t num_blocks,
+    const Threshold_ threshold,
+    Stat_* const output
+) {
+    auto& auc_buffer = work.common_buffer;
+    for (auto& buffers : *work.pairwise_buffers) {
+        for (auto& individual : buffers) {
+            individual.clear();
+        }
+    }
+
+    for (I<decltype(num_blocks)> b = 0; b < num_blocks; ++b) {
+        compute_pairwise_auc(work, b, threshold, true);
+        for (I<decltype(num_groups)> g1 = 0; g1 < num_groups; ++g1) {
+            auto& curbuffers = (*work.pairwise_buffers)[g1];
+            for (I<decltype(num_groups)> g2 = 0; g2 < num_groups; ++g2) {
+                if (g1 != g2) {
+                    const auto val = auc_buffer[sanisizer::nd_offset<std::size_t>(g2, num_groups, g1)];
+                    if (!std::isnan(val)) {
+                        curbuffers[g2].push_back(val);
                     }
                 }
             }
@@ -196,32 +259,33 @@ void process_auc_for_rows(
         for (I<decltype(num_groups)> g2 = 0; g2 < num_groups; ++g2) {
             const auto offset = sanisizer::nd_offset<std::size_t>(g2, num_groups, g1);
             auto& current = output[offset];
-
-            if (work.use_mean) {
-                if (g1 != g2) {
-                    const auto full = (*work.full_weight)[offset];
-                    if (full) {
-                        current /= full;
-                    } else {
-                        current = std::numeric_limits<Stat_>::quiet_NaN();
-                    }
-                } else {
-                    // We do nothing for g1 == g2, so current defaults to 0 from the initial fill.
-                    // This is technically wrong, but no one should be using the self-comparison effect size anyway.
-                }
-
+            if (g1 != g2) {
+                auto& curbuffer = (*work.pairwise_buffers)[g1][g2];
+                current = (*work.calculator)(curbuffer.size(), curbuffer.data());
             } else {
-                if (g1 != g2) {
-                    auto& curbuffer = (*work.pairwise_buffers)[g1][g2];
-                    current = (*work.calculator)(curbuffer.size(), curbuffer.data());
-                } else {
-                    // Explicitly set this to zero because we didn't do an initial fill in quantile mode.
-                    current = 0;
-                }
+                // Explicitly set this to zero because we didn't do an initial fill in quantile mode.
+                current = 0;
             }
         }
     }
 }
+
+template<typename Value_, typename Group_, typename Stat_, typename Index_, typename Threshold_>
+void process_auc_for_rows(
+    AucScanWorkspace<Value_, Group_, Stat_, Index_>& work,
+    const std::size_t num_groups,
+    const std::size_t num_blocks,
+    const Threshold_ threshold,
+    Stat_* const output
+) {
+    if (work.use_mean) {
+        process_auc_for_rows_block_mean(work, num_groups, num_blocks, threshold, output);
+    } else {
+        process_auc_for_rows_block_quantile(work, num_groups, num_blocks, threshold, output);
+    }
+}
+
+/*****************************************************/
 
 template<
     bool single_block_,
@@ -546,6 +610,8 @@ void scan_matrix_by_row_full_auc(
         num_threads
     );
 }
+
+/*****************************************************/
 
 template<typename Value_, typename Index_, typename Combo_, typename Stat_>
 void scan_matrix_by_column(
