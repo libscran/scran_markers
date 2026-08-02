@@ -149,7 +149,7 @@ TEST_P(ScoreMarkersSummaryTest, Basic) {
 
     scran_markers::ScoreMarkersSummaryOptions opt;
     opt.compute_auc = do_auc; // false, if we want to check the running implementations.
-    auto ref = scran_markers::score_markers_summary(*dense_row, groupings.data(), opt);
+    auto ref = scran_markers::score_markers_summary(*dense_row, groupings.data(), ngroups, opt);
 
     if (nthreads == 1) {
         // Running some further checks on the effects.
@@ -181,7 +181,7 @@ TEST_P(ScoreMarkersSummaryTest, Basic) {
         // but requires holding a large 3D matrix in memory.
         scran_markers::ScoreMarkersPairwiseOptions popt;
         popt.compute_auc = do_auc;
-        auto pairres = scran_markers::score_markers_pairwise(*dense_row, groupings.data(), popt);
+        auto pairres = scran_markers::score_markers_pairwise(*dense_row, groupings.data(), ngroups, popt);
         compare_averages(ref.mean, pairres.mean);
         compare_averages(ref.detected, pairres.detected);
 
@@ -206,7 +206,7 @@ TEST_P(ScoreMarkersSummaryTest, Basic) {
 
     } else {
         opt.num_threads = nthreads;
-        auto dr = scran_markers::score_markers_summary(*dense_row, groupings.data(), opt);
+        auto dr = scran_markers::score_markers_summary(*dense_row, groupings.data(), ngroups, opt);
         compare_averages(ref.mean, dr.mean);
         compare_averages(ref.detected, dr.detected);
         compare_effects(ngroups, ref, dr, do_auc);
@@ -214,17 +214,17 @@ TEST_P(ScoreMarkersSummaryTest, Basic) {
 
     // Comparing to all of the other matrix representations.
     {
-        auto dc = scran_markers::score_markers_summary(*dense_column, groupings.data(), opt);
+        auto dc = scran_markers::score_markers_summary(*dense_column, groupings.data(), ngroups, opt);
         compare_averages(ref.mean, dc.mean);
         compare_averages(ref.detected, dc.detected);
         compare_effects(ngroups, ref, dc, do_auc);
 
-        auto sr = scran_markers::score_markers_summary(*sparse_row, groupings.data(), opt);
+        auto sr = scran_markers::score_markers_summary(*sparse_row, groupings.data(), ngroups, opt);
         compare_averages(ref.mean, sr.mean);
         compare_averages(ref.detected, sr.detected);
         compare_effects(ngroups, ref, sr, do_auc);
 
-        auto sc = scran_markers::score_markers_summary(*sparse_column, groupings.data(), opt);
+        auto sc = scran_markers::score_markers_summary(*sparse_column, groupings.data(), ngroups, opt);
         compare_averages(ref.mean, sc.mean);
         compare_averages(ref.detected, sc.detected);
         compare_effects(ngroups, ref, sc, do_auc);
@@ -234,7 +234,7 @@ TEST_P(ScoreMarkersSummaryTest, Basic) {
     {
         auto mr_limited_opt = opt;
         mr_limited_opt.min_rank_limit = 10;
-        auto limited = scran_markers::score_markers_summary(*dense_row, groupings.data(), mr_limited_opt);
+        auto limited = scran_markers::score_markers_summary(*dense_row, groupings.data(), ngroups, mr_limited_opt);
 
         compare_limited_minrank(mr_limited_opt.min_rank_limit, ref.cohens_d, limited.cohens_d);
         compare_limited_minrank(mr_limited_opt.min_rank_limit, ref.delta_mean, limited.delta_mean);
@@ -249,22 +249,22 @@ TEST_P(ScoreMarkersSummaryTest, Basic) {
         auto qopt = opt;
         qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
 
-        auto qdr = scran_markers::score_markers_summary(*dense_row, groupings.data(), qopt);
+        auto qdr = scran_markers::score_markers_summary(*dense_row, groupings.data(), ngroups, qopt);
         compare_averages(ref.mean, qdr.mean);
         compare_averages(ref.detected, qdr.detected);
         compare_effects(ngroups, ref, qdr, do_auc);
 
-        auto qdc = scran_markers::score_markers_summary(*dense_column, groupings.data(), qopt);
+        auto qdc = scran_markers::score_markers_summary(*dense_column, groupings.data(), ngroups, qopt);
         compare_averages(ref.mean, qdc.mean);
         compare_averages(ref.detected, qdc.detected);
         compare_effects(ngroups, ref, qdc, do_auc);
 
-        auto qsr = scran_markers::score_markers_summary(*sparse_row, groupings.data(), qopt);
+        auto qsr = scran_markers::score_markers_summary(*sparse_row, groupings.data(), ngroups, qopt);
         compare_averages(ref.mean, qsr.mean);
         compare_averages(ref.detected, qsr.detected);
         compare_effects(ngroups, ref, qsr, do_auc);
 
-        auto qsc = scran_markers::score_markers_summary(*sparse_column, groupings.data(), qopt);
+        auto qsc = scran_markers::score_markers_summary(*sparse_column, groupings.data(), ngroups, qopt);
         compare_averages(ref.mean, qsc.mean);
         compare_averages(ref.detected, qsc.detected);
         compare_effects(ngroups, ref, qsc, do_auc);
@@ -284,7 +284,7 @@ TEST_P(ScoreMarkersSummaryTest, SummaryQuantile) {
     opt.compute_auc = do_auc; // false, if we want to check the running implementations.
     opt.num_threads = nthreads;
     opt.compute_summary_quantiles = std::vector<double>{ 0.0, 0.5, 1.0 };
-    auto out = scran_markers::score_markers_summary(*dense_row, groupings.data(), opt);
+    auto out = scran_markers::score_markers_summary(*dense_row, groupings.data(), ngroups, opt);
 
     for (int l = 0; l < ngroups; ++l) {
         for (size_t g = 0; g < ngenes; ++g) {
@@ -362,18 +362,19 @@ TEST_P(ScoreMarkersSummaryBlockedTest, AgainstPairwiseMean) {
 
     auto NC = dense_row->ncol();
     std::vector<int> groupings = create_groupings(NC, ngroups);
-    std::vector<int> blocks = create_blocks(NC, 3);
+    const int nblocks = 3;
+    std::vector<int> blocks = create_blocks(NC, nblocks);
 
     scran_markers::ScoreMarkersSummaryOptions opt;
     opt.compute_auc = do_auc; // false, if we want to check the running implementations.
     opt.block_weight_policy = policy;
-    auto ref = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), blocks.data(), opt);
+    auto ref = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), ngroups, blocks.data(), nblocks, opt);
 
     if (nthreads == 1) {
         scran_markers::ScoreMarkersPairwiseOptions popt;
         popt.compute_auc = do_auc;
         popt.block_weight_policy = policy;
-        auto pairres = scran_markers::score_markers_pairwise_blocked(*dense_row, groupings.data(), blocks.data(), popt);
+        auto pairres = scran_markers::score_markers_pairwise_blocked(*dense_row, groupings.data(), ngroups, blocks.data(), nblocks, popt);
         compare_averages(ref.mean, pairres.mean);
         compare_averages(ref.detected, pairres.detected);
 
@@ -399,7 +400,7 @@ TEST_P(ScoreMarkersSummaryBlockedTest, AgainstPairwiseMean) {
 
     } else {
         opt.num_threads = nthreads;
-        auto dr = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), blocks.data(), opt);
+        auto dr = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), ngroups, blocks.data(), nblocks, opt);
         compare_averages(ref.mean, dr.mean);
         compare_averages(ref.detected, dr.detected);
         compare_effects(ngroups, ref, dr, do_auc);
@@ -407,17 +408,17 @@ TEST_P(ScoreMarkersSummaryBlockedTest, AgainstPairwiseMean) {
 
     // Checking the other references.
     {
-        auto dc = scran_markers::score_markers_summary_blocked(*dense_column, groupings.data(), blocks.data(), opt);
+        auto dc = scran_markers::score_markers_summary_blocked(*dense_column, groupings.data(), ngroups, blocks.data(), nblocks, opt);
         compare_averages(ref.mean, dc.mean);
         compare_averages(ref.detected, dc.detected);
         compare_effects(ngroups, ref, dc, do_auc);
 
-        auto sr = scran_markers::score_markers_summary_blocked(*sparse_row, groupings.data(), blocks.data(), opt);
+        auto sr = scran_markers::score_markers_summary_blocked(*sparse_row, groupings.data(), ngroups, blocks.data(), nblocks, opt);
         compare_averages(ref.mean, sr.mean);
         compare_averages(ref.detected, sr.detected);
         compare_effects(ngroups, ref, sr, do_auc);
 
-        auto sc = scran_markers::score_markers_summary_blocked(*sparse_column, groupings.data(), blocks.data(), opt);
+        auto sc = scran_markers::score_markers_summary_blocked(*sparse_column, groupings.data(), ngroups, blocks.data(), nblocks, opt);
         compare_averages(ref.mean, sc.mean);
         compare_averages(ref.detected, sc.detected);
         compare_effects(ngroups, ref, sc, do_auc);
@@ -427,7 +428,7 @@ TEST_P(ScoreMarkersSummaryBlockedTest, AgainstPairwiseMean) {
         // Trying with a more limited min-rank count.
         auto mr_limited_opt = opt;
         mr_limited_opt.min_rank_limit = 10;
-        auto limited = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), blocks.data(), mr_limited_opt);
+        auto limited = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), ngroups, blocks.data(), nblocks, mr_limited_opt);
 
         compare_limited_minrank(mr_limited_opt.min_rank_limit, ref.cohens_d, limited.cohens_d);
         compare_limited_minrank(mr_limited_opt.min_rank_limit, ref.delta_mean, limited.delta_mean);
@@ -452,18 +453,19 @@ TEST_P(ScoreMarkersSummaryBlockedTest, AgainstPairwiseQuantile) {
 
     auto NC = dense_row->ncol();
     std::vector<int> groupings = create_groupings(NC, ngroups);
+    const int nblocks = 3;
     std::vector<int> blocks = create_blocks(NC, 3);
 
     scran_markers::ScoreMarkersSummaryOptions opt;
     opt.compute_auc = do_auc; // false, if we want to check the running implementations.
     opt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
-    auto ref = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), blocks.data(), opt);
+    auto ref = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), ngroups, blocks.data(), nblocks, opt);
 
     if (nthreads == 1) {
         scran_markers::ScoreMarkersPairwiseOptions popt;
         popt.compute_auc = do_auc;
         popt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
-        auto pairres = scran_markers::score_markers_pairwise_blocked(*dense_row, groupings.data(), blocks.data(), popt);
+        auto pairres = scran_markers::score_markers_pairwise_blocked(*dense_row, groupings.data(), ngroups, blocks.data(), nblocks, popt);
         compare_averages(ref.mean, pairres.mean);
         compare_averages(ref.detected, pairres.detected);
 
@@ -489,23 +491,23 @@ TEST_P(ScoreMarkersSummaryBlockedTest, AgainstPairwiseQuantile) {
 
     } else {
         opt.num_threads = nthreads;
-        auto qdr = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), blocks.data(), opt);
+        auto qdr = scran_markers::score_markers_summary_blocked(*dense_row, groupings.data(), ngroups, blocks.data(), nblocks, opt);
         compare_averages(ref.mean, qdr.mean);
         compare_averages(ref.detected, qdr.detected);
         compare_effects(ngroups, ref, qdr, do_auc);
     }
 
-    auto qdc = scran_markers::score_markers_summary_blocked(*dense_column, groupings.data(), blocks.data(), opt);
+    auto qdc = scran_markers::score_markers_summary_blocked(*dense_column, groupings.data(), ngroups, blocks.data(), nblocks, opt);
     compare_averages(ref.mean, qdc.mean);
     compare_averages(ref.detected, qdc.detected);
     compare_effects(ngroups, ref, qdc, do_auc);
 
-    auto qsr = scran_markers::score_markers_summary_blocked(*sparse_row, groupings.data(), blocks.data(), opt);
+    auto qsr = scran_markers::score_markers_summary_blocked(*sparse_row, groupings.data(), ngroups, blocks.data(), nblocks, opt);
     compare_averages(ref.mean, qsr.mean);
     compare_averages(ref.detected, qsr.detected);
     compare_effects(ngroups, ref, qsr, do_auc);
 
-    auto qsc = scran_markers::score_markers_summary_blocked(*sparse_column, groupings.data(), blocks.data(), opt);
+    auto qsc = scran_markers::score_markers_summary_blocked(*sparse_column, groupings.data(), ngroups, blocks.data(), nblocks, opt);
     compare_averages(ref.mean, qsc.mean);
     compare_averages(ref.detected, qsc.detected);
     compare_effects(ngroups, ref, qsc, do_auc);
@@ -545,9 +547,9 @@ TEST_F(ScoreMarkersSummaryScenariosTest, Thresholds) {
     std::vector<int> groupings = create_groupings(mat.ncol(), ngroups);
 
     scran_markers::ScoreMarkersSummaryOptions sopt;
-    auto ref = scran_markers::score_markers_summary(mat, groupings.data(), sopt);
+    auto ref = scran_markers::score_markers_summary(mat, groupings.data(), ngroups, sopt);
     sopt.threshold = 1;
-    auto out = scran_markers::score_markers_summary(mat, groupings.data(), sopt);
+    auto out = scran_markers::score_markers_summary(mat, groupings.data(), ngroups, sopt);
 
     int some_diff = 0;
     for (int l = 0; l < ngroups; ++l) {
@@ -579,7 +581,7 @@ TEST_F(ScoreMarkersSummaryScenariosTest, Thresholds) {
     // Quantile should give the same results for a single block.
     auto qopt = sopt;
     qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
-    auto qout = scran_markers::score_markers_summary(mat, groupings.data(), qopt);
+    auto qout = scran_markers::score_markers_summary(mat, groupings.data(), ngroups, qopt);
     compare_averages(out.mean, qout.mean);
     compare_averages(out.detected, qout.detected);
     compare_effects(ngroups, out, qout, true);
@@ -604,13 +606,14 @@ TEST_F(ScoreMarkersSummaryScenariosTest, Missing) {
     std::vector<int> groupings = create_groupings(ncols, ngroups);
 
     scran_markers::ScoreMarkersSummaryOptions opt;
-    auto ref = scran_markers::score_markers_summary(mat, groupings.data(), opt);
+    auto ref = scran_markers::score_markers_summary(mat, groupings.data(), ngroups, opt);
 
     // Zero is effectively the missing group here.
     for (auto& g : groupings) {
         ++g;
     }
-    auto lost = scran_markers::score_markers_summary(mat, groupings.data(), opt);
+    const int ngroups_p1 = ngroups + 1;
+    auto lost = scran_markers::score_markers_summary(mat, groupings.data(), ngroups_p1, opt);
 
     // First group is effectively all-NA.
     for (int g = 0; g < nrows; ++g) {
@@ -658,7 +661,7 @@ TEST_F(ScoreMarkersSummaryScenariosTest, Missing) {
     // Quantile should give the same results for a single block.
     auto qopt = opt;
     qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
-    auto qlost = scran_markers::score_markers_summary(mat, groupings.data(), qopt);
+    auto qlost = scran_markers::score_markers_summary(mat, groupings.data(), ngroups_p1, qopt);
     compare_averages(lost.mean, qlost.mean);
     compare_averages(lost.detected, qlost.detected);
     compare_effects(ngroups + 1, lost, qlost, true);
@@ -689,7 +692,7 @@ TEST_F(ScoreMarkersSummaryScenariosTest, BlockConfounded) {
     }
 
     scran_markers::ScoreMarkersSummaryOptions sopt;
-    auto comres = scran_markers::score_markers_summary_blocked(mat, groupings.data(), blocks.data(), sopt);
+    auto comres = scran_markers::score_markers_summary_blocked(mat, groupings.data(), ngroups, blocks.data(), 2, sopt);
 
     // Excluding the group and running on the remaining samples.
     std::vector<int> subgroups;
@@ -703,7 +706,7 @@ TEST_F(ScoreMarkersSummaryScenariosTest, BlockConfounded) {
     }
 
     auto sub = tatami::make_DelayedSubset(tatami::wrap_shared_ptr(&mat), std::move(keep), false);
-    auto ref = scran_markers::score_markers_summary(*sub, subgroups.data(), sopt); 
+    auto ref = scran_markers::score_markers_summary(*sub, subgroups.data(), ngroups - 1, sopt); 
 
     // First group is effectively all-NA.
     for (int g = 0; g < nrows; ++g) {
@@ -753,7 +756,7 @@ TEST_F(ScoreMarkersSummaryScenariosTest, BlockConfounded) {
     {
         auto qopt = sopt;
         qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
-        auto qcomres = scran_markers::score_markers_summary_blocked(mat, groupings.data(), blocks.data(), qopt);
+        auto qcomres = scran_markers::score_markers_summary_blocked(mat, groupings.data(), ngroups, blocks.data(), 2, qopt);
         compare_averages(comres.mean, qcomres.mean);
         compare_averages(comres.detected, qcomres.detected);
         compare_effects(ngroups, comres, qcomres, true);
@@ -779,7 +782,7 @@ TEST_F(ScoreMarkersSummaryScenariosTest, MinRank) {
     tatami::DenseRowMatrix<double, int> mat(ngenes, nsamples, std::move(buffer));
 
     scran_markers::ScoreMarkersSummaryOptions opt;
-    auto res = scran_markers::score_markers_summary(mat, grouping.data(), opt);
+    auto res = scran_markers::score_markers_summary(mat, grouping.data(), 3, opt);
 
     for (int i = 0; i < ngenes; ++i) {
         EXPECT_EQ(res.cohens_d[1].min_rank[i], ngenes - i); // second group
@@ -807,14 +810,14 @@ TEST_F(ScoreMarkersSummaryScenariosTest, DisabledSummaries) {
 
     // We won't test these one-by-one as this is already done in summarize_effects(). 
     scran_markers::ScoreMarkersSummaryOptions opt;
-    auto ref = scran_markers::score_markers_summary(mat, groupings.data(), opt);
+    auto ref = scran_markers::score_markers_summary(mat, groupings.data(), ngroups, opt);
 
     opt.compute_summary_min = false;
     opt.compute_summary_mean = false;
     opt.compute_summary_median = false;
     opt.compute_summary_max = false;
     opt.compute_summary_min_rank = false;
-    auto empty = scran_markers::score_markers_summary(mat, groupings.data(), opt);
+    auto empty = scran_markers::score_markers_summary(mat, groupings.data(), ngroups, opt);
 
     EXPECT_EQ(empty.mean.size(), ngroups);
     EXPECT_EQ(empty.detected.size(), ngroups);
@@ -878,8 +881,8 @@ TEST_F(ScoreMarkersSummaryScenariosTest, TiedMinRank) {
     sopt.min_rank_preserve_ties = true;
 
     std::vector<int> groupings{ 0, 1 };
-    auto oout = scran_markers::score_markers_summary(omat, groupings.data(), sopt);
-    auto dout = scran_markers::score_markers_summary(dmat, groupings.data(), sopt);
+    auto oout = scran_markers::score_markers_summary(omat, groupings.data(), 2, sopt);
+    auto dout = scran_markers::score_markers_summary(dmat, groupings.data(), 2, sopt);
 
     for (int g = 0; g < 2; ++g) {
         std::vector<std::pair<int, int> > expected;
@@ -917,7 +920,7 @@ TEST_F(ScoreMarkersSummaryScenariosTest, UnsortedQuantiles) {
     scran_markers::ScoreMarkersSummaryOptions opts;
     opts.compute_summary_quantiles = std::vector<double>{ 0.5, 0.2 };
     scran_tests::expect_error([&]() -> void {
-        scran_markers::score_markers_summary(empty, static_cast<int*>(NULL), opts);
+        scran_markers::score_markers_summary(empty, static_cast<int*>(NULL), 0, opts);
     }, "should be sorted");
 }
 
@@ -929,7 +932,7 @@ TEST_F(ScoreMarkersSummaryScenariosTest, Empty) {
     std::vector<int> groupings = create_groupings(ncols, ngroups);
 
     scran_markers::ScoreMarkersSummaryOptions opts;
-    auto out = scran_markers::score_markers_summary(mat, groupings.data(), opts);
+    auto out = scran_markers::score_markers_summary(mat, groupings.data(), ngroups, opts);
 
     for (int g = 0; g < ngroups; ++g) {
         EXPECT_TRUE(out.mean[g].empty());
@@ -1012,7 +1015,7 @@ TEST_P(ScoreMarkersSummaryOneAtATimeTest, Basic) {
     }
 
     scran_markers::ScoreMarkersSummaryOptions opt;
-    auto ref = scran_markers::score_markers_summary<double>(*mat, groupings.data(), opt);
+    auto ref = scran_markers::score_markers_summary<double>(*mat, groupings.data(), ngroups, opt);
 
     // Only the group mean.
     {
@@ -1023,7 +1026,7 @@ TEST_P(ScoreMarkersSummaryOneAtATimeTest, Basic) {
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
 
-        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), opt);
+        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), ngroups, opt);
         compare_averages(ref.mean, alt.mean);
         EXPECT_TRUE(alt.detected.empty());
         EXPECT_TRUE(alt.cohens_d.empty());
@@ -1041,7 +1044,7 @@ TEST_P(ScoreMarkersSummaryOneAtATimeTest, Basic) {
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
 
-        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), opt);
+        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), ngroups, opt);
         compare_averages(ref.detected, alt.detected);
         EXPECT_TRUE(alt.mean.empty());
         EXPECT_TRUE(alt.cohens_d.empty());
@@ -1059,7 +1062,7 @@ TEST_P(ScoreMarkersSummaryOneAtATimeTest, Basic) {
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
 
-        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), opt);
+        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), ngroups, opt);
         compare_summaries_for_effect(ngroups, alt.cohens_d, ref.cohens_d);
         EXPECT_TRUE(alt.mean.empty());
         EXPECT_TRUE(alt.detected.empty());
@@ -1077,7 +1080,7 @@ TEST_P(ScoreMarkersSummaryOneAtATimeTest, Basic) {
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
 
-        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), opt);
+        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), ngroups, opt);
         compare_summaries_for_effect(ngroups, alt.auc, ref.auc);
         EXPECT_TRUE(alt.cohens_d.empty());
         EXPECT_TRUE(alt.delta_mean.empty());
@@ -1093,7 +1096,7 @@ TEST_P(ScoreMarkersSummaryOneAtATimeTest, Basic) {
         opt.compute_auc = false;
         opt.compute_delta_detected = false;
 
-        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), opt);
+        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), ngroups, opt);
         compare_summaries_for_effect(ngroups, alt.delta_mean, ref.delta_mean);
         EXPECT_TRUE(alt.mean.empty());
         EXPECT_TRUE(alt.detected.empty());
@@ -1111,7 +1114,7 @@ TEST_P(ScoreMarkersSummaryOneAtATimeTest, Basic) {
         opt.compute_auc = false;
         opt.compute_delta_mean = false;
 
-        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), opt);
+        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), ngroups, opt);
         compare_summaries_for_effect(ngroups, alt.delta_detected, ref.delta_detected);
         EXPECT_TRUE(alt.mean.empty());
         EXPECT_TRUE(alt.detected.empty());
@@ -1130,7 +1133,7 @@ TEST_P(ScoreMarkersSummaryOneAtATimeTest, Basic) {
         opt.compute_delta_mean = false;
         opt.compute_delta_detected= false;
 
-        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), opt);
+        auto alt = scran_markers::score_markers_summary<double>(*mat, groupings.data(), ngroups, opt);
         EXPECT_TRUE(alt.mean.empty());
         EXPECT_TRUE(alt.detected.empty());
         EXPECT_TRUE(alt.cohens_d.empty());
