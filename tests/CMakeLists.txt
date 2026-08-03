@@ -48,6 +48,7 @@ set(LIST_FILES
     src/block_averages.cpp
     src/summarize_comparisons.cpp
     src/summarize_effects.cpp
+    src/scan_matrix.cpp
     src/score_markers_pairwise.cpp
     src/score_markers_summary.cpp
     src/score_markers_best.cpp
