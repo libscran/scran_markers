@@ -107,7 +107,7 @@ struct ScoreMarkersSummaryOptions {
 
     /**
      * Probabilites of the quantiles of the effect sizes for each group, to be reported.
-     * If set, the vector should be sorted and each entry should lie in \$f[0, 1]\f$.
+     * If set, the vector should be sorted and each entry should lie in \f$[0, 1]\f$.
      * If not set, no quantiles are reported.
      */
     std::optional<std::vector<double> > compute_summary_quantiles;

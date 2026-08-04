@@ -23,11 +23,11 @@ the `score_markers_summary()` function will compute the aggregate statistics acr
 // Expression matrix, usually log-normalized.
 const tatami::Matrix<double, int>& matrix = some_data_source();
 
-// Array containing integer assignments to groups 0, 1, 2, etc.
+// Array containing integer assignments to groups { 0, 1, 2, ..., num_groups - 1 }
 std::vector<int> groupings = some_groupings();
 
 scran_markers::ScoreMarkersSummaryOptions opt;
-auto res = scran_markers::score_markers_summary(matrix, groupings.data(), opt);
+auto res = scran_markers::score_markers_summary(matrix, groupings.data(), num_groups, opt);
 
 res.mean[0]; // mean of each gene in the first group.
 res.detected[0]; // detected proportion of each gene in the first group.
@@ -49,13 +49,15 @@ we can ensure that it does not affect the effect size calculation by blocking on
 This performs the comparisons within each level of the blocking factor so as to ignore the irrelevant variation.
 
 ```cpp
-// Array containing integer assignments to blocks 0, 1, 2, etc.
+// Array containing integer assignments to blocks { 0, 1, 2, ..., num_blocks - 1 }
 std::vector<int> blocks = some_blocks();
 
 auto block_res = scran_markers::score_markers_summary_blocked(
     matrix,
     groupings.data(), 
+    num_groups,
     blocks.data(),
+    num_blocks,
     opt
 );
 ```
@@ -72,6 +74,7 @@ scran_markers::ScoreMarkersPairwiseOptions popt;
 auto pair_res = scran_markers::score_markers_pairwise(
     matrix,
     groupings.data(),
+    num_groups,
     popt
 );
 
@@ -94,11 +97,13 @@ auto cohen_summary = scran_markers::summarize_effects(
 If we just want the top genes from each pairwise comparison, we can use the `score_markers_best()` function to save memory:
 
 ```cpp
-scran_markers::ScoreMarkersPairwiseOptions popt;
+scran_markers::ScoreMarkersBestOptions popt;
 
+// Getting the top 10 genes for each pairwise comparison.
 auto best_res = scran_markers::score_markers_best(
     matrix,
     groupings.data(),
+    num_groups,
     10,
     popt
 );
