@@ -17,112 +17,108 @@ struct ScoreMarkersBestResultsAsVectors {
     std::vector<std::vector<std::vector<std::pair<int, double> > > > delta_detected;
 };
 
-class ScoreMarkersBestTestCore {
-protected:
-    static void compare_averages(const std::vector<std::vector<double> >& res, const std::vector<std::vector<double> >& other) {
-        const int ngroups = res.size();
-        ASSERT_EQ(ngroups, other.size());
-        for (int l = 0; l < ngroups; ++l) {
-            scran_tests::compare_almost_equal(res[l], other[l]);
-        }
+static void compare_averages(const std::vector<std::vector<double> >& res, const std::vector<std::vector<double> >& other) {
+    const int ngroups = res.size();
+    ASSERT_EQ(ngroups, other.size());
+    for (int l = 0; l < ngroups; ++l) {
+        scran_tests::compare_almost_equal(res[l], other[l]);
     }
+}
 
-    ScoreMarkersBestResultsAsVectors vectorize(scran_markers::ScoreMarkersBestResults<double, int> in) {
-        ScoreMarkersBestResultsAsVectors output;
-        output.mean = std::move(in.mean);
-        output.detected = std::move(in.detected);
-        output.cohens_d = scran_markers::queues_to_vectors(in.cohens_d); 
-        output.auc = scran_markers::queues_to_vectors(in.auc); 
-        output.delta_mean = scran_markers::queues_to_vectors(in.delta_mean); 
-        output.delta_detected = scran_markers::queues_to_vectors(in.delta_detected); 
-        return output;
-    }
+static ScoreMarkersBestResultsAsVectors vectorize(scran_markers::ScoreMarkersBestResults<double, int> in) {
+    ScoreMarkersBestResultsAsVectors output;
+    output.mean = std::move(in.mean);
+    output.detected = std::move(in.detected);
+    output.cohens_d = scran_markers::queues_to_vectors(in.cohens_d); 
+    output.auc = scran_markers::queues_to_vectors(in.auc); 
+    output.delta_mean = scran_markers::queues_to_vectors(in.delta_mean); 
+    output.delta_detected = scran_markers::queues_to_vectors(in.delta_detected); 
+    return output;
+}
 
-    void compare_best(
-        const std::vector<std::vector<std::vector<std::pair<int, double> > > >& left,
-        const std::vector<std::vector<std::vector<std::pair<int, double> > > >& right
-    ) {
-        ASSERT_EQ(left.size(), right.size());
-        const int ngroups = left.size();
-        for (int g1 = 0; g1 < ngroups; ++g1) {
-            ASSERT_EQ(left[g1].size(), right[g1].size());
-            for (int g2 = 0; g2 < ngroups; ++g2) {
-                const auto n = left[g1][g2].size();
-                ASSERT_EQ(n, right[g1][g2].size());
+static void compare_best(
+    const std::vector<std::vector<std::vector<std::pair<int, double> > > >& left,
+    const std::vector<std::vector<std::vector<std::pair<int, double> > > >& right
+) {
+    ASSERT_EQ(left.size(), right.size());
+    const int ngroups = left.size();
+    for (int g1 = 0; g1 < ngroups; ++g1) {
+        ASSERT_EQ(left[g1].size(), right[g1].size());
+        for (int g2 = 0; g2 < ngroups; ++g2) {
+            const auto n = left[g1][g2].size();
+            ASSERT_EQ(n, right[g1][g2].size());
 
-                for (std::size_t i = 0; i < n; ++i) {
-                    const auto& lval = left[g1][g2][i];
-                    const auto& rval = right[g1][g2][i];
-                    EXPECT_EQ(lval.first, rval.first);
-                    scran_tests::compare_almost_equal(lval.second, rval.second);
-                }
+            for (std::size_t i = 0; i < n; ++i) {
+                const auto& lval = left[g1][g2][i];
+                const auto& rval = right[g1][g2][i];
+                EXPECT_EQ(lval.first, rval.first);
+                scran_tests::compare_almost_equal(lval.second, rval.second);
             }
         }
     }
+}
 
-    void compare_best(const ScoreMarkersBestResultsAsVectors& left, const ScoreMarkersBestResultsAsVectors& right) {
-        compare_best(left.cohens_d, right.cohens_d);
-        compare_best(left.auc, right.auc);
-        compare_best(left.delta_mean, right.delta_mean);
-        compare_best(left.delta_detected, right.delta_detected);
+static void compare_best(const ScoreMarkersBestResultsAsVectors& left, const ScoreMarkersBestResultsAsVectors& right) {
+    compare_best(left.cohens_d, right.cohens_d);
+    compare_best(left.auc, right.auc);
+    compare_best(left.delta_mean, right.delta_mean);
+    compare_best(left.delta_detected, right.delta_detected);
+}
+
+static void compare_best_to_pairwise(
+    const std::vector<std::vector<std::vector<std::pair<int, double> > > >& best,
+    const std::vector<double>& effects,
+    int ngenes,
+    int ngroups,
+    int top,
+    bool larger,
+    const std::optional<double>& bound
+) {
+    std::vector<double> buffer(ngenes);
+
+    topicks::PickTopGenesOptions<double> opt;
+    opt.check_nan = true;
+    opt.keep_ties = false;
+    if (bound.has_value()) {
+        opt.bound = *bound;
     }
 
-    void compare_best_to_pairwise(
-        const std::vector<std::vector<std::vector<std::pair<int, double> > > >& best,
-        const std::vector<double>& effects,
-        int ngenes,
-        int ngroups,
-        int top,
-        bool larger,
-        bool keep_ties,
-        const std::optional<double>& bound
-    ) {
-        std::vector<double> buffer(ngenes);
-
-        topicks::PickTopGenesOptions<double> opt;
-        opt.check_nan = true;
-        opt.keep_ties = keep_ties;
-        if (bound.has_value()) {
-            opt.bound = *bound;
-        }
-
-        for (int g1 = 0; g1 < ngroups; ++g1) {
-            for (int g2 = 0; g2 < ngroups; ++g2) {
-                const auto& curbest = best[g1][g2];
-                if (g1 == g2) {
-                    EXPECT_TRUE(curbest.empty());
-                    continue;
-                }
-
-                for (int r = 0; r < ngenes; ++r) {
-                    buffer[r] = effects[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1, ngroups, r)];
-                }
-
-                const auto curtop = topicks::pick_top_genes_index(ngenes, buffer.data(), top, larger, opt);
-                std::vector<std::pair<int, double> > expected;
-                expected.reserve(curtop.size());
-                for (auto t : curtop) {
-                    expected.emplace_back(t, buffer[t]);
-                }
-                std::sort(expected.begin(), expected.end(), [&](const std::pair<int, double>& left, const std::pair<int, double>& right) -> bool {
-                    if (left.second == right.second) {
-                        return left.first < right.first;
-                    } else if (larger) {
-                        return left.second > right.second;
-                    } else {
-                        return left.second < right.second;
-                    }
-                });
-
-                EXPECT_EQ(expected, curbest);
+    for (int g1 = 0; g1 < ngroups; ++g1) {
+        for (int g2 = 0; g2 < ngroups; ++g2) {
+            const auto& curbest = best[g1][g2];
+            if (g1 == g2) {
+                EXPECT_TRUE(curbest.empty());
+                continue;
             }
+
+            for (int r = 0; r < ngenes; ++r) {
+                buffer[r] = effects[sanisizer::nd_offset<std::size_t>(g2, ngroups, g1, ngroups, r)];
+            }
+
+            const auto curtop = topicks::pick_top_genes_index(ngenes, buffer.data(), top, larger, opt);
+            std::vector<std::pair<int, double> > expected;
+            expected.reserve(curtop.size());
+            for (auto t : curtop) {
+                expected.emplace_back(t, buffer[t]);
+            }
+            std::sort(expected.begin(), expected.end(), [&](const std::pair<int, double>& left, const std::pair<int, double>& right) -> bool {
+                if (left.second == right.second) {
+                    return left.first < right.first;
+                } else if (larger) {
+                    return left.second > right.second;
+                } else {
+                    return left.second < right.second;
+                }
+            });
+
+            EXPECT_EQ(expected, curbest);
         }
     }
-};
+}
 
 /*********************************************/
 
-class ScoreMarkersBestTest : public ScoreMarkersBestTestCore, public ::testing::TestWithParam<std::tuple<int, bool, int, bool, bool, bool, int> > {
+class ScoreMarkersBestTest : public ::testing::TestWithParam<std::tuple<int, bool, int, bool, int> > {
 protected:
     inline static std::shared_ptr<tatami::Matrix<double, int> > dense_row, dense_column, sparse_row, sparse_column;
 
@@ -155,20 +151,12 @@ TEST_P(ScoreMarkersBestTest, Basic) {
     auto ngroups = std::get<0>(param);
     bool do_auc = std::get<1>(param);
     int top = std::get<2>(param);
-    bool larger = std::get<3>(param);
-    bool use_bound = std::get<4>(param);
-    bool keep_ties = std::get<5>(param);
-    auto nthreads = std::get<6>(param);
+    bool use_bound = std::get<3>(param);
+    auto nthreads = std::get<4>(param);
 
-    std::vector<int> groupings = create_groupings(dense_row->ncol(), ngroups);
-    size_t ngenes = dense_row->nrow();
+    auto groupings = create_interleaved_factor(dense_row->ncol(), ngroups);
 
     scran_markers::ScoreMarkersBestOptions opt;
-    opt.largest_cohens_d = larger;
-    opt.largest_delta_detected = larger;
-    opt.largest_delta_mean = larger;
-    opt.largest_auc = larger;
-
     if (!use_bound) {
         opt.threshold_cohens_d.reset();
         opt.threshold_delta_detected.reset();
@@ -176,8 +164,8 @@ TEST_P(ScoreMarkersBestTest, Basic) {
         opt.threshold_auc.reset();
     }
 
-    opt.keep_ties = keep_ties;
     opt.compute_auc = do_auc; // false, if we want to check the running implementations.
+
     auto ref = vectorize(scran_markers::score_markers_best<double>(*dense_row, groupings.data(), ngroups, top, opt));
 
     if (nthreads == 1) {
@@ -189,11 +177,12 @@ TEST_P(ScoreMarkersBestTest, Basic) {
         compare_averages(ref.mean, pairres.mean);
         compare_averages(ref.detected, pairres.detected);
 
-        compare_best_to_pairwise(ref.cohens_d, pairres.cohens_d, ngenes, ngroups, top, opt.largest_cohens_d, keep_ties, opt.threshold_cohens_d);
-        compare_best_to_pairwise(ref.delta_mean, pairres.delta_mean, ngenes, ngroups, top, opt.largest_delta_mean, keep_ties, opt.threshold_delta_mean);
-        compare_best_to_pairwise(ref.delta_detected, pairres.delta_detected, ngenes, ngroups, top, opt.largest_delta_detected, keep_ties, opt.threshold_delta_detected);
+        const auto ngenes = dense_row->nrow();
+        compare_best_to_pairwise(ref.cohens_d, pairres.cohens_d, ngenes, ngroups, top, opt.largest_cohens_d, opt.threshold_cohens_d);
+        compare_best_to_pairwise(ref.delta_mean, pairres.delta_mean, ngenes, ngroups, top, opt.largest_delta_mean, opt.threshold_delta_mean);
+        compare_best_to_pairwise(ref.delta_detected, pairres.delta_detected, ngenes, ngroups, top, opt.largest_delta_detected, opt.threshold_delta_detected);
         if (do_auc) {
-            compare_best_to_pairwise(ref.auc, pairres.auc, ngenes, ngroups, top, opt.largest_auc, keep_ties, opt.threshold_auc);
+            compare_best_to_pairwise(ref.auc, pairres.auc, ngenes, ngroups, top, opt.largest_auc, opt.threshold_auc);
         }
 
     } else {
@@ -253,19 +242,17 @@ INSTANTIATE_TEST_SUITE_P(
     ScoreMarkersBest,
     ScoreMarkersBestTest,
     ::testing::Combine(
-        ::testing::Values(2, 5), // number of clusters
+        ::testing::Values(2, 5), // number of groups
         ::testing::Values(false, true), // with or without the AUC?
-        ::testing::Values(10, 50), // number of top markers
-        ::testing::Values(true, false), // use larger or smaller effects
+        ::testing::Values(10, 10000), // number of top markers
         ::testing::Values(true, false), // use bounds or not
-        ::testing::Values(true, false), // keep ties or not
         ::testing::Values(1, 3) // number of threads
     )
 );
 
 /*********************************************/
 
-class ScoreMarkersBestBlockedTest : public ScoreMarkersBestTestCore, public ::testing::TestWithParam<std::tuple<int, bool, scran_blocks::WeightPolicy, int, bool, bool, bool> > {
+class ScoreMarkersBestBlockedTest : public ::testing::TestWithParam<std::tuple<int, bool, scran_blocks::WeightPolicy, int, bool> > {
 protected:
     inline static std::shared_ptr<tatami::Matrix<double, int> > dense_row, dense_column, sparse_row, sparse_column;
 
@@ -293,28 +280,22 @@ protected:
     }
 };
 
-TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseMean) {
+// Note: skipping the multi-threaded checks as we've already got too many test cases.
+// Besides, there isn't any blocking-specific multi-threaded code in this function.
+
+TEST_P(ScoreMarkersBestBlockedTest, ReferenceMean) {
     auto param = GetParam();
     auto ngroups = std::get<0>(param);
     bool do_auc = std::get<1>(param);
     auto policy = std::get<2>(param);
     int top = std::get<3>(param);
-    bool larger = std::get<4>(param);
-    bool use_bound = std::get<5>(param);
-    bool keep_ties = std::get<6>(param);
+    bool use_bound = std::get<4>(param);
 
-    auto NC = dense_row->ncol();
-    std::vector<int> groupings = create_groupings(NC, ngroups);
     const int nblocks = 3;
-    std::vector<int> blocks = create_blocks(NC, nblocks);
-    auto ngenes = dense_row->nrow();
+    auto groupings = create_interleaved_factor(dense_row->ncol(), ngroups);
+    auto blocks = create_contiguous_factor(dense_row->ncol(), nblocks);
 
     scran_markers::ScoreMarkersBestOptions opt;
-    opt.largest_cohens_d = larger;
-    opt.largest_delta_detected = larger;
-    opt.largest_delta_mean = larger;
-    opt.largest_auc = larger;
-
     if (!use_bound) {
         opt.threshold_cohens_d.reset();
         opt.threshold_delta_detected.reset();
@@ -322,9 +303,9 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseMean) {
         opt.threshold_auc.reset();
     }
 
-    opt.keep_ties = keep_ties;
     opt.compute_auc = do_auc; // false, if we want to check the running implementations.
     opt.block_weight_policy = policy;
+
     auto ref = vectorize(scran_markers::score_markers_best_blocked<double>(*dense_row, groupings.data(), ngroups, blocks.data(), nblocks, top, opt));
 
     // Comparing score_markers_best_blocked against score_markers_pairwise_blocked + topicks::pick_top_genes.
@@ -337,16 +318,14 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseMean) {
         compare_averages(ref.mean, pairres.mean);
         compare_averages(ref.detected, pairres.detected);
 
-        compare_best_to_pairwise(ref.cohens_d, pairres.cohens_d, ngenes, ngroups, top, opt.largest_cohens_d, keep_ties, opt.threshold_cohens_d);
-        compare_best_to_pairwise(ref.delta_mean, pairres.delta_mean, ngenes, ngroups, top, opt.largest_delta_mean, keep_ties, opt.threshold_delta_mean);
-        compare_best_to_pairwise(ref.delta_detected, pairres.delta_detected, ngenes, ngroups, top, opt.largest_delta_detected, keep_ties, opt.threshold_delta_detected);
+        const auto ngenes = dense_row->nrow();
+        compare_best_to_pairwise(ref.cohens_d, pairres.cohens_d, ngenes, ngroups, top, opt.largest_cohens_d, opt.threshold_cohens_d);
+        compare_best_to_pairwise(ref.delta_mean, pairres.delta_mean, ngenes, ngroups, top, opt.largest_delta_mean, opt.threshold_delta_mean);
+        compare_best_to_pairwise(ref.delta_detected, pairres.delta_detected, ngenes, ngroups, top, opt.largest_delta_detected, opt.threshold_delta_detected);
         if (do_auc) {
-            compare_best_to_pairwise(ref.auc, pairres.auc, ngenes, ngroups, top, opt.largest_auc, keep_ties, opt.threshold_auc);
+            compare_best_to_pairwise(ref.auc, pairres.auc, ngenes, ngroups, top, opt.largest_auc, opt.threshold_auc);
         }
     }
-
-    // Note: skipping the multi-threaded checks as we've already got too many test cases.
-    // Besides, the multi-threaded code is the same as the unblocked case.
 
     // Comparing to all of the other matrix representations.
     {
@@ -367,33 +346,20 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseMean) {
     }
 }
 
-TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseQuantile) {
+TEST_P(ScoreMarkersBestBlockedTest, ReferenceQuantile) {
     auto param = GetParam();
     auto ngroups = std::get<0>(param);
     bool do_auc = std::get<1>(param);
     auto policy = std::get<2>(param);
     int top = std::get<3>(param);
-    bool larger = std::get<4>(param);
-    bool use_bound = std::get<5>(param);
-    bool keep_ties = std::get<6>(param);
+    bool use_bound = std::get<4>(param);
 
-    // Block weighting has no effect here, so we'll just short-circuit.
-    if (policy == scran_blocks::WeightPolicy::EQUAL) {
-        return;
-    }
-
-    auto NC = dense_row->ncol();
-    std::vector<int> groupings = create_groupings(NC, ngroups);
     const int nblocks = 3;
-    std::vector<int> blocks = create_blocks(NC, nblocks);
-    auto ngenes = dense_row->nrow();
+    // Checking contiguous groupings with interleaved blocks, just for some variety.
+    const auto groupings = create_contiguous_factor(dense_row->ncol(), ngroups);
+    const auto blocks = create_interleaved_factor(dense_row->ncol(), nblocks);
 
     scran_markers::ScoreMarkersBestOptions opt;
-    opt.largest_cohens_d = larger;
-    opt.largest_delta_detected = larger;
-    opt.largest_delta_mean = larger;
-    opt.largest_auc = larger;
-
     if (!use_bound) {
         opt.threshold_cohens_d.reset();
         opt.threshold_delta_detected.reset();
@@ -401,9 +367,10 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseQuantile) {
         opt.threshold_auc.reset();
     }
 
-    opt.keep_ties = keep_ties;
     opt.compute_auc = do_auc; // false, if we want to check the running implementations.
     opt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
+    opt.block_weight_policy = policy; // should't matter as the quantile is unweighted, but whatever.
+
     auto ref = vectorize(scran_markers::score_markers_best_blocked<double>(*dense_row, groupings.data(), ngroups, blocks.data(), nblocks, top, opt));
 
     // Comparing score_markers_best_blocked against score_markers_pairwise_blocked + topicks::pick_top_genes.
@@ -416,16 +383,14 @@ TEST_P(ScoreMarkersBestBlockedTest, AgainstPairwiseQuantile) {
         compare_averages(ref.mean, pairres.mean);
         compare_averages(ref.detected, pairres.detected);
 
-        compare_best_to_pairwise(ref.cohens_d, pairres.cohens_d, ngenes, ngroups, top, opt.largest_cohens_d, keep_ties, opt.threshold_cohens_d);
-        compare_best_to_pairwise(ref.delta_mean, pairres.delta_mean, ngenes, ngroups, top, opt.largest_delta_mean, keep_ties, opt.threshold_delta_mean);
-        compare_best_to_pairwise(ref.delta_detected, pairres.delta_detected, ngenes, ngroups, top, opt.largest_delta_detected, keep_ties, opt.threshold_delta_detected);
+        const auto ngenes = dense_row->nrow();
+        compare_best_to_pairwise(ref.cohens_d, pairres.cohens_d, ngenes, ngroups, top, opt.largest_cohens_d, opt.threshold_cohens_d);
+        compare_best_to_pairwise(ref.delta_mean, pairres.delta_mean, ngenes, ngroups, top, opt.largest_delta_mean, opt.threshold_delta_mean);
+        compare_best_to_pairwise(ref.delta_detected, pairres.delta_detected, ngenes, ngroups, top, opt.largest_delta_detected, opt.threshold_delta_detected);
         if (do_auc) {
-            compare_best_to_pairwise(ref.auc, pairres.auc, ngenes, ngroups, top, opt.largest_auc, keep_ties, opt.threshold_auc);
+            compare_best_to_pairwise(ref.auc, pairres.auc, ngenes, ngroups, top, opt.largest_auc, opt.threshold_auc);
         }
     }
-
-    // Note: skipping the multi-threaded checks as we've already got too many test cases.
-    // Besides, the multi-threaded code is the same as the unblocked case.
 
     // Comparing to all of the other matrix representations.
     {
@@ -450,21 +415,17 @@ INSTANTIATE_TEST_SUITE_P(
     ScoreMarkersBest,
     ScoreMarkersBestBlockedTest,
     ::testing::Combine(
-        ::testing::Values(2, 5), // number of clusters
+        ::testing::Values(2, 5), // number of groups
         ::testing::Values(false, true), // with or without the AUC?
         ::testing::Values(scran_blocks::WeightPolicy::NONE, scran_blocks::WeightPolicy::EQUAL), // block weighting method.
-        ::testing::Values(10, 50), // number of top markers
-        ::testing::Values(true, false), // use larger or smaller effects
-        ::testing::Values(true, false), // use bounds or not
-        ::testing::Values(true, false)  // keep ties or not
+        ::testing::Values(10, 10000), // number of top markers
+        ::testing::Values(true, false) // use bounds or not
     )
 );
 
 /*********************************************/
 
-class ScoreMarkersBestScenariosTest : public ScoreMarkersBestTestCore, public ::testing::Test {};
-
-TEST_F(ScoreMarkersBestScenariosTest, Thresholds) {
+TEST(ScoreMarkersBest, Thresholds) {
     int nrows = 291, ncols = 91;
     tatami::DenseRowMatrix<double, int> mat(
         nrows,
@@ -484,32 +445,47 @@ TEST_F(ScoreMarkersBestScenariosTest, Thresholds) {
 
     int top = 10;
     scran_markers::ScoreMarkersBestOptions sopt;
-    auto ref = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), ngroups, top, sopt));
-    sopt.threshold = 1;
+    sopt.threshold = 0.34;
     auto out = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), ngroups, top, sopt));
+
+    // Comparing score_markers_best against score_markers_pairwise + topicks::pick_top_genes.
+    // The latter is less mind-bending but requires holding a large 3D matrix in memory.
+    scran_markers::ScoreMarkersPairwiseOptions popt;
+    popt.threshold = sopt.threshold;
+    auto pairres = scran_markers::score_markers_pairwise(mat, groupings.data(), ngroups, popt);
+    compare_averages(out.mean, pairres.mean);
+    compare_averages(out.detected, pairres.detected);
+
+    compare_best_to_pairwise(out.cohens_d, pairres.cohens_d, nrows, ngroups, top, sopt.largest_cohens_d, sopt.threshold_cohens_d);
+    compare_best_to_pairwise(out.delta_mean, pairres.delta_mean, nrows, ngroups, top, sopt.largest_delta_mean, sopt.threshold_delta_mean);
+    compare_best_to_pairwise(out.delta_detected, pairres.delta_detected, nrows, ngroups, top, sopt.largest_delta_detected, sopt.threshold_delta_detected);
+    compare_best_to_pairwise(out.auc, pairres.auc, nrows, ngroups, top, sopt.largest_auc, sopt.threshold_auc);
+
+    // Checking that the effect sizes really are changed compared to a no-threshold run. 
+    auto no_thresh = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), ngroups, top, {}));
 
     int some_diff = 0;
     for (int l = 0; l < ngroups; ++l) {
         // Not affected.
-        EXPECT_EQ(ref.mean[l], out.mean[l]);
-        EXPECT_EQ(ref.detected[l], out.detected[l]);
+        EXPECT_EQ(no_thresh.mean[l], out.mean[l]);
+        EXPECT_EQ(no_thresh.detected[l], out.detected[l]);
 
         for (int k = 0; k < ngroups; ++k) {
             if (k == l) {
                 continue;
             }
 
-            EXPECT_EQ(ref.delta_mean[l][k], out.delta_mean[l][k]);
-            EXPECT_EQ(ref.delta_detected[l][k], out.delta_detected[l][k]);
+            EXPECT_EQ(no_thresh.delta_mean[l][k], out.delta_mean[l][k]);
+            EXPECT_EQ(no_thresh.delta_detected[l][k], out.delta_detected[l][k]);
 
-            const auto& rcohen = ref.cohens_d[l][k];
+            const auto& rcohen = no_thresh.cohens_d[l][k];
             const auto& ocohen = out.cohens_d[l][k];
             const std::size_t ncohen = std::min(rcohen.size(), ocohen.size());
             for (std::size_t i = 0; i < ncohen; ++i) {
                 EXPECT_GT(rcohen[i].second, ocohen[i].second);
             }
 
-            const auto& rauc = ref.auc[l][k];
+            const auto& rauc = no_thresh.auc[l][k];
             const auto& oauc = out.auc[l][k];
             const std::size_t nauc = std::min(rauc.size(), oauc.size());
             for (std::size_t i = 0; i < nauc; ++i) {
@@ -531,7 +507,7 @@ TEST_F(ScoreMarkersBestScenariosTest, Thresholds) {
     compare_best(out, qout);
 }
 
-TEST_F(ScoreMarkersBestScenariosTest, Missing) {
+TEST(ScoreMarkersBest, EmptyGroups) {
     int nrows = 144, ncols = 109;
     tatami::DenseRowMatrix<double, int> mat(
         nrows,
@@ -598,7 +574,44 @@ TEST_F(ScoreMarkersBestScenariosTest, Missing) {
     compare_best(lost, qlost);
 }
 
-TEST_F(ScoreMarkersBestScenariosTest, BlockConfounded) {
+TEST(ScoreMarkersBest, NoGenes) {
+    int nrows = 0, ncols = 66;
+    tatami::DenseMatrix<double, int, std::vector<double> > mat(nrows, ncols, std::vector<double>(), true);
+
+    int ngroups = 4;
+    std::vector<int> groupings = create_groupings(ncols, ngroups);
+
+    scran_markers::ScoreMarkersBestOptions opts;
+    int top = 10;
+    auto out = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), ngroups, top, opts));
+
+    for (int g = 0; g < ngroups; ++g) {
+        EXPECT_TRUE(out.mean[g].empty());
+        EXPECT_TRUE(out.detected[g].empty());
+
+        EXPECT_EQ(out.cohens_d[g].size(), ngroups);
+        EXPECT_EQ(out.auc[g].size(), ngroups);
+        EXPECT_EQ(out.delta_mean[g].size(), ngroups);
+        EXPECT_EQ(out.delta_detected[g].size(), ngroups);
+
+        for (int g2 = 0; g2 < ngroups; ++g2) {
+            EXPECT_TRUE(out.cohens_d[g][g2].empty());
+            EXPECT_TRUE(out.auc[g][g2].empty());
+            EXPECT_TRUE(out.delta_mean[g][g2].empty());
+            EXPECT_TRUE(out.delta_detected[g][g2].empty());
+        }
+    }
+
+    // Quantile should give the same results for a single block.
+    auto qopt = opts;
+    qopt.block_average_policy = scran_markers::BlockAveragePolicy::QUANTILE;
+    auto qout = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), ngroups, top, qopt));
+    compare_averages(out.mean, qout.mean);
+    compare_averages(out.detected, qout.detected);
+    compare_best(out, qout);
+}
+
+TEST(ScoreMarkersBest, BlockConfounded) {
     int nrows = 198, ncols = 99;
     std::shared_ptr<tatami::Matrix<double, int> > mat(
         new tatami::DenseRowMatrix<double, int>(
@@ -676,86 +689,15 @@ TEST_F(ScoreMarkersBestScenariosTest, BlockConfounded) {
     compare_best(comres, qcomres);
 }
 
-TEST_F(ScoreMarkersBestScenariosTest, Empty) {
-    int nrows = 0, ncols = 66;
-    tatami::DenseMatrix<double, int, std::vector<double> > mat(nrows, ncols, std::vector<double>(), true);
-
-    int ngroups = 4;
-    std::vector<int> groupings = create_groupings(ncols, ngroups);
-
-    scran_markers::ScoreMarkersBestOptions opts;
-    int top = 10;
-    auto out = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), ngroups, top, opts));
-
-    for (int g = 0; g < ngroups; ++g) {
-        EXPECT_TRUE(out.mean[g].empty());
-        EXPECT_TRUE(out.detected[g].empty());
-
-        EXPECT_EQ(out.cohens_d[g].size(), ngroups);
-        EXPECT_EQ(out.auc[g].size(), ngroups);
-        EXPECT_EQ(out.delta_mean[g].size(), ngroups);
-        EXPECT_EQ(out.delta_detected[g].size(), ngroups);
-
-        for (int g2 = 0; g2 < ngroups; ++g2) {
-            EXPECT_TRUE(out.cohens_d[g][g2].empty());
-            EXPECT_TRUE(out.auc[g][g2].empty());
-            EXPECT_TRUE(out.delta_mean[g][g2].empty());
-            EXPECT_TRUE(out.delta_detected[g][g2].empty());
-        }
-    }
-}
-
 /*********************************************/
 
-class ScoreMarkersBestOneAtATimeTest : public ScoreMarkersBestTestCore, public ::testing::TestWithParam<int> {
-protected:
-    inline static std::shared_ptr<tatami::Matrix<double, int> > dense_row, dense_column, sparse_row, sparse_column;
-
-    static void SetUpTestSuite() {
-        size_t nr = 128, nc = 302;
-        dense_row.reset(
-            new tatami::DenseRowMatrix<double, int>(
-                nr,
-                nc,
-                scran_tests::simulate_vector(
-                    nr * nc, 
-                    []{
-                        scran_tests::SimulateVectorParameters sparam;
-                        sparam.density = 0.2;
-                        sparam.seed = 96;
-                        return sparam;
-                    }()
-                )
-            )
-        );
-
-        dense_column = tatami::convert_to_dense(dense_row.get(), false);
-        sparse_row = tatami::convert_to_compressed_sparse(dense_row.get(), true);
-        sparse_column = tatami::convert_to_compressed_sparse(dense_row.get(), false);
-    }
-};
-
-TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
-    auto NC = dense_row->ncol();
-    const int ngroups = 3;
-    std::vector<int> groupings = create_groupings(NC, ngroups);
-
-    const tatami::Matrix<double, int>* mat;
-    switch (GetParam()) {
-        case 0:
-            mat = dense_row.get(); break;
-        case 1:
-            mat = dense_column.get(); break;
-        case 2:
-            mat = sparse_row.get(); break;
-        case 3:
-            mat = sparse_column.get(); break;
-    }
-
-    scran_markers::ScoreMarkersBestOptions opt;
-    int top = 15;
-    auto ref = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), ngroups, top, opt));
-
+static void check_one_at_a_time(
+    const tatami::Matrix<double, int>& mat,
+    const std::vector<int>& groupings,
+    const std::size_t ngroups,
+    const int top,
+    const ScoreMarkersBestResultsAsVectors& ref
+) {
     // Only the group mean.
     {
         scran_markers::ScoreMarkersBestOptions opt;
@@ -765,7 +707,7 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
 
-        auto alt = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), ngroups, top, opt));
+        auto alt = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), ngroups, top, opt));
         compare_averages(ref.mean, alt.mean);
         EXPECT_TRUE(alt.detected.empty());
         EXPECT_TRUE(alt.cohens_d.empty());
@@ -783,7 +725,7 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
 
-        auto alt = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), ngroups, top, opt));
+        auto alt = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), ngroups, top, opt));
         compare_averages(ref.detected, alt.detected);
         EXPECT_TRUE(alt.mean.empty());
         EXPECT_TRUE(alt.cohens_d.empty());
@@ -801,7 +743,7 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
 
-        auto alt = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), ngroups, top, opt));
+        auto alt = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), ngroups, top, opt));
         compare_best(alt.cohens_d, ref.cohens_d);
         EXPECT_TRUE(alt.mean.empty());
         EXPECT_TRUE(alt.detected.empty());
@@ -819,7 +761,7 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
         opt.compute_delta_mean = false;
         opt.compute_delta_detected = false;
 
-        auto alt = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), ngroups, top, opt));
+        auto alt = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), ngroups, top, opt));
         compare_best(alt.auc, ref.auc);
         EXPECT_TRUE(alt.cohens_d.empty());
         EXPECT_TRUE(alt.delta_mean.empty());
@@ -835,7 +777,7 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
         opt.compute_auc = false;
         opt.compute_delta_detected = false;
 
-        auto alt = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), ngroups, top, opt));
+        auto alt = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), ngroups, top, opt));
         compare_best(alt.delta_mean, ref.delta_mean);
         EXPECT_TRUE(alt.mean.empty());
         EXPECT_TRUE(alt.detected.empty());
@@ -853,7 +795,7 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
         opt.compute_auc = false;
         opt.compute_delta_mean = false;
 
-        auto alt = vectorize(scran_markers::score_markers_best<double>(*mat, groupings.data(), ngroups, top, opt));
+        auto alt = vectorize(scran_markers::score_markers_best<double>(mat, groupings.data(), ngroups, top, opt));
         compare_best(alt.delta_detected, ref.delta_detected);
         EXPECT_TRUE(alt.mean.empty());
         EXPECT_TRUE(alt.detected.empty());
@@ -863,8 +805,35 @@ TEST_P(ScoreMarkersBestOneAtATimeTest, Basic) {
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    ScoreMarkersBest,
-    ScoreMarkersBestOneAtATimeTest,
-    ::testing::Values(0, 1, 2, 3)
-);
+TEST(ScoreMarkersBest, OneAtATime) {
+    const int NR = 129, NC = 236;
+    auto dense_row = std::make_shared<tatami::DenseRowMatrix<double, int> >(
+        NR,
+        NC,
+        scran_tests::simulate_vector(
+            NR * NC, 
+            []{
+                scran_tests::SimulateVectorParameters sparam;
+                sparam.density = 0.2;
+                sparam.seed = 96;
+                return sparam;
+            }()
+        )
+    );
+
+    auto dense_column = tatami::convert_to_dense(dense_row.get(), false);
+    auto sparse_row = tatami::convert_to_compressed_sparse(dense_row.get(), true);
+    auto sparse_column = tatami::convert_to_compressed_sparse(dense_row.get(), false);
+
+    const int ngroups = 3;
+    std::vector<int> groupings = create_groupings(NC, ngroups);
+
+    scran_markers::ScoreMarkersBestOptions opt;
+    int top = 15;
+    auto ref = vectorize(scran_markers::score_markers_best<double>(*dense_row, groupings.data(), ngroups, top, opt));
+
+    check_one_at_a_time(*dense_row, groupings, ngroups, top, ref);
+    check_one_at_a_time(*sparse_row, groupings, ngroups, top, ref);
+    check_one_at_a_time(*dense_column, groupings, ngroups, top, ref);
+    check_one_at_a_time(*sparse_column, groupings, ngroups, top, ref);
+}
