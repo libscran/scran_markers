@@ -109,11 +109,11 @@ Quick start</h1>
 <div class="line"><span class="comment">// Expression matrix, usually log-normalized.</span></div>
 <div class="line"><span class="keyword">const</span> <a class="code hl_classRef" href="https://tatami-inc.github.io/tatami/classtatami_1_1Matrix.html">tatami::Matrix&lt;double, int&gt;</a>&amp; matrix = some_data_source();</div>
 <div class="line"> </div>
-<div class="line"><span class="comment">// Array containing integer assignments to groups 0, 1, 2, etc.</span></div>
+<div class="line"><span class="comment">// Array containing integer assignments to groups { 0, 1, 2, ..., num_groups - 1 }</span></div>
 <div class="line">std::vector&lt;int&gt; groupings = some_groupings();</div>
 <div class="line"> </div>
 <div class="line"><a class="code hl_struct" href="structscran__markers_1_1ScoreMarkersSummaryOptions.html">scran_markers::ScoreMarkersSummaryOptions</a> opt;</div>
-<div class="line"><span class="keyword">auto</span> res = <a class="code hl_function" href="namespacescran__markers.html#ae2dd82f0a44f0394f365dae16544c14a">scran_markers::score_markers_summary</a>(matrix, groupings.data(), opt);</div>
+<div class="line"><span class="keyword">auto</span> res = <a class="code hl_function" href="namespacescran__markers.html#ae2dd82f0a44f0394f365dae16544c14a">scran_markers::score_markers_summary</a>(matrix, groupings.data(), num_groups, opt);</div>
 <div class="line"> </div>
 <div class="line">res.mean[0]; <span class="comment">// mean of each gene in the first group.</span></div>
 <div class="line">res.detected[0]; <span class="comment">// detected proportion of each gene in the first group.</span></div>
@@ -125,13 +125,15 @@ Quick start</h1>
 <div class="fragment"><div class="line">res.cohens_d[0].mean; <span class="comment">// mean Cohen&#39;s d across all genes for the first group</span></div>
 <div class="line">res.auc[0].median; <span class="comment">// median AUC across all genes for the first group.</span></div>
 </div><!-- fragment --><p>If the dataset contains some uninteresting variation (e.g., batches, samples), we can ensure that it does not affect the effect size calculation by blocking on that factor. This performs the comparisons within each level of the blocking factor so as to ignore the irrelevant variation.</p>
-<div class="fragment"><div class="line"><span class="comment">// Array containing integer assignments to blocks 0, 1, 2, etc.</span></div>
+<div class="fragment"><div class="line"><span class="comment">// Array containing integer assignments to blocks { 0, 1, 2, ..., num_blocks - 1 }</span></div>
 <div class="line">std::vector&lt;int&gt; blocks = some_blocks();</div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">auto</span> block_res = <a class="code hl_function" href="namespacescran__markers.html#a3deee03cb517e246b09ae58c5df90c58">scran_markers::score_markers_summary_blocked</a>(</div>
 <div class="line">    matrix,</div>
 <div class="line">    groupings.data(), </div>
+<div class="line">    num_groups,</div>
 <div class="line">    blocks.data(),</div>
+<div class="line">    num_blocks,</div>
 <div class="line">    opt</div>
 <div class="line">);</div>
 <div class="ttc" id="anamespacescran__markers_html_a3deee03cb517e246b09ae58c5df90c58"><div class="ttname"><a href="namespacescran__markers.html#a3deee03cb517e246b09ae58c5df90c58">scran_markers::score_markers_summary_blocked</a></div><div class="ttdeci">void score_markers_summary_blocked(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const Block_ *const block, const std::size_t num_blocks, const ScoreMarkersSummaryOptions &amp;options, const ScoreMarkersSummaryBuffers&lt; Stat_, Rank_ &gt; &amp;output)</div><div class="ttdef"><b>Definition</b> score_markers_summary.hpp:789</div></div>
@@ -144,6 +146,7 @@ Computing pairwise effects</h1>
 <div class="line"><span class="keyword">auto</span> pair_res = <a class="code hl_function" href="namespacescran__markers.html#a14eb231ef9e7bd82b04655a6c698f8b2">scran_markers::score_markers_pairwise</a>(</div>
 <div class="line">    matrix,</div>
 <div class="line">    groupings.data(),</div>
+<div class="line">    num_groups,</div>
 <div class="line">    popt</div>
 <div class="line">);</div>
 <div class="line"> </div>
@@ -160,11 +163,13 @@ Computing pairwise effects</h1>
 <div class="line">);</div>
 <div class="ttc" id="anamespacescran__markers_html_ae581fdc934b2c14eb04c4b4f68dfc898"><div class="ttname"><a href="namespacescran__markers.html#ae581fdc934b2c14eb04c4b4f68dfc898">scran_markers::summarize_effects</a></div><div class="ttdeci">void summarize_effects(const Gene_ num_genes, const std::size_t num_groups, const Stat_ *const effects, const std::vector&lt; SummaryBuffers&lt; Stat_, Rank_ &gt; &gt; &amp;summaries, const SummarizeEffectsOptions &amp;options)</div><div class="ttdef"><b>Definition</b> summarize_effects.hpp:134</div></div>
 </div><!-- fragment --><p>If we just want the top genes from each pairwise comparison, we can use the <code>score_markers_best()</code> function to save memory:</p>
-<div class="fragment"><div class="line"><a class="code hl_struct" href="structscran__markers_1_1ScoreMarkersPairwiseOptions.html">scran_markers::ScoreMarkersPairwiseOptions</a> popt;</div>
+<div class="fragment"><div class="line"><a class="code hl_struct" href="structscran__markers_1_1ScoreMarkersBestOptions.html">scran_markers::ScoreMarkersBestOptions</a> popt;</div>
 <div class="line"> </div>
+<div class="line"><span class="comment">// Getting the top 10 genes for each pairwise comparison.</span></div>
 <div class="line"><span class="keyword">auto</span> best_res = <a class="code hl_function" href="namespacescran__markers.html#a9fd5cd9e115515f49b151b9aa8a303db">scran_markers::score_markers_best</a>(</div>
 <div class="line">    matrix,</div>
 <div class="line">    groupings.data(),</div>
+<div class="line">    num_groups,</div>
 <div class="line">    10,</div>
 <div class="line">    popt</div>
 <div class="line">);</div>
@@ -172,6 +177,7 @@ Computing pairwise effects</h1>
 <div class="line"><span class="comment">// Vector of the top 10 genes when comparing group 0 to group 1.</span></div>
 <div class="line">best_res.cohens_d[0][1];</div>
 <div class="ttc" id="anamespacescran__markers_html_a9fd5cd9e115515f49b151b9aa8a303db"><div class="ttname"><a href="namespacescran__markers.html#a9fd5cd9e115515f49b151b9aa8a303db">scran_markers::score_markers_best</a></div><div class="ttdeci">ScoreMarkersBestResults&lt; Stat_, Index_ &gt; score_markers_best(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const Index_ top, const ScoreMarkersBestOptions &amp;options)</div><div class="ttdef"><b>Definition</b> score_markers_best.hpp:739</div></div>
+<div class="ttc" id="astructscran__markers_1_1ScoreMarkersBestOptions_html"><div class="ttname"><a href="structscran__markers_1_1ScoreMarkersBestOptions.html">scran_markers::ScoreMarkersBestOptions</a></div><div class="ttdoc">Options for score_markers_best() and friends.</div><div class="ttdef"><b>Definition</b> score_markers_best.hpp:32</div></div>
 </div><!-- fragment --><h1><a class="anchor" id="autotoc_md4"></a>
 Building projects</h1>
 <h2><a class="anchor" id="autotoc_md5"></a>

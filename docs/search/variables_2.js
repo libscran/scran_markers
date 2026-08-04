@@ -14,8 +14,11 @@ var searchData=
   ['compute_5fmedian_11',['compute_median',['../structscran__markers_1_1SummarizeEffectsOptions.html#a263938e45059acbbb45c2aed3f1fea31',1,'scran_markers::SummarizeEffectsOptions']]],
   ['compute_5fmin_12',['compute_min',['../structscran__markers_1_1SummarizeEffectsOptions.html#aa882f8fbc4e85c2a0dae845d0a915169',1,'scran_markers::SummarizeEffectsOptions']]],
   ['compute_5fmin_5frank_13',['compute_min_rank',['../structscran__markers_1_1SummarizeEffectsOptions.html#a72ed641c77c6265d8da4583fe8f5db42',1,'scran_markers::SummarizeEffectsOptions']]],
-  ['compute_5fsummary_5fmax_14',['compute_summary_max',['../structscran__markers_1_1ScoreMarkersSummaryOptions.html#a6d78c16b4ebd8435766396b2d72a8504',1,'scran_markers::ScoreMarkersSummaryOptions']]],
-  ['compute_5fsummary_5fmean_15',['compute_summary_mean',['../structscran__markers_1_1ScoreMarkersSummaryOptions.html#a9814d7496191a7362fb50ac68faa3923',1,'scran_markers::ScoreMarkersSummaryOptions']]],
-  ['compute_5fsummary_5fmedian_16',['compute_summary_median',['../structscran__markers_1_1ScoreMarkersSummaryOptions.html#ae809497654a1be98db59aa1e88e2f8b0',1,'scran_markers::ScoreMarkersSummaryOptions']]],
-  ['compute_5fsummary_5fmin_17',['compute_summary_min',['../structscran__markers_1_1ScoreMarkersSummaryOptions.html#ab2cb5cc187964a3e51fc48f09d8be91c',1,'scran_markers::ScoreMarkersSummaryOptions']]]
+  ['compute_5fquantiles_14',['compute_quantiles',['../structscran__markers_1_1SummarizeEffectsOptions.html#a0db81c2440e8e4818c88aab90871d26a',1,'scran_markers::SummarizeEffectsOptions']]],
+  ['compute_5fsummary_5fmax_15',['compute_summary_max',['../structscran__markers_1_1ScoreMarkersSummaryOptions.html#a6d78c16b4ebd8435766396b2d72a8504',1,'scran_markers::ScoreMarkersSummaryOptions']]],
+  ['compute_5fsummary_5fmean_16',['compute_summary_mean',['../structscran__markers_1_1ScoreMarkersSummaryOptions.html#a9814d7496191a7362fb50ac68faa3923',1,'scran_markers::ScoreMarkersSummaryOptions']]],
+  ['compute_5fsummary_5fmedian_17',['compute_summary_median',['../structscran__markers_1_1ScoreMarkersSummaryOptions.html#ae809497654a1be98db59aa1e88e2f8b0',1,'scran_markers::ScoreMarkersSummaryOptions']]],
+  ['compute_5fsummary_5fmin_18',['compute_summary_min',['../structscran__markers_1_1ScoreMarkersSummaryOptions.html#ab2cb5cc187964a3e51fc48f09d8be91c',1,'scran_markers::ScoreMarkersSummaryOptions']]],
+  ['compute_5fsummary_5fmin_5frank_19',['compute_summary_min_rank',['../structscran__markers_1_1ScoreMarkersSummaryOptions.html#ab9c5c080c58e24ced3a4de466a12f5c8',1,'scran_markers::ScoreMarkersSummaryOptions']]],
+  ['compute_5fsummary_5fquantiles_20',['compute_summary_quantiles',['../structscran__markers_1_1ScoreMarkersSummaryOptions.html#a590b9f59e5aaec9d031fe99b64a24e24',1,'scran_markers::ScoreMarkersSummaryOptions']]]
 ];

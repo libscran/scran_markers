@@ -35,7 +35,6 @@
     <class kind="struct">scran_markers::ScoreMarkersSummaryBuffers</class>
     <class kind="struct">scran_markers::ScoreMarkersSummaryResults</class>
     <namespace>scran_markers</namespace>
-    <namespace>scran_markers::internal</namespace>
   </compound>
   <compound kind="file">
     <name>scran_markers.hpp</name>
@@ -43,6 +42,8 @@
     <filename>scran__markers_8hpp.html</filename>
     <includes id="score__markers__pairwise_8hpp" name="score_markers_pairwise.hpp" local="yes" import="no" module="no" objc="no">score_markers_pairwise.hpp</includes>
     <includes id="score__markers__summary_8hpp" name="score_markers_summary.hpp" local="yes" import="no" module="no" objc="no">score_markers_summary.hpp</includes>
+    <includes id="score__markers__best_8hpp" name="score_markers_best.hpp" local="yes" import="no" module="no" objc="no">score_markers_best.hpp</includes>
+    <includes id="summarize__effects_8hpp" name="summarize_effects.hpp" local="yes" import="no" module="no" objc="no">summarize_effects.hpp</includes>
     <namespace>scran_markers</namespace>
   </compound>
   <compound kind="file">
@@ -577,6 +578,62 @@
       <anchor>a6d78c16b4ebd8435766396b2d72a8504</anchor>
       <arglist></arglist>
     </member>
+    <member kind="variable">
+      <type>std::optional&lt; std::vector&lt; double &gt; &gt;</type>
+      <name>compute_summary_quantiles</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>a590b9f59e5aaec9d031fe99b64a24e24</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>compute_summary_min_rank</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>ab9c5c080c58e24ced3a4de466a12f5c8</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>std::size_t</type>
+      <name>min_rank_limit</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>af717200fc00125d5427c6f050fd50c89</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>min_rank_preserve_ties</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>a865440ea066ee6a6cd81bfbbd9a8f426</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>BlockAveragePolicy</type>
+      <name>block_average_policy</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>a99d282395909a8c7360f46b98248ebbc</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>scran_blocks::WeightPolicy</type>
+      <name>block_weight_policy</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>a9581052b53623da99d9b1e6498d55430</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>scran_blocks::VariableWeightParameters</type>
+      <name>variable_block_weight_parameters</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>ad16d7561289a49c342ed6eb4be6adfbc</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>double</type>
+      <name>block_quantile</name>
+      <anchorfile>structscran__markers_1_1ScoreMarkersSummaryOptions.html</anchorfile>
+      <anchor>a4796ff4ea6ebadba4711c92783fd4180</anchor>
+      <arglist></arglist>
+    </member>
   </compound>
   <compound kind="struct">
     <name>scran_markers::ScoreMarkersSummaryResults</name>
@@ -669,6 +726,20 @@
       <name>compute_min_rank</name>
       <anchorfile>structscran__markers_1_1SummarizeEffectsOptions.html</anchorfile>
       <anchor>a72ed641c77c6265d8da4583fe8f5db42</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>std::optional&lt; std::vector&lt; double &gt; &gt;</type>
+      <name>compute_quantiles</name>
+      <anchorfile>structscran__markers_1_1SummarizeEffectsOptions.html</anchorfile>
+      <anchor>a0db81c2440e8e4818c88aab90871d26a</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="variable">
+      <type>bool</type>
+      <name>min_rank_preserve_ties</name>
+      <anchorfile>structscran__markers_1_1SummarizeEffectsOptions.html</anchorfile>
+      <anchor>a5ea001f5ab4d49b472b55a9a79329230</anchor>
       <arglist></arglist>
     </member>
   </compound>
@@ -771,7 +842,6 @@
   <compound kind="namespace">
     <name>scran_markers</name>
     <filename>namespacescran__markers.html</filename>
-    <namespace>scran_markers::internal</namespace>
     <class kind="struct">scran_markers::ScoreMarkersBestOptions</class>
     <class kind="struct">scran_markers::ScoreMarkersBestResults</class>
     <class kind="struct">scran_markers::ScoreMarkersPairwiseBuffers</class>
@@ -873,13 +943,6 @@
       <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const Block_ *const block, const std::size_t num_blocks, const ScoreMarkersSummaryOptions &amp;options, const ScoreMarkersSummaryBuffers&lt; Stat_, Rank_ &gt; &amp;output)</arglist>
     </member>
     <member kind="function">
-      <type>ScoreMarkersSummaryBuffers&lt; Stat_, Rank_ &gt;</type>
-      <name>preallocate_summary_results</name>
-      <anchorfile>namespacescran__markers.html</anchorfile>
-      <anchor>a86ca0a0af32c100db8449be2eef05610</anchor>
-      <arglist>(const Index_ num_genes, const std::size_t num_groups, ScoreMarkersSummaryResults&lt; Stat_, Rank_ &gt; &amp;store, const ScoreMarkersSummaryOptions &amp;options)</arglist>
-    </member>
-    <member kind="function">
       <type>ScoreMarkersSummaryResults&lt; Stat_, Rank_ &gt;</type>
       <name>score_markers_summary</name>
       <anchorfile>namespacescran__markers.html</anchorfile>
@@ -893,10 +956,6 @@
       <anchor>a77895e45dbbd6716cd404a1ced5d6427</anchor>
       <arglist>(const tatami::Matrix&lt; Value_, Index_ &gt; &amp;matrix, const Group_ *const group, const std::size_t num_groups, const Block_ *const block, const std::size_t num_blocks, const ScoreMarkersSummaryOptions &amp;options)</arglist>
     </member>
-  </compound>
-  <compound kind="namespace">
-    <name>scran_markers::internal</name>
-    <filename>namespacescran__markers_1_1internal.html</filename>
   </compound>
   <compound kind="page">
     <name>index</name>
