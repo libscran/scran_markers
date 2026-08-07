@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(scran_markers
-    VERSION 0.3.2
+project(
+    scran_markers
+    VERSION 0.4.0
     DESCRIPTION "Marker detection for single-cell data"
-    LANGUAGES CXX)
+    LANGUAGES CXX
+)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -25,7 +27,7 @@ else()
     find_package(tatami_tatami 4.1.0 CONFIG REQUIRED)
     find_package(libscran_scran_blocks 0.1.0 CONFIG REQUIRED)
     find_package(libscran_topicks 0.2.1 CONFIG REQUIRED)
-    find_package(ltla_quickstats 0.1.0 CONFIG REQUIRED)
+    find_package(ltla_quickstats 0.2.0 CONFIG REQUIRED)
     find_package(ltla_sanisizer 0.2.0 CONFIG REQUIRED)
 endif()
 
